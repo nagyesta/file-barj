@@ -1,0 +1,19 @@
+{
+  "extends": [
+    "config:base",
+    ":gitSignOff"
+  ],
+  "assignees": [
+    "nagyesta"
+  ],
+  "assigneesSampleSize": 1,
+  "commitMessageSuffix": "{patch}",
+  "separateMajorMinor": true,
+  "separateMinorPatch": true,
+  "docker": {
+    "pinDigests": true
+  },
+  "github-actions": {
+    "pinDigests": true
+  }
+}
