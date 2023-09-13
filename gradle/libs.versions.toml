@@ -1,0 +1,58 @@
+[versions]
+logback = "1.4.11"
+bouncycastle = "1.76"
+hibernateValidator = "8.0.1.Final"
+findbugs = "3.0.2"
+lombok = "1.18.28"
+commonsCodec = "1.16.0"
+mockitoCore = "5.5.0"
+jupiter = "5.10.0"
+abortMission = "4.2.57"
+checkstyle = "10.12.2"
+jacoco = "0.8.10"
+jacksonBom = { strictly = "2.15.2" }
+jackson = { strictly = "2.15.2" }
+
+abortMissionPlugin = "4.1.22"
+indexScanPlugin = "2.6.0"
+lombokPlugin = "8.3"
+gitVersionerPlugin = "1.6.7"
+owaspPlugin = "8.4.0"
+
+[libraries]
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
+
+bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
+
+hibernate-validator = { module = "org.hibernate:hibernate-validator", version.ref = "hibernateValidator" }
+
+findbugs-jsr305 = { module = "com.google.code.findbugs:jsr305", version.ref = "findbugs" }
+
+commons-codec = { module = "commons-codec:commons-codec", version.ref = "commonsCodec" }
+
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
+
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+
+jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jupiter" }
+
+abort-mission-jupiter = { module = "com.github.nagyesta.abort-mission.boosters:abort.booster-junit-jupiter", version.ref = "abortMission" }
+
+jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jacksonBom" }
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml", version.ref = "jackson" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+
+[bundles]
+logback = ["logback-classic", "logback-core"]
+jackson = ["jackson-core", "jackson-annotations", "jackson-databind", "jackson-dataformat-xml", "jackson-datatype-jsr310"]
+
+[plugins]
+lombok = { id = "io.freefair.lombok", version.ref = "lombokPlugin" }
+abort-mission = { id = "com.github.nagyesta.abort-mission-gradle-plugin", version.ref = "abortMissionPlugin" }
+versioner = { id = "io.toolebox.git-versioner", version.ref = "gitVersionerPlugin" }
+index-scan = { id = "org.sonatype.gradle.plugins.scan", version.ref = "indexScanPlugin" }
+owasp-dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "owaspPlugin" }

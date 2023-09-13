@@ -1,13 +1,11 @@
 buildscript {
-    fun readExclusions(): Array<String> {
+    fun readExclusions(): MutableSet<String> {
         return rootProject.file("config/ossindex/exclusions.txt").readLines()
                 .stream()
                 .toList()
                 .filter { it.isNotBlank() }
-                .toTypedArray()
+                .toMutableSet()
     }
 
-    extra.apply {
-        set("ossIndexExclusions", readExclusions())
-    }
+    extra.set("ossIndexExclusions", readExclusions())
 }

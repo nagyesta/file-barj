@@ -2,8 +2,6 @@ plugins {
     id("java")
 }
 
-group = "com.github.nagyesta.file-barj"
-
 repositories {
     mavenCentral()
 }
