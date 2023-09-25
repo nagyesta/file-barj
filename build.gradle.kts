@@ -6,6 +6,7 @@ plugins {
     checkstyle
     alias(libs.plugins.versioner)
     alias(libs.plugins.lombok) apply false
+    alias(libs.plugins.abort.mission) apply false
     alias(libs.plugins.index.scan)
     alias(libs.plugins.owasp.dependencycheck)
 }
@@ -79,6 +80,7 @@ subprojects {
     apply(plugin = "io.freefair.lombok")
     apply(plugin = "org.sonatype.gradle.plugins.scan")
     apply(plugin = "org.owasp.dependencycheck")
+    apply(plugin = "com.github.nagyesta.abort-mission-gradle-plugin")
 
     group = rootProject.group
     version = rootProject.version
@@ -98,18 +100,18 @@ subprojects {
     tasks.jacocoTestReport {
         reports {
             xml.required.set(true)
-            xml.outputLocation.set(layout.buildDirectory.file("/reports/jacoco/report.xml"))
+            xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/report.xml"))
             csv.required.set(false)
             html.required.set(true)
-            html.outputLocation.set(layout.buildDirectory.dir("/reports/jacoco/html"))
+            html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/html"))
         }
         dependsOn(tasks.test)
         finalizedBy(tasks.getByName("jacocoTestCoverageVerification"))
     }
 
     tasks.withType<JacocoCoverageVerification>().configureEach {
-        inputs.file(layout.buildDirectory.file("/reports/jacoco/report.xml"))
-        outputs.file(layout.buildDirectory.file("/reports/jacoco/jacocoTestCoverageVerification"))
+        inputs.file(layout.buildDirectory.file("reports/jacoco/report.xml"))
+        outputs.file(layout.buildDirectory.file("reports/jacoco/jacocoTestCoverageVerification"))
 
         violationRules {
             rule {
@@ -141,7 +143,7 @@ subprojects {
             }
         }
         doLast {
-            layout.buildDirectory.file("/reports/jacoco/jacocoTestCoverageVerification").get().asFile.writeText("Passed")
+            layout.buildDirectory.file("reports/jacoco/jacocoTestCoverageVerification").get().asFile.writeText("Passed")
         }
     }
 
@@ -164,7 +166,7 @@ subprojects {
     tasks.withType<Checkstyle>().configureEach {
         configProperties = mutableMapOf<String, Any>(
                 "base_dir" to rootDir.absolutePath.toString(),
-                "cache_file" to layout.buildDirectory.file("/checkstyle/cacheFile").get().asFile.absolutePath.toString()
+                "cache_file" to layout.buildDirectory.file("checkstyle/cacheFile").get().asFile.absolutePath.toString()
         )
         checkstyle.toolVersion = rootProject.libs.versions.checkstyle.get()
         checkstyle.configFile = rootProject.file("config/checkstyle/checkstyle.xml")

@@ -2,15 +2,22 @@ plugins {
     id("java")
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    implementation(libs.bundles.jackson)
+    implementation(libs.commons.codec)
+    implementation(libs.commons.compress)
+    implementation(libs.commons.crypto)
+    implementation(libs.commons.io)
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.jupiter)
+    testImplementation(libs.abort.mission.jupiter)
+    testImplementation(libs.mockito.core)
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+abortMission {
+    toolVersion = libs.versions.abortMission.get()
 }

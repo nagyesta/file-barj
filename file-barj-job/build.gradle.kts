@@ -2,15 +2,18 @@ plugins {
     id("java")
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
+    implementation(project(":file-barj-core"))
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.jupiter)
+    testImplementation(libs.abort.mission.jupiter)
+    testImplementation(libs.mockito.core)
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+abortMission {
+    toolVersion = libs.versions.abortMission.get()
 }
