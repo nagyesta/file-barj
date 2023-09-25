@@ -39,6 +39,8 @@ buildscript {
         set("maintainerUrl", "https://github.com/nagyesta/")
         set("scmConnection", "scm:git:https://github.com/nagyesta/file-barj.git")
         set("scmProjectUrl", "https://github.com/nagyesta/file-barj/")
+        set("githubMavenRepoUrl", "https://maven.pkg.github.com/nagyesta/file-barj")
+        set("ossrhMavenRepoUrl", "https://oss.sonatype.org/service/local/staging/deploy/maven2")
     }
 }
 
@@ -73,9 +75,9 @@ versioner.apply()
 
 subprojects {
     apply(plugin = "java")
-    apply(plugin = "maven-publish")
     apply(plugin = "org.gradle.jacoco")
     apply(plugin = "org.gradle.checkstyle")
+    apply(plugin = "org.gradle.signing")
     apply(plugin = "io.freefair.lombok")
     apply(plugin = "org.sonatype.gradle.plugins.scan")
     apply(plugin = "org.owasp.dependencycheck")
@@ -98,18 +100,18 @@ subprojects {
     tasks.jacocoTestReport {
         reports {
             xml.required.set(true)
-            xml.outputLocation.set(layout.buildDirectory.file("/reports/jacoco/report.xml"))
+            xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/report.xml"))
             csv.required.set(false)
             html.required.set(true)
-            html.outputLocation.set(layout.buildDirectory.dir("/reports/jacoco/html"))
+            html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/html"))
         }
         dependsOn(tasks.test)
         finalizedBy(tasks.getByName("jacocoTestCoverageVerification"))
     }
 
     tasks.withType<JacocoCoverageVerification>().configureEach {
-        inputs.file(layout.buildDirectory.file("/reports/jacoco/report.xml"))
-        outputs.file(layout.buildDirectory.file("/reports/jacoco/jacocoTestCoverageVerification"))
+        inputs.file(layout.buildDirectory.file("reports/jacoco/report.xml"))
+        outputs.file(layout.buildDirectory.file("reports/jacoco/jacocoTestCoverageVerification"))
 
         violationRules {
             rule {
@@ -137,15 +139,18 @@ subprojects {
                     value = "COVEREDRATIO"
                     minimum = BigDecimal.valueOf(0.5)
                 }
-                excludes = mutableListOf()
+                excludes = mutableListOf(
+                        "com.github.nagyesta.filebarj.core.backup.FileParseException",
+                        "com.github.nagyesta.filebarj.job.Main")
             }
         }
         doLast {
-            layout.buildDirectory.file("/reports/jacoco/jacocoTestCoverageVerification").get().asFile.writeText("Passed")
+            layout.buildDirectory.file("reports/jacoco/jacocoTestCoverageVerification").get().asFile.writeText("Passed")
         }
     }
 
     tasks.test {
+        outputs.upToDateWhen { false }
         useJUnitPlatform()
         finalizedBy(tasks.getByName("jacocoTestReport"))
     }
@@ -164,7 +169,7 @@ subprojects {
     tasks.withType<Checkstyle>().configureEach {
         configProperties = mutableMapOf<String, Any>(
                 "base_dir" to rootDir.absolutePath.toString(),
-                "cache_file" to layout.buildDirectory.file("/checkstyle/cacheFile").get().asFile.absolutePath.toString()
+                "cache_file" to layout.buildDirectory.file("checkstyle/cacheFile").get().asFile.absolutePath.toString()
         )
         checkstyle.toolVersion = rootProject.libs.versions.checkstyle.get()
         checkstyle.configFile = rootProject.file("config/checkstyle/checkstyle.xml")
@@ -172,27 +177,6 @@ subprojects {
             xml.required.set(false)
             html.required.set(true)
             html.stylesheet = rootProject.resources.text.fromFile("config/checkstyle/checkstyle-stylesheet.xsl")
-        }
-    }
-
-    tasks.withType<PublishToMavenRepository>().configureEach {
-        repositories {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/nagyesta/lowkey-vault")
-                credentials {
-                    username = rootProject.extra.get("gitUser").toString()
-                    password = rootProject.extra.get("gitToken").toString()
-                }
-            }
-            maven {
-                name = "ossrh"
-                url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
-                credentials {
-                    username = rootProject.extra.get("ossrhUser").toString()
-                    password = rootProject.extra.get("ossrhPass").toString()
-                }
-            }
         }
     }
 
