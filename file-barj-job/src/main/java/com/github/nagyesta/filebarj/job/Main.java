@@ -1,4 +1,4 @@
-package com.github.nagyesta;
+package com.github.nagyesta.filebarj.job;
 
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 public class Main {
