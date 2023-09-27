@@ -15,7 +15,7 @@ jacksonBom = { strictly = "2.15.2" }
 jackson = { strictly = "2.15.2" }
 
 abortMissionPlugin = "4.1.22"
-indexScanPlugin = "2.6.0"
+indexScanPlugin = "2.6.1"
 lombokPlugin = "8.3"
 gitVersionerPlugin = "1.6.7"
 owaspPlugin = "8.4.0"
