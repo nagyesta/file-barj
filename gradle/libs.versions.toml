@@ -5,7 +5,7 @@
 commonsCodec = "1.16.0"
 commonsCompress = "1.24.0"
 commonsCrypto = "1.2.0"
-commonsIo = "2.13.0"
+commonsIo = "2.14.0"
 mockitoCore = "5.5.0"
 jupiter = "5.10.0"
 abortMission = "4.2.57"
