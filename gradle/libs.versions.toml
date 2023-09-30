@@ -1,10 +1,12 @@
 [versions]
-#logback = "1.4.11"
-#bouncycastle = "1.76"
+slf4j = "2.0.9"
+logback = "1.4.11"
 #hibernateValidator = "8.0.1.Final"
+bouncycastle = "1.76"
 commonsCodec = "1.16.0"
 commonsCompress = "1.25.0"
 commonsCrypto = "1.2.0"
+commonsCli = "1.6.0"
 commonsIo = "2.15.1"
 mockitoCore = "5.8.0"
 jupiter = "5.10.1"
@@ -13,6 +15,7 @@ checkstyle = "10.12.2"
 jacoco = "0.8.10"
 jacksonBom = { strictly = "2.16.1" }
 jackson = { strictly = "2.16.1" }
+jetbrainsAnnotations = "24.0.0"
 
 abortMissionPlugin = "4.1.46"
 indexScanPlugin = "2.6.2"
@@ -22,16 +25,20 @@ gitVersionerPlugin = "1.6.7"
 owaspPlugin = "9.0.7"
 
 [libraries]
-#logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
-#logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logback-core = { module = "ch.qos.logback:logback-core", version.ref = "logback" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
-#bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
+jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrainsAnnotations" }
 
 #hibernate-validator = { module = "org.hibernate:hibernate-validator", version.ref = "hibernateValidator" }
+
+bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 commons-crypto = { module = "org.apache.commons:commons-crypto", version.ref = "commonsCrypto" }
 commons-codec = { module = "commons-codec:commons-codec", version.ref = "commonsCodec" }
+commons-cli = { module = "commons-cli:commons-cli", version.ref = "commonsCli" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsIo" }
 
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
@@ -48,7 +55,7 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml", version.ref = "jackson" }
 
 [bundles]
-#logback = ["logback-classic", "logback-core"]
+logback = ["logback-classic", "logback-core"]
 jackson = ["jackson-core", "jackson-annotations", "jackson-databind", "jackson-dataformat-xml"]
 
 [plugins]

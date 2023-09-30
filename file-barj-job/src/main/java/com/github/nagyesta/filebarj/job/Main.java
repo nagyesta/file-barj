@@ -1,12 +1,21 @@
 package com.github.nagyesta.filebarj.job;
 
-@SuppressWarnings("checkstyle:HideUtilityClassConstructor")
-public class Main {
-    public static void main(final String[] args) {
-        new Main().callHello();
-    }
+import lombok.extern.slf4j.Slf4j;
 
-    private void callHello() {
-        System.out.println("Hello world!");
+/**
+ * Main class for the backup job.
+ */
+@SuppressWarnings({"checkstyle:HideUtilityClassConstructor"})
+@Slf4j
+public class Main {
+
+    /**
+     * Entry point for the backup job.
+     *
+     * @param args the command line arguments
+     */
+    public static void main(final String[] args) throws Exception {
+        final var controller = new Controller(args, System.console());
+        controller.run();
     }
 }

@@ -13,17 +13,16 @@ public enum DuplicateHandlingStrategy {
     /**
      * Archives one copy for each backup increment.
      * <br/>e.g.,<br/>
-     * The second instance of the same file is not added to the current
-     * backup increment if it was already saved once. Each duplicate can
-     * point to the same archive file.
+     * The second instance of the same file is not added to the current backup increment if it was
+     * already saved once. Each duplicate can point to the same archive file.
      */
     KEEP_ONE_PER_INCREMENT,
     /**
      * Archives one copy per any increment of the backup since the last full backup.
      * <br/>e.g.,<br/>
-     * The file is not added to the current archive even if the duplicate
-     * is found archived in a previous backup version, such as a file was
-     * overwritten with a previously archived version of the same file,
+     * The file is not added to the current archive even if the duplicate is found archived in a
+     * previous backup version, such as a file was overwritten with a previously archived version
+     * of the same file,
      */
     KEEP_ONE_PER_BACKUP
 }

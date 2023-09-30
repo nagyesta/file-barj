@@ -14,38 +14,42 @@
 File BaRJ (File Backup and Restore Java) is a multi-platform backup utility for files. It is intended to be a highly configurable tool
 that can create secure backups of preconfigured files and folders and can be easily scheduled.
 
-## Recommended use
-
-### Warning!
-
+> [!WARNING]
 > File BaRJ is a free tool that is provided "as is", **without warranty of any kind**. It might be the perfect tool you need, or leave you
-> with gigabytes of encrypted hot mess instead of your precious data. By using it, you accept the risk of data loss (among others).
+with gigabytes of encrypted hot mess instead of your precious data. By using it, you accept the risk of data loss (among others).
 
 ## Features
+
+### Already supported
 
 File BaRJ comes with the following features
 
 - Full backups of folders or files
-- Incremental backups of folders or files
-- Change detection based on:
-  - file size, 
-  - last modification time, 
-  - configurable hash algorithms
 - Optional encryption using
   - an RSA key pair
   - a password
-  - AES-256 per file and/or the backup archive
+  - AES-256 keys for each file and the archive contents
 - Compression of the backup archive
 - Backup archive splitting to configurable chunks
 - Backup archive integrity checks
 - Restore/unpack previous backup
 
-## Quick start guide
+### Planned features
 
-### Startup parameters
+- Incremental backups of folders or files
+- Change detection based on:
+    - file size,
+    - last modification time,
+    - configurable hash algorithms
+- Merge previous backup increments
+- UI for convenient configuration
 
-TBD
+## Modules
+
+- [File BaRJ Stream IO](file-barj-stream-io/README.md)
+- [File BaRJ Core](file-barj-core/README.md)
+- [File BaRJ Job](file-barj-job/README.md)
 
 # Limitations
 
-TBD
+- The file permissions are only captured from the point of view of the current user on Windows or other non-POSIX compliant systems.

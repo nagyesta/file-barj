@@ -9,11 +9,11 @@ import java.util.function.Consumer;
 
 import static com.github.nagyesta.abortmission.core.MissionControl.reportOnlyEvaluator;
 
+@SuppressWarnings("unused")
 public class MissionOutlineDefinition extends MissionOutline {
     @Override
     protected Map<String, Consumer<AbortMissionCommandOps>> defineOutline() {
-        return Map.of(SHARED_CONTEXT, ops -> {
-            ops.registerHealthCheck(reportOnlyEvaluator(MissionControl.matcher().anyClass().build()).build());
-        });
+        return Map.of(SHARED_CONTEXT, ops -> ops
+                .registerHealthCheck(reportOnlyEvaluator(MissionControl.matcher().anyClass().build()).build()));
     }
 }

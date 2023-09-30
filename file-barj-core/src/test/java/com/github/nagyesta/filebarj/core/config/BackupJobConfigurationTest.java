@@ -1,36 +1,37 @@
 package com.github.nagyesta.filebarj.core.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
-import com.github.nagyesta.filebarj.core.crypto.EncryptionKeyUtil;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.Set;
 
-class BackupJobConfigurationTest {
-    private static final String TEMP_DIR = System.getProperty("java.io.tmpdir");
-    private final ObjectMapper objectMapper = new ObjectMapper();
+class BackupJobConfigurationTest extends TempFileAwareTest {
 
     @Test
     @SuppressWarnings("checkstyle:MagicNumber")
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfFullyPopulatedObject() throws JsonProcessingException {
         //given
-        final BackupJobConfiguration expected = BackupJobConfiguration.builder()
+        final var testRoot = testDataRoot.toAbsolutePath().toString();
+        final var expected = BackupJobConfiguration.builder()
                 .backupType(BackupType.FULL)
-                .checksumAlgorithm(HashAlgorithm.SHA256)
-                .encryptionKey(EncryptionKeyUtil.generateRsaKeyPair().getPublic())
+                .hashAlgorithm(HashAlgorithm.SHA256)
+                .compression(CompressionAlgorithm.GZIP)
+                .encryptionKey(EncryptionUtil.generateRsaKeyPair().getPublic())
                 .chunkSizeMebibyte(1024)
-                .destinationDirectory(Path.of(TEMP_DIR, "file-barj"))
+                .destinationDirectory(Path.of(testRoot, "file-barj"))
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .fileNamePrefix("backup-")
-                .sources(Set.of(BackupSource.builder().path(Path.of(TEMP_DIR, "visible-file1.txt")).build()))
+                .sources(Set.of(BackupSource.builder().path(Path.of(testRoot, "visible-file1.txt")).build()))
                 .build();
-        final String json = objectMapper.writer().writeValueAsString(expected);
+        final var json = objectMapper.writer().writeValueAsString(expected);
 
         //when
         final BackupJobConfiguration actual = objectMapper.readerFor(BackupJobConfiguration.class).readValue(json);
@@ -45,15 +46,17 @@ class BackupJobConfigurationTest {
     @Test
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfMinimalObject() throws JsonProcessingException {
         //given
-        final BackupJobConfiguration expected = BackupJobConfiguration.builder()
+        final var testRoot = testDataRoot.toAbsolutePath().toString();
+        final var expected = BackupJobConfiguration.builder()
                 .backupType(BackupType.FULL)
-                .checksumAlgorithm(HashAlgorithm.NONE)
-                .destinationDirectory(Path.of(TEMP_DIR, "file-barj"))
+                .hashAlgorithm(HashAlgorithm.NONE)
+                .compression(CompressionAlgorithm.NONE)
+                .destinationDirectory(Path.of(testRoot, "file-barj"))
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .fileNamePrefix("backup-")
-                .sources(Set.of(BackupSource.builder().path(Path.of(TEMP_DIR, "visible-file1.txt")).build()))
+                .sources(Set.of(BackupSource.builder().path(Path.of(testRoot, "visible-file1.txt")).build()))
                 .build();
-        final String json = objectMapper.writer().writeValueAsString(expected);
+        final var json = objectMapper.writer().writeValueAsString(expected);
 
         //when
         final BackupJobConfiguration actual = objectMapper.readerFor(BackupJobConfiguration.class).readValue(json);

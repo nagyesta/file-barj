@@ -1,29 +1,25 @@
 package com.github.nagyesta.filebarj.core.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterAll;
+import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-class BackupSourceTest {
+class BackupSourceTest extends TempFileAwareTest {
 
-    private static Path testDataRoot;
     private static final List<String> DIRS_RELATIVE = List.of(
             "",
             ".hidden", ".hidden/dir1", ".hidden/dir2",
@@ -35,41 +31,25 @@ class BackupSourceTest {
             ".hidden/file3.txt", ".hidden/dir1/1.txt", ".hidden/dir2/1.md",
             "visible/1.txt", "visible/dir1/1.txt",
             "tmp/1.txt");
-    private static List<Path> dirsCreated;
-    private static List<Path> filesCreated;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @BeforeAll
-    static void beforeAll() {
-        final String tempDir = System.getProperty("java.io.tmpdir");
-        testDataRoot = Path.of(tempDir, "backup-source-" + UUID.randomUUID());
-        dirsCreated = DIRS_RELATIVE.stream()
+    @BeforeEach
+    protected void setUp() throws IOException {
+        super.setUp();
+        DIRS_RELATIVE.stream()
                 .map(p -> Path.of(testDataRoot.toString() + File.separator + p).toFile())
-                .map(f -> {
-                    Assertions.assertTrue(f.mkdir(), "Directory was already found: " + f.getAbsolutePath());
+                .forEach(f -> {
+                    //noinspection ResultOfMethodCallIgnored
+                    f.mkdir();
+                    Assertions.assertTrue(f.exists(), "Directory was already found: " + f.getAbsolutePath());
                     f.deleteOnExit();
-                    return f.toPath();
-                })
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList());
-        filesCreated = FILES_RELATIVE.stream()
+                });
+        FILES_RELATIVE.stream()
                 .map(p -> Path.of(testDataRoot.toString() + File.separator + p).toFile())
-                .map(f -> {
+                .forEach(f -> {
                     Assertions.assertDoesNotThrow(() -> Assertions
                             .assertTrue(f.createNewFile(), "File was already found: " + f.getAbsolutePath()));
                     f.deleteOnExit();
-                    return f.toPath();
-                })
-                .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList());
-    }
-
-    @AfterAll
-    static void afterAll() {
-        Stream.of(filesCreated, dirsCreated)
-                .flatMap(List::stream)
-                .map(Path::toFile)
-                .forEach(file -> Assertions.assertTrue(file.delete(), "Could not delete: " + file.getAbsolutePath()));
+                });
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")
@@ -91,7 +71,7 @@ class BackupSourceTest {
                 .build();
     }
 
-    @SuppressWarnings("checkstyle:MagicNumber")
+    @SuppressWarnings({"checkstyle:MagicNumber", "MagicNumber"})
     public static Stream<Arguments> nullFilterExpressionProvider() {
         return Stream.<Arguments>builder()
                 .add(Arguments.of(null, null, 17))
@@ -109,14 +89,14 @@ class BackupSourceTest {
             final String expectedExtension
     ) {
         //given
-        final BackupSource underTest = BackupSource.builder()
+        final var underTest = BackupSource.builder()
                 .path(testDataRoot)
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
 
         //when
-        final List<Path> actual = underTest.listMatchingFilePaths();
+        final var actual = underTest.listMatchingFilePaths();
 
         //then
         Assertions.assertEquals(expectedResults, actual.size());
@@ -139,21 +119,19 @@ class BackupSourceTest {
             final int expectedResults
     ) {
         //given
-        final BackupSource underTest = BackupSource.builder()
+        final var underTest = BackupSource.builder()
                 .path(testDataRoot)
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
 
         //when
-        final List<Path> actual = underTest.listMatchingFilePaths();
+        final var actual = underTest.listMatchingFilePaths();
 
         //then
         Assertions.assertEquals(expectedResults, actual.size());
-        actual.forEach(path -> {
-            Assertions.assertTrue(Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS),
-                    "File should be a directory but wasn't: " + path);
-        });
+        actual.forEach(path -> Assertions.assertTrue(Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS),
+                "File should be a directory but wasn't: " + path));
     }
 
     @ParameterizedTest
@@ -164,14 +142,14 @@ class BackupSourceTest {
             final int expectedResults
     ) {
         //given
-        final BackupSource underTest = BackupSource.builder()
+        final var underTest = BackupSource.builder()
                 .path(testDataRoot)
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
 
         //when
-        final List<Path> actual = underTest.listMatchingFilePaths();
+        final var actual = underTest.listMatchingFilePaths();
 
         //then
         Assertions.assertEquals(expectedResults, actual.size());
@@ -180,13 +158,13 @@ class BackupSourceTest {
     @Test
     void testListMatchingFilePathsShouldReturnSingleFileWhenRootIsRegularFile() {
         //given
-        final Path expectedFile = Path.of(testDataRoot.toString(), ".hidden-file1.txt");
-        final BackupSource underTest = BackupSource.builder()
+        final var expectedFile = Path.of(testDataRoot.toString(), ".hidden-file1.txt");
+        final var underTest = BackupSource.builder()
                 .path(expectedFile)
                 .build();
 
         //when
-        final List<Path> actual = underTest.listMatchingFilePaths();
+        final var actual = underTest.listMatchingFilePaths();
 
         //then
         Assertions.assertIterableEquals(List.of(expectedFile), actual);
@@ -195,13 +173,13 @@ class BackupSourceTest {
     @Test
     void testListMatchingFilePathsShouldReturnNothingWhenRootDoesNotExist() {
         //given
-        final Path expectedFile = Path.of(testDataRoot.toString(), "unknown-file.txt");
-        final BackupSource underTest = BackupSource.builder()
+        final var expectedFile = Path.of(testDataRoot.toString(), "unknown-file.txt");
+        final var underTest = BackupSource.builder()
                 .path(expectedFile)
                 .build();
 
         //when
-        final List<Path> actual = underTest.listMatchingFilePaths();
+        final var actual = underTest.listMatchingFilePaths();
 
         //then
         Assertions.assertIterableEquals(List.of(), actual);
@@ -210,8 +188,8 @@ class BackupSourceTest {
     @Test
     void testListMatchingFilePathsShouldThrowExceptionWhenIncludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
-        final Path expectedFile = Path.of(testDataRoot.toString(), "visible-file1.txt");
-        final BackupSource underTest = BackupSource.builder()
+        final var expectedFile = Path.of(testDataRoot.toString(), "visible-file1.txt");
+        final var underTest = BackupSource.builder()
                 .path(expectedFile)
                 .includePatterns(Set.of("**.txt"))
                 .build();
@@ -225,8 +203,8 @@ class BackupSourceTest {
     @Test
     void testListMatchingFilePathsShouldThrowExceptionWhenExcludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
-        final Path expectedFile = Path.of(testDataRoot.toString(), "visible-file1.txt");
-        final BackupSource underTest = BackupSource.builder()
+        final var expectedFile = Path.of(testDataRoot.toString(), "visible-file1.txt");
+        final var underTest = BackupSource.builder()
                 .path(expectedFile)
                 .excludePatterns(Set.of("**.txt"))
                 .build();
@@ -240,12 +218,12 @@ class BackupSourceTest {
     @Test
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfFullyPopulatedObject() throws JsonProcessingException {
         //given
-        final BackupSource expected = BackupSource.builder()
+        final var expected = BackupSource.builder()
                 .path(testDataRoot)
                 .includePatterns(Set.of("visible/**"))
                 .excludePatterns(Set.of("**.txt"))
                 .build();
-        final String json = objectMapper.writer().writeValueAsString(expected);
+        final var json = objectMapper.writer().writeValueAsString(expected);
 
         //when
         final BackupSource actual = objectMapper.readerFor(BackupSource.class).readValue(json);
@@ -258,10 +236,10 @@ class BackupSourceTest {
     @Test
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfMinimalObject() throws JsonProcessingException {
         //given
-        final BackupSource expected = BackupSource.builder()
+        final var expected = BackupSource.builder()
                 .path(Path.of(testDataRoot.toString(), "visible-file1.txt"))
                 .build();
-        final String json = objectMapper.writer().writeValueAsString(expected);
+        final var json = objectMapper.writer().writeValueAsString(expected);
 
         //when
         final BackupSource actual = objectMapper.readerFor(BackupSource.class).readValue(json);
@@ -269,5 +247,27 @@ class BackupSourceTest {
         //then
         Assertions.assertEquals(expected, actual);
         Assertions.assertEquals(expected.hashCode(), actual.hashCode());
+    }
+
+    @ParameterizedTest
+    @MethodSource("filterExpressionProvider")
+    void testToStringShouldContainRootAndPatternsWhenCalled(
+            final Set<String> includePatterns,
+            final Set<String> excludePatterns
+    ) {
+        //given
+        final var underTest = BackupSource.builder()
+                .path(testDataRoot)
+                .excludePatterns(excludePatterns)
+                .includePatterns(includePatterns)
+                .build();
+
+        //when
+        final var actual = underTest.toString();
+
+        //then
+        Assertions.assertTrue(actual.contains(testDataRoot.toString()), "Root should be contained in: " + actual);
+        Assertions.assertTrue(actual.contains(excludePatterns.toString()), "Exclude patterns should be contained in: " + actual);
+        Assertions.assertTrue(actual.contains(includePatterns.toString()), "Include patterns should be contained in: " + actual);
     }
 }

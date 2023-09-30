@@ -31,19 +31,18 @@ public class ArchivedFileMetadata {
     @JsonProperty("archive_location")
     private final ArchiveEntryLocator archiveLocation;
     /**
-     * The checksum of the archived content.
+     * The hash of the archived content.
      */
-    @JsonProperty("archived_checksum")
-    private String archivedChecksum;
+    @JsonProperty("archived_hash")
+    private String archivedHash;
     /**
-     * The checksum of the original content.
+     * The hash of the original content.
      */
-    @JsonProperty("original_checksum")
-    private String originalChecksum;
+    @JsonProperty("original_hash")
+    private String originalHash;
     /**
-     * The Ids of the original files which are archived by the
-     * current entry. If multiple Ids are listed, then duplicates
-     * where eliminated.
+     * The Ids of the original files which are archived by the current entry. If multiple Ids are
+     * listed, then duplicates where eliminated.
      */
     @NonNull
     @JsonProperty("files")

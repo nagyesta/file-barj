@@ -1,3 +1,5 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 plugins {
     id("java")
     signing
@@ -8,18 +10,28 @@ plugins {
 extra.apply {
     set("artifactDisplayName", "File BaRJ - Core")
     set("artifactDescription", "Defines the inner working mechanism of backup and restore tasks.")
-}
+                              }
 
 dependencies {
+    compileOnly(libs.jetbrains.annotations)
+    implementation(project(":file-barj-stream-io"))
+    implementation(libs.slf4j.api)
     implementation(libs.bundles.jackson)
-    implementation(libs.commons.codec)
     implementation(libs.commons.compress)
-    implementation(libs.commons.crypto)
     implementation(libs.commons.io)
+    implementation(libs.commons.codec)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.jupiter)
     testImplementation(libs.abort.mission.jupiter)
     testImplementation(libs.mockito.core)
+    testRuntimeOnly(libs.bundles.logback)
+}
+
+project.tasks.processResources {
+    val tokens = mapOf("version" to project.version)
+    filesMatching("**/file-barj-component.version") {
+        filter<ReplaceTokens>("tokens" to tokens)
+    }
 }
 
 abortMission {
@@ -48,7 +60,7 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-            artifactId = tasks.jar.get().archiveBaseName.get()
+            artifactId = name
             pom {
                 name.set(project.extra.get("artifactDisplayName").toString())
                 description.set(project.extra.get("artifactDescription").toString())

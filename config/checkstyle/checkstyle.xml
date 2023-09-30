@@ -157,7 +157,6 @@
         <!--            <property name="ignoredAnnotations" value="Override,Generated,ParameterizedTest,Test,Bean,PostMapping,GetMapping,DeleteMapping"/>-->
         <!--        </module>-->
         <module name="FinalClass"/>
-        <module name="HideUtilityClassConstructor"/>
         <module name="InterfaceIsType"/>
         <module name="VisibilityModifier"/>
 

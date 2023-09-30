@@ -1,15 +1,12 @@
 name: UpdateChecksums
 on:
-  push:
-    branches: [ renovate/** ]
-    paths:
-      - 'gradle/libs.versions.toml'
+    workflow_dispatch:
 
 permissions: read-all
 
 jobs:
   build:
-    name: Dependency checksum pin action
+    name: Dependency checksum compaction action
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -27,7 +24,7 @@ jobs:
         uses: gradle/gradle-build-action@982da8e78c05368c70dac0351bb82647a9e9a5d2 # v2.11.1
         with:
           cache-disabled: true
-          arguments: --write-verification-metadata sha256
+          arguments: clean file-barj-job:checkstyleMain --write-verification-metadata sha256
       - name: "Git commit"
         run: |
           git config --global user.name 'Esta Nagy'
