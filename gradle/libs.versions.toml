@@ -3,7 +3,7 @@
 #bouncycastle = "1.76"
 #hibernateValidator = "8.0.1.Final"
 commonsCodec = "1.16.0"
-commonsCompress = "1.24.0"
+commonsCompress = "1.25.0"
 commonsCrypto = "1.2.0"
 commonsIo = "2.15.0"
 mockitoCore = "5.7.0"
