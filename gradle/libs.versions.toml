@@ -14,7 +14,7 @@ jacoco = "0.8.10"
 jacksonBom = { strictly = "2.16.0" }
 jackson = { strictly = "2.16.0" }
 
-abortMissionPlugin = "4.1.43"
+abortMissionPlugin = "4.1.46"
 indexScanPlugin = "2.6.1"
 lombokPlugin = "8.4"
 shadowPlugin = "8.1.1"
