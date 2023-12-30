@@ -27,7 +27,7 @@ import static javax.crypto.spec.PSource.PSpecified.DEFAULT;
  */
 @UtilityClass
 public class EncryptionUtil {
-    private static final String RSA_ALG = "RSA/ECB/OAEPWithSHA256AndMGF1Padding";
+    private static final String RSA_ALG = "RSA/None/OAEPWithSHA256AndMGF1Padding";
     private static final int RSA_KEY_SIZE = 4096;
     private static final String AES = "AES";
     /**

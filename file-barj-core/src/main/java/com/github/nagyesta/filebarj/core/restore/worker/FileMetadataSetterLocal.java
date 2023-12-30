@@ -142,7 +142,7 @@ public class FileMetadataSetterLocal implements FileMetadataSetter {
         final var absolutePath = restoreTargets.mapToRestorePath(metadata.getAbsolutePath());
         performIoTaskAndHandleException(() -> {
             if (OsUtil.isWindows() && metadata.getHidden()) {
-                Runtime.getRuntime().exec("attrib +H " + absolutePath).waitFor();
+                Runtime.getRuntime().exec(new String[]{"attrib", "+H", absolutePath.toString()}).waitFor();
             }
             return null;
         });

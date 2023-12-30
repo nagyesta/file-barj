@@ -204,7 +204,7 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
 
     private void setFileHidden(final Path tempFilePath) throws IOException, InterruptedException {
         if (OsUtil.isWindows()) {
-            Runtime.getRuntime().exec("attrib +H " + tempFilePath.toAbsolutePath()).waitFor();
+            Runtime.getRuntime().exec(new String[]{"attrib", "+H", tempFilePath.toAbsolutePath().toString()}).waitFor();
         }
     }
 }
