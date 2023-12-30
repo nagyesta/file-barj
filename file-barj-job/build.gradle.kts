@@ -11,7 +11,15 @@ extra.apply {
 }
 
 dependencies {
+    compileOnly(libs.jetbrains.annotations)
+    implementation(project(":file-barj-stream-io"))
     implementation(project(":file-barj-core"))
+    implementation(libs.bundles.jackson)
+    implementation(libs.bundles.logback)
+    implementation(libs.commons.io)
+    implementation(libs.commons.cli)
+    implementation(libs.bouncycastle.bcpkix)
+    implementation(libs.slf4j.api)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.jupiter)
     testImplementation(libs.abort.mission.jupiter)
@@ -30,6 +38,7 @@ tasks.jar {
             .map(::zipTree)
     from(dependencies)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
 }
 
 publishing {
@@ -54,7 +63,7 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-            artifactId = tasks.jar.get().archiveBaseName.get()
+            artifactId = name
             pom {
                 name.set(project.extra.get("artifactDisplayName").toString())
                 description.set(project.extra.get("artifactDescription").toString())

@@ -11,6 +11,9 @@ coverage:
       job:
         flags:
         - job
+      stream:
+        flags:
+        - stream
     patch: false
 flags:
   core:
@@ -19,3 +22,6 @@ flags:
   job:
     paths:
       - ./file-barj-job
+  stream:
+    paths:
+      - ./file-barj-stream-io

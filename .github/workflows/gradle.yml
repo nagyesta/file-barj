@@ -3,33 +3,33 @@
 
 name: JavaCI
 
-#on:
-#  push:
-#    branches: [ main ]
-#    paths-ignore:
-#      - 'README.md'
-#      - '**/README.md'
-#      - 'CODE_OF_CONDUCT.md'
-#      - 'CONTRIBUTING.md'
-#      - 'pull_request_template.md'
-#      - '.lift/.toml'
-#      - '**/.lift/.toml'
-#      - 'SECURITY.md'
-#      - 'LICENSE'
-#      - '.github/ISSUE_TEMPLATE/**'
-#      - '.github/assets/**'
-#      - '.github/workflows/**'
-#      - '.github/pr-labeler.yml'
-#      - 'renovate.json'
-#      - '.whitesource'
-#      - 'gradle/libs.versions.toml'
-#      - 'gradle/verification-metadata.xml'
-#      - 'gradle/verification-metadata-clean.xml'
-#      - 'gradle/wrapper/gradle-wrapper.properties'
-#      - 'gradle/wrapper/gradle-wrapper.jar'
-#      - 'gradlew'
-#      - 'gradlew.bat'
-#      - 'config/ossindex/exclusions.txt'
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'README.md'
+      - '**/README.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+      - 'pull_request_template.md'
+      - '.lift/.toml'
+      - '**/.lift/.toml'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/assets/**'
+      - '.github/workflows/**'
+      - '.github/pr-labeler.yml'
+      - 'renovate.json'
+      - '.whitesource'
+      - 'gradle/libs.versions.toml'
+      - 'gradle/verification-metadata.xml'
+      - 'gradle/verification-metadata-clean.xml'
+      - 'gradle/wrapper/gradle-wrapper.properties'
+      - 'gradle/wrapper/gradle-wrapper.jar'
+      - 'gradlew'
+      - 'gradlew.bat'
+      - 'config/ossindex/exclusions.txt'
 
 permissions: read-all
 
@@ -52,6 +52,7 @@ jobs:
           gradle-home-cache-cleanup: true
           arguments: |
             tagVersion build
+            -Pci
             -PgithubUser=${{ secrets.PUBLISH_USER_NAME }}
             -PgithubToken=${{ secrets.PUBLISH_KEY }}
       - name: Decode key
@@ -62,6 +63,7 @@ jobs:
         with:
           arguments: |
             publish -x test
+            -Pci
             -PgithubUser=${{ secrets.PUBLISH_USER_NAME }}
             -PgithubToken=${{ secrets.PUBLISH_KEY }}
             -PossrhUsername=${{ secrets.OSSRH_USER }}
@@ -85,3 +87,9 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-job/build/reports/jacoco/report.xml
           flags: job
+      - name: Upload coverage to Codecov - Stream IO
+        uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./file-barj-stream-io/build/reports/jacoco/report.xml
+          flags: stream

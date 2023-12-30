@@ -11,7 +11,7 @@ on:
           - Manual
   schedule:
     # * is a special character in YAML, so we have to quote this string
-    - cron: '0 4 10 * *'
+    - cron: '0 4 25 * *'
 
 jobs:
   build:

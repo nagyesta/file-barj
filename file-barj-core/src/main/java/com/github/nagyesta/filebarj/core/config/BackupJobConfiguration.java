@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.json.PublicKeyDeserializer;
@@ -25,36 +26,47 @@ import java.util.Set;
 @EqualsAndHashCode
 @Builder
 @Jacksonized
+@SuppressWarnings("checkstyle:TodoComment")
 public class BackupJobConfiguration {
+    //TODO: validate the whole configuration
+    private static final int ONE_HUNDRED_GIBIBYTE = 100 * 1024;
     /**
      * The desired backup type which should be used when the job is executed.
      * <br/><br/>
-     * NOTE: The backup will be automatically a {@link BackupType#FULL} backup
-     * every time when there is no previous increment or there is a change in
-     * the backup configuration since the last increment was saved. As a side
-     * effect, this property is ignored during the first execution after each
-     * configuration change.
+     * NOTE: The backup will be automatically a {@link BackupType#FULL} backup every time when there
+     * is no previous increment or there is a change in the backup configuration since the last
+     * increment was saved. As a side effect, this property is ignored during the first execution
+     * after each configuration change.
      */
     @NonNull
     @JsonProperty("backup_type")
     private final BackupType backupType;
     /**
-     * The algorithm used for checksum calculations before and after archival.
-     * Useful for data integrity verifications.
+     * The algorithm used for hash calculations before and after archival. Useful for data
+     * integrity verifications.
      * <br/><br/>
-     * NOTE: A change of this value requires a {@link BackupType#FULL} backup
-     * as the previous increments cannot use a different hash algorithm.
+     * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
+     * increments cannot use a different hash algorithm.
      */
     @NonNull
-    @JsonProperty("checksum_algorithm")
-    private final HashAlgorithm checksumAlgorithm;
+    @JsonProperty("hash_algorithm")
+    private final HashAlgorithm hashAlgorithm;
     /**
-     * The public key of an RSA key pair used for encryption.
-     * The files will be encrypted using automatically generated AES keys (DEK)
-     * which will be encrypted using the RSA public key (KEK).
+     * The algorithm used for compression before writing the archived stream to the file system.
      * <br/><br/>
-     * NOTE: A change of this value requires a {@link BackupType#FULL} backup
-     * as the previous increments cannot use a different encryption key.
+     * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
+     * increments cannot use a different hash algorithm.
+     */
+    @NonNull
+    @JsonProperty("compression_algorithm")
+    private final CompressionAlgorithm compression;
+    /**
+     * The public key of an RSA key pair used for encryption. The files will be encrypted using
+     * automatically generated AES keys (DEK) which will be encrypted using the RSA public key
+     * (KEK).
+     * <br/><br/>
+     * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
+     * increments cannot use a different encryption key.
      */
     @JsonSerialize(using = PublicKeySerializer.class)
     @JsonDeserialize(using = PublicKeyDeserializer.class)
@@ -63,9 +75,8 @@ public class BackupJobConfiguration {
     /**
      * The strategy used for handling duplicate files.
      * <br/><br/>
-     * NOTE: A change of this value requires a {@link BackupType#FULL} backup
-     * as the previous increments cannot use a different duplicate handling
-     * strategy.
+     * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
+     * increments cannot use a different duplicate handling strategy.
      */
     @NonNull
     @JsonProperty("duplicate_strategy")
@@ -75,14 +86,15 @@ public class BackupJobConfiguration {
      * <br/><br/>
      * NOTE: Using 0 means that the archive won't be chunked.
      */
+    @Builder.Default
     @EqualsAndHashCode.Exclude
     @JsonProperty("chunk_size_mebibyte")
-    private final int chunkSizeMebibyte;
+    private final int chunkSizeMebibyte = ONE_HUNDRED_GIBIBYTE;
     /**
      * The prefix of the backup file names.
      * <br/><br/>
-     * NOTE: A change of this value requires a {@link BackupType#FULL} backup
-     * as the previous increments cannot use a different file name prefix.
+     * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
+     * increments cannot use a different duplicate handling strategy.
      */
     @NonNull
     @JsonProperty("file_name_prefix")
@@ -90,9 +102,8 @@ public class BackupJobConfiguration {
     /**
      * The destination where the backup files will be saved.
      * <br/><br/>
-     * NOTE: A change of this value requires a {@link BackupType#FULL} backup
-     * as the metadata of the previous increments must be found in the destination
-     * in order to calculate changes.
+     * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the metadata of the
+     * previous increments must be found in the destination in order to calculate changes.
      */
     @NonNull
     @JsonProperty("destination_directory")

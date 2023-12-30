@@ -13,12 +13,12 @@ import lombok.NonNull;
 import lombok.extern.jackson.Jacksonized;
 
 import java.io.File;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -42,18 +42,16 @@ public class BackupSource {
     @JsonDeserialize(using = NioPathDeserializer.class)
     private final Path path;
     /**
-     * Optional include patterns for filtering the contents.
-     * Uses {@link java.nio.file.PathMatcher} with "glob" syntax
-     * relative to the value of the path field.
+     * Optional include patterns for filtering the contents. Uses {@link java.nio.file.PathMatcher}
+     * with "glob" syntax relative to the value of the path field.
      */
-    @JsonProperty("includePatterns")
+    @JsonProperty("include_patterns")
     private final Set<String> includePatterns;
     /**
-     * Optional exclude patterns for filtering the contents.
-     * Uses {@link java.nio.file.PathMatcher} with "glob" syntax
-     * relative to the value of the path field.
+     * Optional exclude patterns for filtering the contents. Uses {@link java.nio.file.PathMatcher}
+     * with "glob" syntax relative to the value of the path field.
      */
-    @JsonProperty("excludePatterns")
+    @JsonProperty("exclude_patterns")
     private final Set<String> excludePatterns;
 
     /**
@@ -72,8 +70,19 @@ public class BackupSource {
                 .toList();
     }
 
+    @Override
+    public String toString() {
+        final var includes = Optional.ofNullable(includePatterns)
+                .filter(v -> !v.isEmpty())
+                .orElse(Set.of(INCLUDE_ALL_FILES));
+        final var excludes = Optional.ofNullable(excludePatterns)
+                .filter(v -> !v.isEmpty())
+                .orElse(Set.of());
+        return "BackupSource{path=" + path + ", include=" + includes + ", exclude=" + excludes + "}";
+    }
+
     private Stream<Path> includeIntermediateDirectories(final Path aPath) {
-        final Stream<Path> pathAsStream = Stream.of(aPath);
+        final var pathAsStream = Stream.of(aPath);
         if (aPath.toAbsolutePath().equals(path)) {
             return pathAsStream;
         } else {
@@ -108,7 +117,7 @@ public class BackupSource {
             assertHasNoPatterns(includePatterns, "Include");
             return true;
         }
-        final FileSystem fileSystem = FileSystems.getDefault();
+        final var fileSystem = FileSystems.getDefault();
         return Optional.ofNullable(includePatterns)
                 .filter(v -> !v.isEmpty())
                 .orElse(Set.of(INCLUDE_ALL_FILES))
@@ -123,7 +132,7 @@ public class BackupSource {
             assertHasNoPatterns(excludePatterns, "Exclude");
             return true;
         }
-        final FileSystem fileSystem = FileSystems.getDefault();
+        final var fileSystem = FileSystems.getDefault();
         return Optional.ofNullable(excludePatterns)
                 .orElse(Set.of())
                 .stream()
@@ -141,6 +150,8 @@ public class BackupSource {
     }
 
     private String translatePattern(final String pattern) {
-        return "glob:" + path.toAbsolutePath() + File.separator + pattern;
+        return ("glob:" + path.toAbsolutePath() + File.separator + pattern)
+                //replace backslashes to let the regex conversion work later
+                .replaceAll(Pattern.quote("\\"), "/");
     }
 }

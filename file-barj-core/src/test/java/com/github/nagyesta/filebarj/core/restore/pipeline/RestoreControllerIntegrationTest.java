@@ -1,0 +1,439 @@
+package com.github.nagyesta.filebarj.core.restore.pipeline;
+
+import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.backup.ArchivalException;
+import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
+import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
+import com.github.nagyesta.filebarj.core.config.BackupSource;
+import com.github.nagyesta.filebarj.core.config.RestoreTarget;
+import com.github.nagyesta.filebarj.core.config.RestoreTargets;
+import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
+import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
+import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
+import org.apache.commons.io.FileUtils;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Stream;
+
+class RestoreControllerIntegrationTest extends TempFileAwareTest {
+
+    @SuppressWarnings({"MagicNumber", "checkstyle:MagicNumber"})
+    public static Stream<Arguments> restoreParameterProvider() {
+        final var keyPair = EncryptionUtil.generateRsaKeyPair();
+        return Stream.<Arguments>builder()
+                .add(Arguments.of(null, null, 1, HashAlgorithm.SHA256))
+                .add(Arguments.of(null, null, 2, HashAlgorithm.NONE))
+                .add(Arguments.of(null, null, 500, HashAlgorithm.MD5))
+                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 1, HashAlgorithm.NONE))
+                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 2, HashAlgorithm.MD5))
+                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 500, HashAlgorithm.SHA256))
+                .build();
+    }
+
+    @Test
+    void testConstructorShouldThrowExceptionWhenCalledWithAPathWithoutBackups() {
+        //given
+        final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(source, backup, null, HashAlgorithm.SHA256);
+
+        //when
+        Assertions.assertThrows(ArchivalException.class, () -> new RestoreController(
+                configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testExecuteShouldThrowExceptionWhenCalledWithNullPath() throws IOException {
+        //given
+        final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(source, backup, null, HashAlgorithm.SHA256);
+        FileUtils.copyFile(getExampleResource(), source.resolve("A.png").toFile());
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+        final var underTest = new RestoreController(
+                configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.execute(null, 1, false));
+
+        //then + exception
+    }
+
+    @Test
+    void testExecuteShouldThrowExceptionWhenCalledWithLessThanOneThreads() throws IOException {
+        //given
+        final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var restore = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(source, backup, null, HashAlgorithm.SHA256);
+        FileUtils.copyFile(getExampleResource(), source.resolve("A.png").toFile());
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+
+        final var underTest = new RestoreController(
+                configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(backup, restore)));
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.execute(restoreTargets, 0, false));
+
+        //then + exception
+    }
+
+    @ParameterizedTest
+    @MethodSource("restoreParameterProvider")
+    void testExecuteShouldRestoreFilesToDestinationWhenExecutedWithValidInput(
+            final PublicKey encryptionKey, final PrivateKey decryptionKey,
+            final int threads, final HashAlgorithm hash) throws IOException {
+        //given
+        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var movedBackupDir = testDataRoot.resolve("moved-backup-dir" + UUID.randomUUID());
+        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+
+        final var sourceFiles = List.of(
+                sourceDir.resolve("A.png"),
+                sourceDir.resolve("B.png"),
+                sourceDir.resolve("C.png"));
+        for (final var sourceFile : sourceFiles) {
+            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+        }
+        final var sourceFolder = sourceDir.resolve("folder");
+        Files.createDirectories(sourceFolder);
+
+        final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
+        final var internalLinkTarget = sourceDir.resolve("A.png");
+        Files.createSymbolicLink(sourceLinkInternal, internalLinkTarget);
+        final var sourceLinkExternal = sourceDir.resolve("external.png");
+        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+        Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
+
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+
+        Files.move(backupDir, movedBackupDir);
+
+        final var underTest = new RestoreController(
+                movedBackupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+
+        //when
+        underTest.execute(restoreTargets, threads, false);
+
+        //then
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var metadataParser = new FileMetadataParserLocal();
+        for (final var sourceFile : sourceFiles) {
+            final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
+            assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
+        }
+        final var restoredInternal = Files.readSymbolicLink(realRestorePath.resolve("folder/internal.png")).toAbsolutePath();
+        Assertions.assertEquals(sourceDir.relativize(internalLinkTarget), realRestorePath.relativize(restoredInternal));
+        final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
+        Assertions.assertEquals(externalLinkTarget, restoredExternal);
+        assertFileMetadataMatches(sourceFolder, realRestorePath.resolve("folder"), metadataParser, configuration);
+    }
+
+    @ParameterizedTest
+    @MethodSource("restoreParameterProvider")
+    void testExecuteShouldRestoreFilesToDestinationWhenTargetFilesAlreadyExistWithDifferentContent(
+            final PublicKey encryptionKey, final PrivateKey decryptionKey,
+            final int threads, final HashAlgorithm hash) throws IOException {
+        //given
+        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+
+        final var sourceFiles = List.of(
+                sourceDir.resolve("A.png"),
+                sourceDir.resolve("B.png"),
+                sourceDir.resolve("C.png"));
+        for (final var sourceFile : sourceFiles) {
+            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+        }
+        final var sourceFolder = sourceDir.resolve("folder");
+        Files.createDirectories(sourceFolder);
+
+        final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
+        final var internalLinkTarget = sourceDir.resolve("A.png");
+        Files.createSymbolicLink(sourceLinkInternal, internalLinkTarget);
+        final var sourceLinkExternal = sourceDir.resolve("external.png");
+        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+        Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
+
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+
+        final var underTest = new RestoreController(
+                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        Files.createDirectories(realRestorePath);
+        final var restoredA = realRestorePath.resolve("A.png");
+        Files.createFile(restoredA);
+        Files.createSymbolicLink(realRestorePath.resolve("B.png"), restoredA);
+        Files.createSymbolicLink(realRestorePath.resolve("external.png"), restoredA);
+        Files.createDirectories(realRestorePath.resolve("C.png"));
+        Files.createDirectories(realRestorePath.resolve("C.png/D.png"));
+        Files.createSymbolicLink(realRestorePath.resolve("folder"), restoredA);
+
+        //when
+        underTest.execute(restoreTargets, threads, false);
+
+        //then
+        final var metadataParser = new FileMetadataParserLocal();
+        for (final var sourceFile : sourceFiles) {
+            final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
+            assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
+        }
+        final var restoredInternal = Files.readSymbolicLink(realRestorePath.resolve("folder/internal.png")).toAbsolutePath();
+        Assertions.assertEquals(sourceDir.relativize(internalLinkTarget), realRestorePath.relativize(restoredInternal));
+        final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
+        Assertions.assertEquals(externalLinkTarget, restoredExternal);
+        assertFileMetadataMatches(sourceFolder, realRestorePath.resolve("folder"), metadataParser, configuration);
+    }
+
+    @ParameterizedTest
+    @MethodSource("restoreParameterProvider")
+    void testExecuteShouldOnlySimulateRestoreWhenTargetFilesAlreadyExistWithDifferentContentAndDryRunIsUsed(
+            final PublicKey encryptionKey, final PrivateKey decryptionKey,
+            final int threads, final HashAlgorithm hash) throws IOException {
+        //given
+        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+
+        final var sourceFiles = List.of(
+                sourceDir.resolve("A.png"),
+                sourceDir.resolve("B.png"),
+                sourceDir.resolve("C.png"));
+        for (final var sourceFile : sourceFiles) {
+            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+        }
+        final var sourceFolder = sourceDir.resolve("folder");
+        Files.createDirectories(sourceFolder);
+
+        final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
+        final var internalLinkTarget = sourceDir.resolve("A.png");
+        Files.createSymbolicLink(sourceLinkInternal, internalLinkTarget);
+        final var sourceLinkExternal = sourceDir.resolve("external.png");
+        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+        Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
+
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+
+        final var underTest = new RestoreController(
+                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        Files.createDirectories(realRestorePath);
+        final var restoredA = realRestorePath.resolve("A.png");
+        final var restoredB = realRestorePath.resolve("B.png");
+        final var restoredExternal = realRestorePath.resolve("external.png");
+        final var restoredCD = realRestorePath.resolve("C.png/D.png");
+        final var restoredFolder = realRestorePath.resolve("folder");
+        Files.createFile(restoredA);
+        Files.createSymbolicLink(restoredB, restoredA);
+        Files.createSymbolicLink(restoredExternal, restoredA);
+        Files.createDirectories(restoredCD);
+        Files.createSymbolicLink(restoredFolder, restoredA);
+
+        //when
+        underTest.execute(restoreTargets, threads, true);
+
+        //then
+        Assertions.assertTrue(restoredA.toFile().exists());
+        Assertions.assertEquals(0, restoredA.toFile().length());
+        Assertions.assertEquals(restoredA, Files.readSymbolicLink(restoredB));
+        Assertions.assertEquals(restoredA, Files.readSymbolicLink(restoredExternal));
+        Assertions.assertEquals(restoredA, Files.readSymbolicLink(restoredFolder));
+        Assertions.assertTrue(restoredCD.toFile().exists());
+        Assertions.assertTrue(restoredCD.toFile().isDirectory());
+    }
+
+    @ParameterizedTest
+    @MethodSource("restoreParameterProvider")
+    void testExecuteShouldRestoreFilesToDestinationWhenTargetFilesAlreadyExistWithPartiallyMatchingContent(
+            final PublicKey encryptionKey, final PrivateKey decryptionKey,
+            final int threads, final HashAlgorithm hash) throws IOException {
+        //given
+        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+
+        final var sourceFiles = List.of(
+                sourceDir.resolve("A.png"),
+                sourceDir.resolve("B.png"),
+                sourceDir.resolve("C.png"));
+        for (final var sourceFile : sourceFiles) {
+            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+        }
+        final var sourceFolder = sourceDir.resolve("folder");
+        Files.createDirectories(sourceFolder);
+
+        final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
+        final var internalLinkTarget = sourceDir.resolve("A.png");
+        Files.createSymbolicLink(sourceLinkInternal, internalLinkTarget);
+        final var sourceLinkExternal = sourceDir.resolve("external.png");
+        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+        Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
+
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+
+        final var underTest = new RestoreController(
+                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        Files.createDirectories(realRestorePath);
+        Files.copy(sourceDir.resolve("A.png"), realRestorePath.resolve("A.png"));
+        Files.copy(sourceDir.resolve("B.png"), realRestorePath.resolve("B.png"));
+        Files.copy(sourceDir.resolve("C.png"), realRestorePath.resolve("C.png"));
+        Files.createSymbolicLink(realRestorePath.resolve("external.png"), externalLinkTarget);
+
+        //when
+        underTest.execute(restoreTargets, threads, false);
+
+        //then
+        final var metadataParser = new FileMetadataParserLocal();
+        for (final var sourceFile : sourceFiles) {
+            final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
+            assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
+        }
+        final var restoredInternal = Files.readSymbolicLink(realRestorePath.resolve("folder/internal.png")).toAbsolutePath();
+        Assertions.assertEquals(sourceDir.relativize(internalLinkTarget), realRestorePath.relativize(restoredInternal));
+        final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
+        Assertions.assertEquals(externalLinkTarget, restoredExternal);
+        assertFileMetadataMatches(sourceFolder, realRestorePath.resolve("folder"), metadataParser, configuration);
+    }
+
+    @ParameterizedTest
+    @MethodSource("restoreParameterProvider")
+    void testExecuteShouldNotRestoreAnyFilesWhenExecutedWithValidInputUsingDryRun(
+            final PublicKey encryptionKey, final PrivateKey decryptionKey,
+            final int threads, final HashAlgorithm hash) throws IOException {
+        //given
+        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+
+        final var sourceFiles = List.of(
+                sourceDir.resolve("A.png"),
+                sourceDir.resolve("B.png"),
+                sourceDir.resolve("C.png"));
+        for (final var sourceFile : sourceFiles) {
+            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+        }
+        final var sourceFolder = sourceDir.resolve("folder");
+        Files.createDirectories(sourceFolder);
+
+        final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
+        final var internalLinkTarget = sourceDir.resolve("A.png");
+        Files.createSymbolicLink(sourceLinkInternal, internalLinkTarget);
+        final var sourceLinkExternal = sourceDir.resolve("external.png");
+        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+        Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
+
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+
+        final var underTest = new RestoreController(
+                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+
+        //when
+        underTest.execute(restoreTargets, threads, true);
+
+        //then
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        for (final var sourceFile : sourceFiles) {
+            final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
+            Assertions.assertFalse(Files.exists(restoredFile), "File should not exist: " + restoredFile);
+        }
+        final var internal = realRestorePath.resolve("folder/internal.png");
+        final var external = realRestorePath.resolve("external.png");
+        final var folder = realRestorePath.resolve("folder");
+        Stream.of(internal, external, folder).forEach(file -> {
+            Assertions.assertFalse(Files.exists(file), "File should not exist: " + file);
+        });
+    }
+
+    private static void assertFileIsFullyRestored(
+            final Path sourceFile,
+            final Path restoredFile,
+            final FileMetadataParserLocal metadataParser,
+            final BackupJobConfiguration configuration) throws IOException {
+        final var expectedBytes = Files.readAllBytes(sourceFile);
+        Assertions.assertTrue(restoredFile.toFile().exists());
+        final var actualBytes = Files.readAllBytes(restoredFile);
+        Assertions.assertArrayEquals(expectedBytes, actualBytes);
+        assertFileMetadataMatches(sourceFile, restoredFile, metadataParser, configuration);
+    }
+
+    private static void assertFileMetadataMatches(
+            final Path sourceFile,
+            final Path restoredFile,
+            final FileMetadataParserLocal metadataParser,
+            final BackupJobConfiguration configuration) {
+        final var actualMetadata = metadataParser.parse(restoredFile.toFile(), configuration);
+        final var expectedMetadata = metadataParser.parse(sourceFile.toFile(), configuration);
+        Assertions.assertEquals(expectedMetadata.getHidden(), actualMetadata.getHidden());
+        Assertions.assertEquals(expectedMetadata.getOwner(), actualMetadata.getOwner());
+        Assertions.assertEquals(expectedMetadata.getGroup(), actualMetadata.getGroup());
+        Assertions.assertEquals(expectedMetadata.getPosixPermissions(), actualMetadata.getPosixPermissions());
+        Assertions.assertEquals(expectedMetadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
+        Assertions.assertEquals(expectedMetadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
+        Assertions.assertEquals(expectedMetadata.getOriginalSizeBytes(), actualMetadata.getOriginalSizeBytes());
+        Assertions.assertEquals(expectedMetadata.getOriginalHash(), actualMetadata.getOriginalHash());
+    }
+
+    private File getExampleResource() {
+        return new File(Objects.requireNonNull(getClass().getResource("/encrypt/FileBarJ-logo-512_decrypted.png")).getFile());
+    }
+
+    private BackupJobConfiguration getBackupJobConfiguration(
+            final Path source, final Path backup, final PublicKey encryptionKey, final HashAlgorithm hashAlgorithm) {
+        return BackupJobConfiguration.builder()
+                .backupType(BackupType.FULL)
+                .fileNamePrefix("test")
+                .compression(CompressionAlgorithm.BZIP2)
+                .hashAlgorithm(hashAlgorithm)
+                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                .destinationDirectory(backup)
+                .sources(Set.of(BackupSource.builder()
+                        .path(source)
+                        .build()))
+                .chunkSizeMebibyte(1)
+                .encryptionKey(encryptionKey)
+                .build();
+    }
+
+}

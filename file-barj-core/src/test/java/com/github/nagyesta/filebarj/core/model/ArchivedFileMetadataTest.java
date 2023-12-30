@@ -2,7 +2,6 @@ package com.github.nagyesta.filebarj.core.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.nagyesta.filebarj.core.crypto.EncryptionKeyUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -15,18 +14,17 @@ class ArchivedFileMetadataTest {
     @Test
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfFullyPopulatedObject() throws JsonProcessingException {
         //given
-        final ArchivedFileMetadata expected = ArchivedFileMetadata.builder()
+        final var expected = ArchivedFileMetadata.builder()
                 .id(UUID.randomUUID())
-                .originalChecksum("checksum")
-                .archivedChecksum("archived")
+                .originalHash("hash")
+                .archivedHash("archived")
                 .archiveLocation(ArchiveEntryLocator.builder()
                         .backupIncrement(1)
                         .entryName(UUID.randomUUID())
-                        .randomBytes(EncryptionKeyUtil.generateSecureRandomBytes())
                         .build())
                 .files(Set.of(UUID.randomUUID()))
                 .build();
-        final String json = objectMapper.writer().writeValueAsString(expected);
+        final var json = objectMapper.writer().writeValueAsString(expected);
 
         //when
         final ArchivedFileMetadata actual = objectMapper.readerFor(ArchivedFileMetadata.class).readValue(json);
@@ -39,7 +37,7 @@ class ArchivedFileMetadataTest {
     @Test
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfMinimalObject() throws JsonProcessingException {
         //given
-        final ArchivedFileMetadata expected = ArchivedFileMetadata.builder()
+        final var expected = ArchivedFileMetadata.builder()
                 .id(UUID.randomUUID())
                 .archiveLocation(ArchiveEntryLocator.builder()
                         .backupIncrement(1)
@@ -47,7 +45,7 @@ class ArchivedFileMetadataTest {
                         .build())
                 .files(Set.of(UUID.randomUUID()))
                 .build();
-        final String json = objectMapper.writer().writeValueAsString(expected);
+        final var json = objectMapper.writer().writeValueAsString(expected);
 
         //when
         final ArchivedFileMetadata actual = objectMapper.readerFor(ArchivedFileMetadata.class).readValue(json);

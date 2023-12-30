@@ -1,16 +1,19 @@
 package com.github.nagyesta.filebarj.core.config.enums;
 
+import com.github.nagyesta.filebarj.io.stream.internal.OptionalDigestOutputStream;
 import lombok.Getter;
 import lombok.ToString;
 
+import java.io.OutputStream;
+
 /**
- * Defines the supported hash algorithms used for checksum calculations.
+ * Defines the supported hash algorithms used for hash calculations.
  */
 @Getter
 @ToString
 public enum HashAlgorithm {
     /**
-     * No checksum calculation needed.
+     * No hash calculation needed.
      */
     NONE(null),
     /**
@@ -39,5 +42,16 @@ public enum HashAlgorithm {
      */
     HashAlgorithm(final String algorithmName) {
         this.algorithmName = algorithmName;
+    }
+
+    /**
+     * Decorates the provided stream with an optional digest calculator using the algorithm
+     * represented by this.
+     *
+     * @param stream The destination stream.
+     * @return Decorated stream
+     */
+    public OptionalDigestOutputStream decorate(final OutputStream stream) {
+        return new OptionalDigestOutputStream(stream, this.getAlgorithmName());
     }
 }

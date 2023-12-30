@@ -141,7 +141,8 @@ subprojects {
                 }
                 excludes = mutableListOf(
                         "com.github.nagyesta.filebarj.core.backup.FileParseException",
-                        "com.github.nagyesta.filebarj.job.Main")
+                        "com.github.nagyesta.filebarj.job.Main",
+                        "com.github.nagyesta.filebarj.job.Controller")
             }
         }
         doLast {
@@ -152,6 +153,7 @@ subprojects {
     tasks.test {
         outputs.upToDateWhen { false }
         useJUnitPlatform()
+        systemProperties["ci"] = rootProject.hasProperty("ci").toString()
         finalizedBy(tasks.getByName("jacocoTestReport"))
     }
 

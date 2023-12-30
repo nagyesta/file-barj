@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
@@ -9,6 +10,8 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.jackson.Jacksonized;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.UUID;
 
@@ -27,6 +30,8 @@ public class FileMetadata {
     @NonNull
     @JsonProperty("id")
     private final UUID id;
+    @JsonProperty("file_system_key")
+    private final String fileSystemKey;
     /**
      * The absolute path where the file is located.
      */
@@ -34,13 +39,12 @@ public class FileMetadata {
     @JsonProperty("path")
     private final Path absolutePath;
     /**
-     * The checksum of the file content using the configured checksum
-     * algorithm.
+     * The hash of the file content using the configured hash algorithm.
      * <br/>
-     * {@link com.github.nagyesta.filebarj.core.config.BackupJobConfiguration#getChecksumAlgorithm()}
+     * {@link com.github.nagyesta.filebarj.core.config.BackupJobConfiguration#getHashAlgorithm()}
      */
-    @JsonProperty("original_checksum")
-    private final String originalChecksum;
+    @JsonProperty("original_hash")
+    private final String originalHash;
     /**
      * The original file size.
      */
@@ -51,6 +55,16 @@ public class FileMetadata {
      */
     @JsonProperty("last_modified_utc_epoch_seconds")
     private Long lastModifiedUtcEpochSeconds;
+    /**
+     * The last access time of the file using UTC epoch seconds.
+     */
+    @JsonProperty("last_accessed_utc_epoch_seconds")
+    private Long lastAccessedUtcEpochSeconds;
+    /**
+     * The creation time of the file using UTC epoch seconds.
+     */
+    @JsonProperty("created_utc_epoch_seconds")
+    private Long createdUtcEpochSeconds;
     /**
      * The POSIX permissions of the file.
      */
@@ -93,4 +107,30 @@ public class FileMetadata {
      */
     @JsonProperty("error")
     private String error;
+
+    /**
+     * Streams the content of the file. Verifies that the {@link #fileType} is supported by calling
+     * {@link #assertContentSource()}.
+     *
+     * @return input stream with the content of the file
+     * @throws IOException When the stream cannot be created
+     */
+    @JsonIgnore
+    public InputStream streamContent() throws IOException {
+        assertContentSource();
+        return fileType.streamContent(absolutePath);
+    }
+
+    /**
+     * Calls {@link FileType#isContentSource()} to verify that the file type is a content source.
+     *
+     * @throws UnsupportedOperationException When the file type is not a  content source
+     */
+    @JsonIgnore
+    public void assertContentSource() {
+        if (!fileType.isContentSource()) {
+            throw new UnsupportedOperationException(
+                    "The provided file (" + absolutePath + ") is not a content source: " + fileType);
+        }
+    }
 }
