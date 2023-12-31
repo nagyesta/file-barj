@@ -50,7 +50,7 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-            artifactId = name
+            artifactId = project.name
             pom {
                 name.set(project.extra.get("artifactDisplayName").toString())
                 description.set(project.extra.get("artifactDescription").toString())
