@@ -3,7 +3,7 @@
 [![GitHub license](https://img.shields.io/github/license/nagyesta/file-barj?color=informational)](https://raw.githubusercontent.com/nagyesta/file-barj/main/LICENSE)
 [![Java version](https://img.shields.io/badge/Java%20version-17-yellow?logo=java)](https://img.shields.io/badge/Java%20version-17-yellow?logo=java)
 [![latest-release](https://img.shields.io/github/v/tag/nagyesta/file-barj?color=blue&logo=git&label=releases&sort=semver)](https://github.com/nagyesta/file-barj/releases)
-[![Maven Central](https://img.shields.io/maven-central/v/com.github.nagyesta.file-barj/file-barj-app?logo=apache-maven)](https://search.maven.org/search?q=com.github.nagyesta.file-barj)
+[![Maven Central](https://img.shields.io/maven-central/v/com.github.nagyesta.file-barj/file-barj-job?logo=apache-maven)](https://search.maven.org/search?q=com.github.nagyesta.file-barj)
 [![JavaCI](https://img.shields.io/github/actions/workflow/status/nagyesta/file-barj/gradle.yml?logo=github&branch=main)](https://github.com/nagyesta/file-barj/actions/workflows/gradle.yml)
 
 [![code-climate-maintainability](https://img.shields.io/codeclimate/maintainability/nagyesta/file-barj?logo=code%20climate)](https://img.shields.io/codeclimate/maintainability/nagyesta/file-barj?logo=code%20climate)
