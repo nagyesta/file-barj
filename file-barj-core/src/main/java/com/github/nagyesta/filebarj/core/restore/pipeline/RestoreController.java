@@ -59,13 +59,14 @@ public class RestoreController {
         final var manifests = manifestManager.load(backupDirectory, fileNamePrefix, kek, Integer.MAX_VALUE);
         log.info("Merging {} manifests", manifests.size());
         manifest = manifestManager.mergeForRestore(manifests);
+        log.info("Merge completed. Found {} files in backup.", manifest.allFilesReadOnly().size());
         filesFound = new HashMap<>();
         allEntries = new ArrayList<>();
+        final var archivedEntries = manifest.allArchivedEntriesReadOnly();
         manifest.allFilesReadOnly().values().stream()
                 .filter(metadata -> metadata.getStatus() != Change.DELETED)
                 .forEach(metadata -> {
                     if (metadata.getFileType() != FileType.DIRECTORY) {
-                        final var archivedEntries = manifest.allArchivedEntriesReadOnly();
                         final var archived = archivedEntries.get(metadata.getArchiveMetadataId());
                         filesFound.put(metadata, archived);
                     }

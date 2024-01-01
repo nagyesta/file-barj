@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.*;
@@ -173,7 +174,7 @@ public class RestorePipeline {
     }
 
     /**
-     * Removes the existing file and creates a symbolic link to point ot the desired target..
+     * Removes the existing file and creates a symbolic link to point ot the desired target.
      *
      * @param linkTarget   the link target
      * @param symbolicLink the link file we need to create
@@ -225,6 +226,7 @@ public class RestorePipeline {
      * @param target  the target where we need to store the content
      */
     protected void restoreFileContent(@NotNull final InputStream content, @NotNull final Path target) {
+        createParentDirectoryAsFallbackIfMissing(target);
         try (var outputStream = new FileOutputStream(target.toFile());
              var bufferedStream = new BufferedOutputStream(outputStream);
              var countingStream = new CountingOutputStream(bufferedStream)) {
@@ -242,13 +244,24 @@ public class RestorePipeline {
      * @throws IOException if an I/O error occurs
      */
     protected void deleteIfExists(@NotNull final Path currentFile) throws IOException {
-        if (!Files.exists(currentFile)) {
+        if (!Files.exists(currentFile, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
-        if (Files.isDirectory(currentFile)) {
+        if (Files.isDirectory(currentFile, LinkOption.NOFOLLOW_LINKS)) {
             FileUtils.deleteDirectory(currentFile.toFile());
         } else {
             Files.delete(currentFile);
+        }
+    }
+
+    private void createParentDirectoryAsFallbackIfMissing(@NotNull final Path target) {
+        try {
+            if (target.getParent() != null && !Files.exists(target.getParent())) {
+                log.warn("Creating missing parent directory: {}", target.getParent());
+                Files.createDirectories(target.getParent());
+            }
+        } catch (final IOException e) {
+            throw new ArchivalException("Failed to restore content: " + target, e);
         }
     }
 
@@ -443,11 +456,18 @@ public class RestorePipeline {
 
     private boolean shouldCreateNewLink(final Path linkTarget, final Path to) throws IOException {
         var linkNeeded = true;
-        if (Files.exists(to) && Files.isSymbolicLink(to)) {
+        if (Files.exists(to, LinkOption.NOFOLLOW_LINKS) && Files.isSymbolicLink(to)) {
             final var currentTarget = IOUtils.toString(FileType.SYMBOLIC_LINK.streamContent(to), StandardCharsets.UTF_8);
             if (currentTarget.equals(linkTarget.toString())) {
+                log.debug("Found existing link: {} correctly pointing to: {}", to, currentTarget);
                 linkNeeded = false;
+            } else {
+                log.debug("Found existing link: {} pointing to: {} instead of: {}", to, currentTarget, linkTarget);
             }
+        } else if (!Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
+            log.debug("Link does not exist: {}", to);
+        } else if (!Files.isSymbolicLink(to)) {
+            log.debug("File exist, but is not symbolic link: {}", to);
         }
         return linkNeeded;
     }
@@ -466,7 +486,7 @@ public class RestorePipeline {
             archiveEntry.skipMetadata();
             return true;
         } catch (final IOException e) {
-            throw new ArchivalException("Failed to skip content and metadate.", e);
+            throw new ArchivalException("Failed to skip content and metadata.", e);
         }
     }
 
@@ -525,7 +545,7 @@ public class RestorePipeline {
         try {
             archiveEntry.skipMetadata();
         } catch (final IOException e) {
-            throw new ArchivalException("Failed to skip metadate.", e);
+            throw new ArchivalException("Failed to skip metadata.", e);
         }
     }
 

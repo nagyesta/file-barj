@@ -36,7 +36,7 @@ public enum FileType {
      */
     SYMBOLIC_LINK(BasicFileAttributes::isSymbolicLink, true) {
         public InputStream streamContent(final Path path) throws IOException {
-            final var linkedPathAsString = Files.readSymbolicLink(path).toAbsolutePath().toString();
+            final var linkedPathAsString = Files.readSymbolicLink(path).toString();
             return new ByteArrayInputStream(linkedPathAsString.getBytes(StandardCharsets.UTF_8));
         }
     },

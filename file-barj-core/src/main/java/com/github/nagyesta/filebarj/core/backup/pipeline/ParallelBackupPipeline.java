@@ -105,7 +105,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
             archivedFileMetadata.setArchivedHash(boundarySource.getContentBoundary().getArchivedHash());
             if (!Objects.equals(archivedFileMetadata.getOriginalHash(), fileMetadata.getOriginalHash())) {
                 log.warn("The hash changed between delta calculation and archival for: " + fileMetadata.getAbsolutePath()
-                        + "The archive might contain corrupt data for the file.");
+                        + " The archive might contain corrupt data for the file.");
             }
             //commit
             fileMetadata.setArchiveMetadataId(archivedFileMetadata.getId());

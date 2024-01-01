@@ -89,16 +89,17 @@ public class BackupController {
 
     private void listAffectedFilesFromBackupSources() {
         log.info("Listing affected files from {} backup sources", manifest.getConfiguration().getSources().size());
-        this.filesFound = manifest.getConfiguration().getSources().stream()
+        final SortedSet<Path> uniquePaths = manifest.getConfiguration().getSources().stream()
                 .flatMap(source -> {
                     log.info("Listing files from backup source: {}", source);
                     return source.listMatchingFilePaths().stream();
                 })
-                .distinct()
-                .sorted(Comparator.comparing(Path::toAbsolutePath))
-                .parallel()
+                .collect(Collectors.toCollection(TreeSet::new));
+        log.info("Found {} unique files in backup sources. Parsing metadata...", uniquePaths.size());
+        this.filesFound = uniquePaths.parallelStream()
                 .map(path -> metadataParser.parse(path.toFile(), manifest.getConfiguration()))
                 .collect(Collectors.toList());
+        log.info("Parsed metadata of {} files in backup sources.", filesFound.size());
     }
 
     private void calculateBackupDelta() {

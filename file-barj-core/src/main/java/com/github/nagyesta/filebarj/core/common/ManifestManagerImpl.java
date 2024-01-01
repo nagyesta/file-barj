@@ -188,7 +188,7 @@ public class ManifestManagerImpl implements ManifestManager {
                     remainingFiles.entrySet().stream()
                             .filter(entry -> manifest.getVersions().contains(entry.getValue().getBackupIncrement()))
                             .forEach(entry -> {
-                                //use the file metadata form the last manifest as that is the source of truth
+                                //use the file metadata from the last manifest as that is the source of truth
                                 files.computeIfAbsent(manifest.getFileNamePrefix(), prefix -> new HashMap<>())
                                         .put(entry.getKey().getId(), entry.getKey());
                                 //find the archived entry in the earlier manifests to be able to add the file name prefix
