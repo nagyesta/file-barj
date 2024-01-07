@@ -1,7 +1,7 @@
 package com.github.nagyesta.filebarj.core.util;
 
-import lombok.NonNull;
 import lombok.experimental.UtilityClass;
+import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,17 +24,68 @@ public final class TimerUtil {
      * @param totalBackupSizeBytes Total backup size in bytes
      * @return Process summary
      */
-    @NonNull
+    @NotNull
     public static String toProcessSummary(final long durationMillis, final long totalBackupSizeBytes) {
-        final var elapsedSeconds = new BigDecimal(durationMillis).setScale(2, RoundingMode.HALF_UP)
-                .divide(SECONDS, 2, RoundingMode.HALF_UP);
-        final var elapsedMinutes = elapsedSeconds.divide(MINUTES, RoundingMode.HALF_UP);
-        final var remainingSeconds = elapsedSeconds.remainder(MINUTES);
-        if (elapsedMinutes.setScale(0, RoundingMode.DOWN).compareTo(BigDecimal.ZERO) == 0) {
-            return remainingSeconds.toPlainString() + " seconds";
+        final var elapsedSeconds = toElapsedSeconds(durationMillis);
+        final var elapsedMinutes = toElapsedMinutes(elapsedSeconds);
+        final var remainingSeconds = getRemainderSecondsOfIncompleteMinutes(elapsedSeconds);
+        return minutesToString(elapsedMinutes) + secondsToString(remainingSeconds)
+                + rateToString(totalBackupSizeBytes, elapsedMinutes);
+    }
+
+    /**
+     * Calculates and the process summary containing the elapsed time.
+     *
+     * @param durationMillis Duration in milliseconds
+     * @return Process summary
+     */
+    @NotNull
+    public static String toProcessSummary(final long durationMillis) {
+        return toProcessSummary(durationMillis, 0L);
+    }
+
+    @NotNull
+    private static String rateToString(final long totalBackupSizeBytes, final BigDecimal elapsedMinutes) {
+        if (totalBackupSizeBytes == 0 || isZero(elapsedMinutes)) {
+            return "";
         }
         final var rate = new BigDecimal(totalBackupSizeBytes).divide(elapsedMinutes.multiply(BYTE_TO_MEBIBYTE), RoundingMode.HALF_UP);
-        return elapsedMinutes.setScale(0, RoundingMode.DOWN).toPlainString() + " minutes "
-                + remainingSeconds.toPlainString() + " seconds (speed: " + rate.toPlainString() + " MiB/min)";
+        return " (speed: " + rate.toPlainString() + " MiB/min)";
+    }
+
+    @NotNull
+    private static String secondsToString(final BigDecimal remainingSeconds) {
+        return remainingSeconds.toPlainString() + " seconds";
+    }
+
+    @NotNull
+    private static String minutesToString(final BigDecimal elapsedMinutes) {
+        if (isZero(elapsedMinutes)) {
+            return "";
+        }
+        return elapsedMinutes.setScale(0, RoundingMode.DOWN).toPlainString() + " minutes ";
+    }
+
+    private static boolean isZero(final BigDecimal elapsedMinutes) {
+        return elapsedMinutes.setScale(0, RoundingMode.DOWN).compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    @NotNull
+    private static BigDecimal getRemainderSecondsOfIncompleteMinutes(
+            final BigDecimal elapsedSeconds) {
+        return elapsedSeconds.remainder(MINUTES);
+    }
+
+    @NotNull
+    private static BigDecimal toElapsedMinutes(
+            final BigDecimal elapsedSeconds) {
+        return elapsedSeconds.divide(MINUTES, RoundingMode.HALF_UP);
+    }
+
+    @NotNull
+    private static BigDecimal toElapsedSeconds(
+            final long durationMillis) {
+        return new BigDecimal(durationMillis).setScale(2, RoundingMode.HALF_UP)
+                .divide(SECONDS, 2, RoundingMode.HALF_UP);
     }
 }

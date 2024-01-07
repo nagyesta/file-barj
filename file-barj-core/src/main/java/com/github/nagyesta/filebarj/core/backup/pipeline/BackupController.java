@@ -3,6 +3,8 @@ package com.github.nagyesta.filebarj.core.backup.pipeline;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
+import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
+import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetectorFactory;
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
@@ -10,6 +12,7 @@ import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.util.FileTypeStatsUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import lombok.Getter;
 import lombok.NonNull;
@@ -36,11 +39,12 @@ public class BackupController {
     private final ManifestManager manifestManager = new ManifestManagerImpl();
     @Getter
     private final BackupIncrementManifest manifest;
-    private final List<BackupIncrementManifest> previousManifests;
+    private final SortedMap<Integer, BackupIncrementManifest> previousManifests;
     private final Map<Path, FileMetadata> backupFileSet = new TreeMap<>();
     private List<FileMetadata> filesFound;
     private boolean readyToUse = true;
     private final ReentrantLock executionLock = new ReentrantLock();
+    private FileMetadataChangeDetector changeDetector;
 
     /**
      * Creates a new instance and initializes it for the specified job.
@@ -50,18 +54,14 @@ public class BackupController {
      */
     public BackupController(@NonNull final BackupJobConfiguration job, final boolean forceFull) {
         var backupType = job.getBackupType();
-        this.previousManifests = new ArrayList<>();
+        this.previousManifests = new TreeMap<>();
         if (!forceFull && backupType != BackupType.FULL) {
-            //TODO: read previous manifests backwards from latest until the last full backup and
-            // compare their configuration with the current job configuration. If they match, use
-            // the backupType already set and add the previous backups to the list, otherwise
-            // throw away the previous manifests and use FULL
-            //this.previousManifests.addALL();
+            this.previousManifests.putAll(manifestManager.loadPreviousManifestsForBackup(job));
             if (previousManifests.isEmpty()) {
                 backupType = BackupType.FULL;
             }
         }
-        this.manifest = manifestManager.generateManifest(job, backupType, 0);
+        this.manifest = manifestManager.generateManifest(job, backupType, previousManifests.size());
     }
 
     /**
@@ -95,20 +95,49 @@ public class BackupController {
                     return source.listMatchingFilePaths().stream();
                 })
                 .collect(Collectors.toCollection(TreeSet::new));
-        log.info("Found {} unique files in backup sources. Parsing metadata...", uniquePaths.size());
+        log.info("Found {} unique paths in backup sources. Parsing metadata...", uniquePaths.size());
         this.filesFound = uniquePaths.parallelStream()
                 .map(path -> metadataParser.parse(path.toFile(), manifest.getConfiguration()))
                 .collect(Collectors.toList());
-        log.info("Parsed metadata of {} files in backup sources.", filesFound.size());
+        FileTypeStatsUtil.logStatistics(filesFound,
+                (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
     }
 
     private void calculateBackupDelta() {
-        log.info("Calculating backup delta for {} existing files and {} previous backup increments",
-                filesFound.size(), previousManifests.size());
-        //TODO: calculate delta when the backup is incremental and update the statuses of the
-        // files in the file set before inserting them into the map.
-        this.filesFound.forEach(file -> backupFileSet.put(file.getAbsolutePath(), file));
+        log.info("Calculating backup delta using {} previous backup increments", previousManifests.size());
+        final var previousFiles = new TreeMap<String, Map<UUID, FileMetadata>>();
+        previousManifests.forEach((key, value) -> previousFiles.put(value.getFileNamePrefix(), value.getFiles()));
+        if (!previousManifests.isEmpty()) {
+            changeDetector = FileMetadataChangeDetectorFactory.create(manifest.getConfiguration(), previousFiles);
+            this.filesFound.parallelStream().forEach(this::findPreviousVersionToReuseOrAddToBackupFileSet);
+        } else {
+            this.filesFound.forEach(file -> backupFileSet.put(file.getAbsolutePath(), file));
+        }
+        if (!manifest.getFiles().isEmpty()) {
+            FileTypeStatsUtil.logStatistics(manifest.getFiles().values(),
+                    (type, count) -> log.info("Found {} matching {} items in previous backup increments.", count, type));
+        }
         filesFound = null;
+    }
+
+    private void usePreviousVersionInCurrentIncrement(final FileMetadata previousVersion, final FileMetadata file) {
+        final var archiveMetadataId = previousVersion.getArchiveMetadataId();
+        previousManifests.values().stream()
+                .sorted(Comparator.comparing(BackupIncrementManifest::getStartTimeUtcEpochSeconds).reversed())
+                .map(previousManifest -> Optional.of(previousManifest.getArchivedEntries())
+                        .filter(entries -> entries.containsKey(archiveMetadataId))
+                        .map(entries -> entries.get(archiveMetadataId))
+                        .filter(entry -> entry.getFiles().contains(previousVersion.getId()))
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .ifPresent(archiveEntry -> {
+                    final var copied = archiveEntry.copyArchiveDetails();
+                    copied.getFiles().add(file.getId());
+                    manifest.getArchivedEntries().put(copied.getId(), copied);
+                    file.setArchiveMetadataId(copied.getId());
+                });
+        manifest.getFiles().put(file.getId(), file);
     }
 
     private void executeBackup(final int threads) {
@@ -146,10 +175,26 @@ public class BackupController {
             manifest.setIndexFileName(pipeline.getIndexFileWritten().getFileName().toString());
             final var endTimeMillis = System.currentTimeMillis();
             final var durationMillis = endTimeMillis - startTimeMillis;
-            log.info("Archive write completed. Total time: {}", toProcessSummary(durationMillis, totalBackupSize));
+            log.info("Archive write completed. Archive write took: {}", toProcessSummary(durationMillis, totalBackupSize));
         } catch (final Exception e) {
             throw new ArchivalException("Archival process failed.", e);
         }
+    }
+
+    private void findPreviousVersionToReuseOrAddToBackupFileSet(@NotNull final FileMetadata file) {
+        final var previousVersion = changeDetector.findMostRelevantPreviousVersion(file);
+        if (previousVersion != null) {
+            final var change = changeDetector.classifyChange(previousVersion, file);
+            file.setStatus(change);
+            if (previousVersion.getFileType().isContentSource() && change.isLinkPreviousContent()) {
+                usePreviousVersionInCurrentIncrement(previousVersion, file);
+                return;
+            } else if (file.getFileType() == FileType.DIRECTORY) {
+                manifest.getFiles().put(file.getId(), file);
+                return;
+            }
+        }
+        backupFileSet.put(file.getAbsolutePath(), file);
     }
 
     @NotNull

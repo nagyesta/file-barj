@@ -10,6 +10,7 @@ import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetter;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterLocal;
+import com.github.nagyesta.filebarj.core.util.FileTypeStatsUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoInputStreamConfiguration;
 import com.github.nagyesta.filebarj.io.stream.exception.ArchiveIntegrityException;
@@ -39,13 +40,16 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
+import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStream.MEBIBYTE;
+
 /**
  * Performs the actual restore process as instructed by the controller.
  */
 @Slf4j
 public class RestorePipeline {
 
-    private final Map<Integer, BarjCargoArchiveFileInputStreamSource> cache = new ConcurrentHashMap<>();
+    private final Map<String, BarjCargoArchiveFileInputStreamSource> cache = new ConcurrentHashMap<>();
     private final FileMetadataChangeDetector changeDetector;
     private final Path backupDirectory;
     private final RestoreTargets restoreTargets;
@@ -94,25 +98,32 @@ public class RestorePipeline {
     /**
      * Restore the specified files.
      *
-     * @param files   the files
-     * @param threads the number of threads to use (max)
+     * @param contentSources the files with content to restore
+     * @param threads        the number of threads to use (max)
      */
     @SuppressWarnings("checkstyle:TodoComment")
     public void restoreFiles(
-            @NonNull final Map<FileMetadata, ArchivedFileMetadata> files,
-            final int threads) {
-        log.info("Restoring {} entries", files.size());
+            @NonNull final Collection<FileMetadata> contentSources, final int threads) {
+        log.info("Restoring {} items", contentSources.size());
         //TODO: Deletions should not be ignored. We need to perform them in a separate step
-        final var matchingFiles = keepExistingFilesAndLinks(files);
-        final var changeStatus = detectChanges(matchingFiles.keySet());
-        final var filesWithContentChanges = matchingFiles.entrySet().stream()
-                //always keep the symbolic links in scope as their change status may not be accurate
-                //when restoring links referencing other files from the backup scope, and we are
-                //restoring the content to a new location instead of the original source directory
-                .filter(entry -> entry.getKey().getFileType() == FileType.SYMBOLIC_LINK
-                        || changeStatus.get(entry.getKey().getId()).isRestoreContent())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        restoreContent(threads, filesWithContentChanges, matchingFiles.size());
+        final var changeStatus = detectChanges(contentSources);
+        final var pathsToRestore = contentSources.stream()
+                .map(FileMetadata::getAbsolutePath)
+                .collect(Collectors.toSet());
+        final var files = manifest.getFilesOfLastManifest();
+        final var entries = manifest.getArchivedEntriesOfLastManifest();
+        final var restoreScope = new RestoreScope(files, entries, changeStatus, pathsToRestore);
+        final var filesWithContentChanges = restoreScope.getChangedContentSourcesByPath();
+        final var itemsCount = filesWithContentChanges.size();
+        final var contentSize = filesWithContentChanges.values().stream()
+                .mapToLong(FileMetadata::getOriginalSizeBytes)
+                .sum() / MEBIBYTE;
+        log.info("Unpacking {} items with content changes ({} MiB)", itemsCount, contentSize);
+        final var startTimeMillis = System.currentTimeMillis();
+        restoreContent(threads, restoreScope, contentSources.size());
+        final var endTimeMillis = System.currentTimeMillis();
+        final var durationMillis = (endTimeMillis - startTimeMillis);
+        log.info("Content is unpacked. Completed under: {}", toProcessSummary(durationMillis, contentSize));
     }
 
     /**
@@ -124,13 +135,15 @@ public class RestorePipeline {
         log.info("Finalizing permissions for {} files", files.size());
         final var changeStatus = detectChanges(files);
         final var filesWithMetadataChanges = files.stream()
-                .filter(entry -> changeStatus.get(entry.getId()).isRestoreMetadata())
+                .filter(entry -> changeStatus.get(entry.getAbsolutePath()).isRestoreMetadata())
                 .toList();
         filesWithMetadataChanges.stream()
                 .sorted(Comparator.comparing(FileMetadata::getAbsolutePath).reversed())
                 .forEachOrdered(this::setFileProperties);
-        log.info("Finalizing permissions was required for {} entries out of {} files",
-                filesWithMetadataChanges.size(), files.size());
+        final var totalCount = FileTypeStatsUtil.countsByType(files);
+        final var changedCount = FileTypeStatsUtil.countsByType(filesWithMetadataChanges);
+        changedCount.keySet().forEach(type -> log.info("Finalizing permissions for {} of {} {} entries.",
+                changedCount.get(type), totalCount.get(type), type));
     }
 
     /**
@@ -145,13 +158,13 @@ public class RestorePipeline {
                 //cannot verify symbolic links because they can be referencing files from the
                 //restore folder which is not necessarily the same as the original backup folder
                 .filter(entry -> entry.getFileType() != FileType.SYMBOLIC_LINK)
-                .filter(entry -> checkOutcome.get(entry.getId()).isRestoreMetadata())
+                .filter(entry -> checkOutcome.get(entry.getAbsolutePath()).isRestoreMetadata())
                 .forEach(file -> {
-                    final var change = Optional.ofNullable(checkOutcome.get(file.getId()))
+                    final var change = Optional.ofNullable(checkOutcome.get(file.getAbsolutePath()))
                             .map(Change::getRestoreStatusMessage)
                             .orElse("Unknown.");
                     final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
-                    log.warn("Could not fully restore file {} (status is: {})", restorePath, change);
+                    log.warn("Could not fully restore item.\n  Path: {} \n  Status: {}", restorePath, change);
                 });
     }
 
@@ -161,6 +174,10 @@ public class RestorePipeline {
      * @param fileMetadata the file metadata
      */
     protected void setFileProperties(@NotNull final FileMetadata fileMetadata) {
+        final var restorePath = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
+        if (!Files.exists(restorePath, LinkOption.NOFOLLOW_LINKS)) {
+            return;
+        }
         fileMetadataSetter.setMetadata(fileMetadata);
     }
 
@@ -198,6 +215,7 @@ public class RestorePipeline {
         remainingCopies.forEach(file -> {
             final var copy = restoreTargets.mapToRestorePath(file.getAbsolutePath());
             try {
+                deleteIfExists(copy);
                 if (original.getFileSystemKey().equals(file.getFileSystemKey())) {
                     Files.createLink(copy, unpackedFile);
                 } else {
@@ -267,69 +285,84 @@ public class RestorePipeline {
 
     private void restoreContent(
             final int threads,
-            @NotNull final Map<FileMetadata, ArchivedFileMetadata> filesWithContentChanges,
+            @NotNull final RestoreScope restoreScope,
             final int totalFiles) {
-        final var fileIndex = indexFiles(filesWithContentChanges);
+        final var changedContentSourcesByPath = restoreScope.getChangedContentSourcesByPath();
+        final var size = changedContentSourcesByPath.size();
+        final var restoreSize = changedContentSourcesByPath.values().stream()
+                .map(FileMetadata::getOriginalSizeBytes)
+                .mapToLong(Long::longValue)
+                .sum() / MEBIBYTE;
+        log.info("Restoring {} entries with content changes ({} MiB).", size, restoreSize);
         final var linkPaths = new ConcurrentHashMap<FileMetadata, Path>();
-        final var scopePerManifest = new ConcurrentHashMap<String, Map<UUID, FileMetadata>>();
+        final var contentSourcesInScopeByLocator = restoreScope.getContentSourcesInScopeByLocator();
+        final var scopePerManifest = new ConcurrentHashMap<String, Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>();
         manifest.getFileNamePrefixes()
-                .forEach(prefix -> {
-                    final var scope = filesWithContentChanges.keySet();
-                    final var found = calculateRemainingEntries(manifest, prefix, scope);
-                    scopePerManifest.put(prefix, found);
-                });
+                .forEach((prefix, versions) -> contentSourcesInScopeByLocator.entrySet().stream()
+                        //keep only those entries that have the same version as the archive
+                        .filter(entry -> versions.contains(entry.getKey().getBackupIncrement()))
+                        //assign the files from the scope to the archive prefix
+                        .forEach(entry -> scopePerManifest.computeIfAbsent(prefix, k -> new ConcurrentHashMap<>())
+                                .put(entry.getKey(), entry.getValue())));
         log.info("Found {} manifests.", scopePerManifest.size());
-        final var partitions = scopePerManifest.entrySet().stream()
-                .flatMap(entry -> {
-                    final var prefix = entry.getKey();
-                    final var scope = entry.getValue();
-                    final var archiveEntriesInScope = filterArchiveEntriesToFilesInScope(manifest, prefix, scope.values().stream()
-                            .map(FileMetadata::getId)
-                            .collect(Collectors.toSet()));
-                    try {
-                        final var matchingEntriesInOrderOfOccurrence = getStreamSource(manifest, prefix)
-                                .getMatchingEntriesInOrderOfOccurrence(archiveEntriesInScope);
-                        final var chunks = partition(matchingEntriesInOrderOfOccurrence, fileIndex, threads);
-                        return chunks.stream().map(chunk -> new AbstractMap.SimpleEntry<>(prefix, chunk));
-                    } catch (final IOException e) {
-                        throw new ArchivalException("Failed to filter archive entries.", e);
-                    }
-                })
-                .filter(entry -> !entry.getValue().isEmpty())
-                .toList();
+        scopePerManifest.forEach((key, value) -> {
+            final var entryCount = value.size();
+            final var fileCount = value.values().stream().mapToLong(Collection::size).sum();
+            log.info("Manifest {} has {} archive entries ({} files) in scope.", key, entryCount, fileCount);
+        });
+        final var partitions = new ArrayList<Map.Entry<String, Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>>();
+        scopePerManifest.forEach((prefix, scope) -> {
+            final var archiveEntryPathsInScope = scope.keySet().stream()
+                    .map(ArchiveEntryLocator::asEntryPath)
+                    .collect(Collectors.toSet());
+            log.info("Found {} archive entries in scope for prefix: {}.", archiveEntryPathsInScope.size(), prefix);
+            if (archiveEntryPathsInScope.isEmpty()) {
+                return;
+            }
+            try {
+                final var matchingEntriesInOrderOfOccurrence = getStreamSource(manifest, prefix)
+                        .getMatchingEntriesInOrderOfOccurrence(archiveEntryPathsInScope);
+                log.info("Found {} entries in archive with prefix: {}.", matchingEntriesInOrderOfOccurrence.size(), prefix);
+                partition(matchingEntriesInOrderOfOccurrence, scope, threads).stream()
+                        .filter(chunk -> !chunk.isEmpty())
+                        .forEach(chunk -> {
+                            log.info("Adding a partition with {} entries for prefix: {}", chunk.size(), prefix);
+                            partitions.add(new AbstractMap.SimpleEntry<>(prefix, chunk));
+                        });
+            } catch (final IOException e) {
+                throw new ArchivalException("Failed to filter archive entries.", e);
+            }
+        });
         log.info("Formed {} partitions", partitions.size());
         partitions.parallelStream().forEach(entry -> {
             final var prefix = entry.getKey();
             final var scope = entry.getValue();
-            final var resolvedLinks = restoreMatchingEntriesOfManifest(manifest, prefix, scope, fileIndex);
+            final var resolvedLinks = restoreMatchingEntriesOfManifest(manifest, restoreScope, prefix, scope);
             linkPaths.putAll(resolvedLinks);
         });
         createSymbolicLinks(linkPaths);
-        log.info("Restored {} changed entries of {} files", filesWithContentChanges.size(), totalFiles);
+        log.info("Restored {} changed entries of {} files", size, totalFiles);
     }
 
     @NotNull
-    private List<Set<FileMetadata>> partition(
+    private List<Map<ArchiveEntryLocator, SortedSet<FileMetadata>>> partition(
             @NotNull final List<BarjCargoEntityIndex> input,
-            @NotNull final ConcurrentHashMap<UUID, Map<FileMetadata, ArchivedFileMetadata>> fileIndex,
+            @NotNull final Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator,
             final int partitions) {
-        final var chunks = new ArrayList<Set<FileMetadata>>();
+        final var chunks = new ArrayList<Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>();
         final var threshold = (input.size() / partitions) + 1;
-        var collector = new HashSet<FileMetadata>(threshold);
+        var collector = new HashMap<ArchiveEntryLocator, SortedSet<FileMetadata>>(threshold);
         for (final var file : input) {
-            final var locator = ArchiveEntryLocator.fromEntryPath(file.getPath());
-            if (locator == null) {
-                throw new ArchivalException("Failed to parse entry locator for " + file.getPath());
+            if (collector.size() >= threshold) {
+                chunks.add(collector);
+                collector = new HashMap<>(threshold);
             }
-            final var entryName = locator.getEntryName();
-            final var current = fileIndex.get(entryName).keySet();
-            for (final var entry : current) {
-                if (collector.size() >= threshold) {
-                    chunks.add(collector);
-                    collector = new HashSet<>(threshold);
-                }
-                collector.add(entry);
+            final var currentLocator = ArchiveEntryLocator.fromEntryPath(file.getPath());
+            if (currentLocator == null) {
+                throw new ArchivalException("Failed to extract locator from entry path: " + file.getPath());
             }
+            final var fileMetadataList = contentSourcesInScopeByLocator.get(currentLocator);
+            collector.put(currentLocator, fileMetadataList);
         }
         chunks.add(collector);
         return chunks;
@@ -337,16 +370,20 @@ public class RestorePipeline {
 
     private Map<FileMetadata, Path> restoreMatchingEntriesOfManifest(
             @NotNull final RestoreManifest manifest,
+            @NotNull final RestoreScope restoreScope,
             @NotNull final String prefix,
-            @NotNull final Set<FileMetadata> scope,
-            @NotNull final Map<UUID, Map<FileMetadata, ArchivedFileMetadata>> fileIndex) {
-        final var remaining = calculateRemainingEntries(manifest, prefix, scope);
-        log.info("Found {} entries in manifest with versions: {}", remaining.size(), manifest.getVersions());
+            @NotNull final Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator) {
+        final var remaining = contentSourcesInScopeByLocator
+                .keySet().stream()
+                .filter(locator -> manifest.getFileNamePrefixes().get(prefix).contains(locator.getBackupIncrement()))
+                .collect(Collectors.toSet());
+        log.info("Found {} entries in manifest with prefix: {}", remaining.size(), prefix);
         final var linkPaths = new HashMap<FileMetadata, Path>();
         try {
             final var streamSource = getStreamSource(manifest, prefix);
-            final var archiveEntriesInScope = filterArchiveEntriesToFilesInScope(manifest, prefix, remaining.keySet());
-            final var it = streamSource.getIteratorForScope(archiveEntriesInScope);
+            final var it = streamSource.getIteratorForScope(remaining.stream()
+                    .map(ArchiveEntryLocator::asEntryPath)
+                    .collect(Collectors.toSet()));
             while (it.hasNext()) {
                 final var archiveEntry = it.next();
                 if (remaining.isEmpty()) {
@@ -357,22 +394,21 @@ public class RestorePipeline {
                     throw new ArchivalException("Failed to parse entry locator for " + archiveEntry.getPath());
                 }
                 final var key = getDecryptionKey(manifest, locator);
-                if (skipIfNotInScope(fileIndex, archiveEntry)) {
+                if (skipIfNotInScope(contentSourcesInScopeByLocator.keySet(), archiveEntry)) {
                     continue;
                 }
-                final var mappingsOfArchiveEntry = fileIndex.get(locator.getEntryName());
-                final var entries = mappingsOfArchiveEntry.keySet().stream().toList();
-                final var type = getSingleEntryType(mappingsOfArchiveEntry, locator.getEntryName());
+                final var entries = contentSourcesInScopeByLocator.get(locator);
+                final var type = getSingleEntryType(entries, locator.getEntryName());
                 if (Objects.requireNonNull(type) == FileType.REGULAR_FILE) {
-                    restoreFileContent(archiveEntry, entries.get(0), key);
-                    copyRestoredFileToRemainingLocations(entries.get(0), entries.stream().skip(1).toList());
-                    entries.forEach(metadata -> remaining.remove(metadata.getId()));
+                    restoreFileContent(archiveEntry, entries.first(), key);
+                    copyRestoredFileToRemainingLocations(entries.first(), entries.stream().skip(1).toList());
+                    remaining.remove(locator);
                     skipMetadata(archiveEntry);
                 } else if (type == FileType.SYMBOLIC_LINK) {
-                    final var targetPath = resolveLinkTarget(archiveEntry, entries.get(0), key, manifest);
+                    final var targetPath = resolveLinkTarget(archiveEntry, entries.first(), key, restoreScope);
                     entries.forEach(metadata -> {
                         linkPaths.put(metadata, targetPath);
-                        remaining.remove(metadata.getId());
+                        remaining.remove(locator);
                     });
                     skipMetadata(archiveEntry);
                 }
@@ -385,33 +421,10 @@ public class RestorePipeline {
     }
 
     @NotNull
-    private static Set<String> filterArchiveEntriesToFilesInScope(
-            @NotNull final RestoreManifest manifest,
-            @NotNull final String prefix,
-            @NotNull final Set<UUID> remainingFileMetadataIds) {
-        return manifest.getArchivedEntries().get(prefix).values().stream()
-                .filter(archivedFileMetadata -> archivedFileMetadata.getFiles().stream()
-                        .anyMatch(remainingFileMetadataIds::contains))
-                .map(ArchivedFileMetadata::getArchiveLocation)
-                .filter(location -> manifest.getVersions().contains(location.getBackupIncrement()))
-                .map(ArchiveEntryLocator::asEntryPath)
-                .collect(Collectors.toSet());
-    }
-
-    @NotNull
-    private Map<FileMetadata, ArchivedFileMetadata> keepExistingFilesAndLinks(
-            @NotNull final Map<FileMetadata, ArchivedFileMetadata> files) {
-        return files.entrySet().stream()
-                .filter(entry -> entry.getKey().getStatus() != Change.DELETED)
-                .filter(entry -> entry.getKey().getFileType().isContentSource())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    @NotNull
-    private Map<UUID, Change> detectChanges(
+    private Map<Path, Change> detectChanges(
             @NotNull final Collection<FileMetadata> files) {
         final var parser = new FileMetadataParserLocal();
-        final Map<UUID, Change> changeStatuses = new HashMap<>();
+        final Map<Path, Change> changeStatuses = new HashMap<>();
         files.forEach(file -> {
             final var previous = changeDetector.findPreviousVersionByAbsolutePath(file.getAbsolutePath());
             if (previous == null) {
@@ -420,24 +433,12 @@ public class RestorePipeline {
             final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
             final var current = parser.parse(restorePath.toFile(), manifest.getConfiguration());
             final var change = changeDetector.classifyChange(previous, current);
-            changeStatuses.put(file.getId(), change);
+            changeStatuses.put(file.getAbsolutePath(), change);
         });
+        final var stats = new TreeMap<>(changeStatuses.values().stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting())));
+        log.info("Detected changes: {}", stats);
         return changeStatuses;
-    }
-
-    @NotNull
-    private ConcurrentHashMap<UUID, Map<FileMetadata, ArchivedFileMetadata>> indexFiles(
-            final Map<FileMetadata, ArchivedFileMetadata> matchingFiles) {
-        final var fileIndex = new ConcurrentHashMap<UUID, Map<FileMetadata, ArchivedFileMetadata>>();
-        matchingFiles.entrySet().parallelStream()
-                .forEach(entry -> {
-                    final var file = entry.getKey();
-                    final var archive = entry.getValue();
-                    final var entryName = archive.getArchiveLocation().getEntryName();
-                    final var map = fileIndex.computeIfAbsent(entryName, k -> new ConcurrentHashMap<>());
-                    map.put(file, archive);
-                });
-        return fileIndex;
     }
 
     private void createSymbolicLinks(@NotNull final ConcurrentHashMap<FileMetadata, Path> linkPaths) {
@@ -473,12 +474,12 @@ public class RestorePipeline {
     }
 
     private boolean skipIfNotInScope(
-            @NotNull final Map<UUID, Map<FileMetadata, ArchivedFileMetadata>> fileIndex,
+            @NotNull final Set<ArchiveEntryLocator> archiveEntryPathsInScope,
             @NotNull final SequentialBarjCargoArchiveEntry archiveEntry) {
         final var locator = ArchiveEntryLocator.fromEntryPath(archiveEntry.getPath());
         if (locator == null) {
             return true;
-        } else if (fileIndex.containsKey(locator.getEntryName())) {
+        } else if (archiveEntryPathsInScope.contains(locator)) {
             return false;
         }
         try {
@@ -491,16 +492,15 @@ public class RestorePipeline {
     }
 
     private FileType getSingleEntryType(
-            @NotNull final Map<FileMetadata, ArchivedFileMetadata> mappingsOfArchiveEntry,
+            @NotNull final Collection<FileMetadata> files,
             @NotNull final UUID archiveEntryId) {
-        final var types = mappingsOfArchiveEntry.keySet().stream()
+        final var types = files.stream()
                 .map(FileMetadata::getFileType)
-                .distinct()
-                .toList();
+                .collect(Collectors.toCollection(TreeSet::new));
         if (types.size() > 1) {
             throw new ArchiveIntegrityException("Multiple types found for entry: " + archiveEntryId);
         }
-        return types.get(0);
+        return types.first();
     }
 
     private void restoreFileContent(
@@ -522,13 +522,11 @@ public class RestorePipeline {
             @NotNull final SequentialBarjCargoArchiveEntry archiveEntry,
             @NotNull final FileMetadata fileMetadata,
             @Nullable final SecretKey key,
-            @NotNull final RestoreManifest manifest) {
+            @NotNull final RestoreScope restoreScope) {
         final var to = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         try {
             final var target = archiveEntry.getLinkTarget(key);
-            final var pointsToAFileCoveredByTheBackup = manifest.allFilesReadOnly().values().stream()
-                    .filter(file -> file.getStatus() != Change.DELETED)
-                    .map(FileMetadata::getAbsolutePath)
+            final var pointsToAFileCoveredByTheBackup = restoreScope.getAllKnownPathsInBackup().stream()
                     .anyMatch(path -> path.toString().equals(target));
             final var targetPath = Path.of(target);
             return restoreTargets.restoreTargets().stream()
@@ -547,16 +545,6 @@ public class RestorePipeline {
         } catch (final IOException e) {
             throw new ArchivalException("Failed to skip metadata.", e);
         }
-    }
-
-    @NotNull
-    private Map<UUID, FileMetadata> calculateRemainingEntries(
-            @NotNull final RestoreManifest manifest,
-            @NotNull final String fileNamePrefix,
-            @NotNull final Set<FileMetadata> files) {
-        return new ConcurrentHashMap<>(files.stream()
-                .filter(fileMetadata -> manifest.getFiles().get(fileNamePrefix).containsKey(fileMetadata.getId()))
-                .collect(Collectors.toMap(FileMetadata::getId, Function.identity())));
     }
 
     private void restoreDirectory(@NotNull final FileMetadata fileMetadata) {
@@ -594,14 +582,13 @@ public class RestorePipeline {
     private BarjCargoArchiveFileInputStreamSource getStreamSource(
             @NotNull final RestoreManifest manifest,
             @NotNull final String fileNamePrefix) throws IOException {
-        final var key = manifest.getVersions().first();
-        if (cache.containsKey(key)) {
-            return cache.get(key);
+        if (cache.containsKey(fileNamePrefix)) {
+            return cache.get(fileNamePrefix);
         }
         streamLock.lock();
         try {
-            if (cache.containsKey(key)) {
-                return cache.get(key);
+            if (cache.containsKey(fileNamePrefix)) {
+                return cache.get(fileNamePrefix);
             }
             final var builder = BarjCargoInputStreamConfiguration.builder()
                     .folder(backupDirectory)
@@ -609,10 +596,10 @@ public class RestorePipeline {
                     .hashAlgorithm(manifest.getConfiguration().getHashAlgorithm().getAlgorithmName())
                     .compressionFunction(manifest.getConfiguration().getCompression()::decorateInputStream);
             Optional.ofNullable(kek)
-                    .map(manifest::dataIndexDecryptionKey)
+                    .map(key -> manifest.dataIndexDecryptionKey(fileNamePrefix, key))
                     .ifPresent(builder::indexDecryptionKey);
             final var streamSource = new BarjCargoArchiveFileInputStreamSource(builder.build());
-            manifest.getVersions().forEach(v -> cache.put(v, streamSource));
+            cache.put(fileNamePrefix, streamSource);
             return streamSource;
         } finally {
             streamLock.unlock();

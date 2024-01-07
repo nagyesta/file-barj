@@ -148,7 +148,7 @@ class BackupIncrementManifestTest {
 
         //when
         final var actual = underTest.dataDecryptionKey(keyPair.getPrivate(), new ArchiveEntryLocator(0, UUIDS.get(0)));
-        final var actualIndex = underTest.dataIndexDecryptionKey(keyPair.getPrivate());
+        final var actualIndex = underTest.dataIndexDecryptionKey(keyPair.getPrivate(), underTest.getVersions().first());
 
         //then
         Assertions.assertEquals(secretKey, actual);
@@ -170,7 +170,7 @@ class BackupIncrementManifestTest {
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> underTest.dataDecryptionKey(null, new ArchiveEntryLocator(0, UUIDS.get(0))));
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.dataIndexDecryptionKey(null));
+                () -> underTest.dataIndexDecryptionKey(null, 0));
 
         //then + exception
     }

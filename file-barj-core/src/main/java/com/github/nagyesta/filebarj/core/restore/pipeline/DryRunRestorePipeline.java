@@ -44,7 +44,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
 
     @Override
     protected void setFileProperties(@NotNull final FileMetadata fileMetadata) {
-        log.info("> Set file properties for {}", fileMetadata.getAbsolutePath());
+        log.info("> Set file properties for {}", getRestoreTargets().mapToRestorePath(fileMetadata.getAbsolutePath()));
     }
 
     @Override
@@ -61,6 +61,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
         final var unpackedPath = getRestoreTargets().mapToRestorePath(original.getAbsolutePath());
         remainingCopies.forEach(file -> {
             final var copy = getRestoreTargets().mapToRestorePath(file.getAbsolutePath());
+            deleteIfExists(copy);
             if (file.getFileSystemKey().equals(original.getFileSystemKey())) {
                 log.info("+ Create hard link {} -> {}", copy, unpackedPath);
             } else {
@@ -89,7 +90,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
     }
 
     @Override
-    protected void deleteIfExists(@NotNull final Path currentFile) throws IOException {
+    protected void deleteIfExists(@NotNull final Path currentFile) {
         if (Files.exists(currentFile)) {
             if (Files.isDirectory(currentFile)) {
                 log.info("- Delete directory {}", currentFile);

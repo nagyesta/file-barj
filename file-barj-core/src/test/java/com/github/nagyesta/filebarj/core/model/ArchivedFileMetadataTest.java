@@ -54,4 +54,29 @@ class ArchivedFileMetadataTest {
         Assertions.assertEquals(expected, actual);
         Assertions.assertEquals(expected.hashCode(), actual.hashCode());
     }
+
+    @Test
+    void testCopyArchiveDetailsShouldCopyEveryValueExceptFilesWhenCalled() {
+        //given
+        final var underTest = ArchivedFileMetadata.builder()
+                .id(UUID.randomUUID())
+                .originalHash("hash")
+                .archivedHash("archived")
+                .archiveLocation(ArchiveEntryLocator.builder()
+                        .backupIncrement(1)
+                        .entryName(UUID.randomUUID())
+                        .build())
+                .files(Set.of(UUID.randomUUID()))
+                .build();
+
+        //when
+        final var actual = underTest.copyArchiveDetails();
+
+        //then
+        Assertions.assertNotEquals(underTest.getId(), actual.getId());
+        Assertions.assertEquals(underTest.getOriginalHash(), actual.getOriginalHash());
+        Assertions.assertEquals(underTest.getArchivedHash(), actual.getArchivedHash());
+        Assertions.assertEquals(underTest.getArchiveLocation(), actual.getArchiveLocation());
+        Assertions.assertEquals(Set.of(), actual.getFiles());
+    }
 }

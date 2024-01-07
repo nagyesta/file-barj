@@ -20,6 +20,10 @@ import java.util.function.Predicate;
  */
 public enum FileType {
     /**
+     * Directory.
+     */
+    DIRECTORY(BasicFileAttributes::isDirectory, false),
+    /**
      * Regular file.
      */
     REGULAR_FILE(BasicFileAttributes::isRegularFile, true) {
@@ -27,10 +31,6 @@ public enum FileType {
             return Files.newInputStream(path, StandardOpenOption.READ);
         }
     },
-    /**
-     * Directory.
-     */
-    DIRECTORY(BasicFileAttributes::isDirectory, false),
     /**
      * Symbolic link.
      */

@@ -76,4 +76,11 @@ public interface ManifestManager {
             @NonNull BackupIncrementManifest manifest,
             @NonNull Class<? extends ValidationRules> forAction);
 
+    /**
+     * Loads the previously created manifests of the provided job from the .history folder.
+     *
+     * @param job the job configuration
+     * @return the manifests which can act as previous increments of the provided job
+     */
+    SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(BackupJobConfiguration job);
 }
