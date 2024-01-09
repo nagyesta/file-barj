@@ -39,6 +39,7 @@ public class BackupJobConfiguration {
      * after each configuration change.
      */
     @NonNull
+    @EqualsAndHashCode.Exclude
     @JsonProperty("backup_type")
     private final BackupType backupType;
     /**

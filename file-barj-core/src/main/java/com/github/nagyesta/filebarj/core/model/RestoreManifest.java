@@ -1,11 +1,15 @@
 package com.github.nagyesta.filebarj.core.model;
 
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
+import com.github.nagyesta.filebarj.core.model.enums.Change;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
+import org.jetbrains.annotations.NotNull;
 
+import javax.crypto.SecretKey;
+import java.security.PrivateKey;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,10 +28,11 @@ public class RestoreManifest extends EncryptionKeyStore {
      */
     private final long lastStartTimeUtcEpochSeconds;
     /**
-     * The file name prefix used by the backup archives.
+     * The file name prefix used by the backup archives as keys, mapped to the versions belonging to
+     * that prefix.
      */
     @NonNull
-    private final SortedSet<String> fileNamePrefixes;
+    private final SortedMap<String, SortedSet<Integer>> fileNamePrefixes;
     /**
      * The snapshot of the backup configuration at the time of backup.
      */
@@ -44,11 +49,23 @@ public class RestoreManifest extends EncryptionKeyStore {
     @NonNull
     private final Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries;
 
+    /**
+     * Returns the data decryption key for the given file name prefix using the private key for
+     * decryption.
+     *
+     * @param fileNamePrefix the prefix
+     * @param kekPrivateKey  the private key
+     * @return the data decryption key
+     */
+    public @NotNull SecretKey dataIndexDecryptionKey(@NotNull final String fileNamePrefix, @NotNull final PrivateKey kekPrivateKey) {
+        return dataIndexDecryptionKey(kekPrivateKey, fileNamePrefixes.get(fileNamePrefix).first());
+    }
+
     protected RestoreManifest(final RestoreManifestBuilder<?, ?> builder) {
         super(builder);
         this.maximumAppVersion = builder.maximumAppVersion;
         this.lastStartTimeUtcEpochSeconds = builder.lastStartTimeUtcEpochSeconds;
-        this.fileNamePrefixes = Collections.unmodifiableSortedSet(builder.fileNamePrefixes);
+        this.fileNamePrefixes = Collections.unmodifiableSortedMap(builder.fileNamePrefixes);
         this.configuration = builder.configuration;
         this.files = builder.files.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, entry -> Collections.unmodifiableMap(entry.getValue())));
@@ -61,22 +78,28 @@ public class RestoreManifest extends EncryptionKeyStore {
      *
      * @return the map
      */
-    public Map<UUID, FileMetadata> allFilesReadOnly() {
-        return files.values().stream()
-                .map(Map::entrySet)
-                .flatMap(Set::stream)
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+    public Map<UUID, FileMetadata> getFilesOfLastManifest() {
+        return files.get(fileNamePrefixes.lastKey());
     }
 
     /**
-     * The map of all archived entries in the manifest. This is a read-only view of the map.
+     * The map of all files in the manifest. This is a read-only view of the files map.
      *
      * @return the map
      */
-    public Map<UUID, ArchivedFileMetadata> allArchivedEntriesReadOnly() {
-        return archivedEntries.values().stream()
-                .map(Map::entrySet)
-                .flatMap(Set::stream)
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+    public List<FileMetadata> getExistingContentSourceFilesOfLastManifest() {
+        return getFilesOfLastManifest().values().stream()
+                .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
+                .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
+                .toList();
+    }
+
+    /**
+     * The map of all archived entries from the latest manifest.
+     *
+     * @return the map
+     */
+    public Map<UUID, ArchivedFileMetadata> getArchivedEntriesOfLastManifest() {
+        return archivedEntries.get(fileNamePrefixes.lastKey());
     }
 }

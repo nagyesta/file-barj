@@ -33,6 +33,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 class RestoreControllerIntegrationTest extends TempFileAwareTest {
+    public static final int A_SECOND = 1000;
 
     @SuppressWarnings({"MagicNumber", "checkstyle:MagicNumber"})
     public static Stream<Arguments> restoreParameterProvider() {
@@ -52,7 +53,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(source, backup, null, HashAlgorithm.SHA256);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, source, backup, null, HashAlgorithm.SHA256);
 
         //when
         Assertions.assertThrows(ArchivalException.class, () -> new RestoreController(
@@ -67,7 +68,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(source, backup, null, HashAlgorithm.SHA256);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, source, backup, null, HashAlgorithm.SHA256);
         FileUtils.copyFile(getExampleResource(), source.resolve("A.png").toFile());
         final var backupController = new BackupController(configuration, true);
         backupController.execute(1);
@@ -86,7 +87,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var restore = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(source, backup, null, HashAlgorithm.SHA256);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, source, backup, null, HashAlgorithm.SHA256);
         FileUtils.copyFile(getExampleResource(), source.resolve("A.png").toFile());
         final var backupController = new BackupController(configuration, true);
         backupController.execute(1);
@@ -112,7 +113,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var movedBackupDir = testDataRoot.resolve("moved-backup-dir" + UUID.randomUUID());
         final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, sourceDir, backupDir, encryptionKey, hash);
 
         final var sourceFiles = List.of(
                 sourceDir.resolve("A.png"),
@@ -166,7 +167,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, sourceDir, backupDir, encryptionKey, hash);
 
         final var sourceFiles = List.of(
                 sourceDir.resolve("A.png"),
@@ -226,7 +227,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, sourceDir, backupDir, encryptionKey, hash);
 
         final var sourceFiles = List.of(
                 sourceDir.resolve("A.png"),
@@ -286,7 +287,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, sourceDir, backupDir, encryptionKey, hash);
 
         final var sourceFiles = List.of(
                 sourceDir.resolve("A.png"),
@@ -336,6 +337,91 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
+    void testExecuteShouldRestoreFilesToDestinationWhenExecutedWithIncrementalBackup(
+            final PublicKey encryptionKey, final PrivateKey decryptionKey,
+            final int threads, final HashAlgorithm hash) throws IOException, InterruptedException {
+        //given
+        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(BackupType.INCREMENTAL, sourceDir, backupDir, encryptionKey, hash);
+
+        final var originalFiles = List.of(
+                sourceDir.resolve("unchanged-A.png"),
+                sourceDir.resolve("unchanged-B.png"),
+                sourceDir.resolve("unchanged-C.png"));
+        for (final var sourceFile : originalFiles) {
+            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+        }
+        final var deleted = sourceDir.resolve("deleted.txt");
+        Files.createFile(deleted);
+        Files.writeString(deleted, "deleted content");
+        final var changed = sourceDir.resolve("changed.txt");
+        Files.createFile(changed);
+        Files.writeString(changed, "original content");
+        final var sourceFolder = sourceDir.resolve("folder");
+        Files.createDirectories(sourceFolder);
+
+        final var changedLinkInternal = sourceDir.resolve("folder/changed.png");
+        final var internalLinkTarget = sourceDir.resolve("unchanged-A.png");
+        Files.createSymbolicLink(changedLinkInternal, internalLinkTarget);
+        final var deletedLinkInternal = sourceDir.resolve("folder/deleted.png");
+        Files.createSymbolicLink(deletedLinkInternal, internalLinkTarget);
+        final var originalLinkInternal = sourceDir.resolve("folder/internal.png");
+        Files.createSymbolicLink(originalLinkInternal, internalLinkTarget);
+        final var originalLinkExternal = sourceDir.resolve("external.png");
+        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+        Files.createSymbolicLink(originalLinkExternal, externalLinkTarget);
+
+        new BackupController(configuration, true).execute(1);
+
+        FileUtils.delete(deleted.toFile());
+        final var expectedChangedContent = "changed content";
+        Files.writeString(changed, expectedChangedContent);
+        final var added = sourceDir.resolve("added.png");
+        FileUtils.copyFile(getExampleResource(), added.toFile());
+
+        final var alternativeLinkTarget = sourceDir.resolve("unchanged-B.png");
+        Files.delete(changedLinkInternal);
+        Files.createSymbolicLink(changedLinkInternal, alternativeLinkTarget);
+        Files.delete(deletedLinkInternal);
+        final var addedLinkExternal = sourceDir.resolve("folder/added-external.png");
+        Files.createSymbolicLink(addedLinkExternal, externalLinkTarget);
+
+        Thread.sleep(A_SECOND);
+        new BackupController(configuration, false).execute(1);
+
+        final var underTest = new RestoreController(
+                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+
+        //when
+        underTest.execute(restoreTargets, threads, false);
+
+        //then
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var metadataParser = new FileMetadataParserLocal();
+        for (final var sourceFile : originalFiles) {
+            final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
+            assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
+        }
+        final var restoredAddedFile = realRestorePath.resolve(added.getFileName().toString());
+        assertFileIsFullyRestored(added, restoredAddedFile, metadataParser, configuration);
+        final var restoredChangedFile = realRestorePath.resolve(changed.getFileName().toString());
+        assertFileIsFullyRestored(changed, restoredChangedFile, metadataParser, configuration);
+        final var restoredInternal = Files.readSymbolicLink(realRestorePath.resolve("folder/internal.png")).toAbsolutePath();
+        Assertions.assertEquals(sourceDir.relativize(internalLinkTarget), realRestorePath.relativize(restoredInternal));
+        final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
+        Assertions.assertEquals(externalLinkTarget, restoredExternal);
+        final var restoredAddedLink = Files.readSymbolicLink(realRestorePath.resolve("folder/added-external.png")).toAbsolutePath();
+        Assertions.assertEquals(restoredAddedLink, restoredExternal);
+        Assertions.assertTrue(Files.notExists(realRestorePath.resolve("deleted.txt")));
+        Assertions.assertTrue(Files.notExists(realRestorePath.resolve("folder/deleted.png")));
+        assertFileMetadataMatches(sourceFolder, realRestorePath.resolve("folder"), metadataParser, configuration);
+    }
+
+    @ParameterizedTest
+    @MethodSource("restoreParameterProvider")
     void testExecuteShouldNotRestoreAnyFilesWhenExecutedWithValidInputUsingDryRun(
             final PublicKey encryptionKey, final PrivateKey decryptionKey,
             final int threads, final HashAlgorithm hash) throws IOException {
@@ -343,7 +429,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(sourceDir, backupDir, encryptionKey, hash);
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, sourceDir, backupDir, encryptionKey, hash);
 
         final var sourceFiles = List.of(
                 sourceDir.resolve("A.png"),
@@ -420,9 +506,9 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     }
 
     private BackupJobConfiguration getBackupJobConfiguration(
-            final Path source, final Path backup, final PublicKey encryptionKey, final HashAlgorithm hashAlgorithm) {
+            final BackupType type, final Path source, final Path backup, final PublicKey encryptionKey, final HashAlgorithm hashAlgorithm) {
         return BackupJobConfiguration.builder()
-                .backupType(BackupType.FULL)
+                .backupType(type)
                 .fileNamePrefix("test")
                 .compression(CompressionAlgorithm.BZIP2)
                 .hashAlgorithm(hashAlgorithm)

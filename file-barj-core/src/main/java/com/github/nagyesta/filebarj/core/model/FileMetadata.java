@@ -23,7 +23,7 @@ import java.util.UUID;
 @Builder
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class FileMetadata {
+public class FileMetadata implements Comparable<FileMetadata> {
     /**
      * The unique Id of the file.
      */
@@ -132,5 +132,10 @@ public class FileMetadata {
             throw new UnsupportedOperationException(
                     "The provided file (" + absolutePath + ") is not a content source: " + fileType);
         }
+    }
+
+    @Override
+    public int compareTo(@NonNull final FileMetadata o) {
+        return getAbsolutePath().compareTo(o.getAbsolutePath());
     }
 }

@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -266,7 +264,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         final var scopeMap = scope.stream()
                 .filter(f -> f.getArchiveMetadataId() != null)
-                .collect(Collectors.toMap(Function.identity(), f -> manifest.getArchivedEntries().get(f.getArchiveMetadataId())));
+                .toList();
 
         //when
         underTest.restoreDirectories(scope);

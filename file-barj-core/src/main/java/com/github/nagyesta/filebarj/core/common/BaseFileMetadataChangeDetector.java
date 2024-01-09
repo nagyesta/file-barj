@@ -12,6 +12,8 @@ import org.jetbrains.annotations.Nullable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * The base implementation of the {@link FileMetadataChangeDetector}.
@@ -66,16 +68,16 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     @Override
     public FileMetadata findMostRelevantPreviousVersion(
             @NonNull final FileMetadata currentMetadata) {
-        //TODO: will be needed later for the incremental backup
         final var increments = filesFromManifests.keySet().stream().sorted(Comparator.reverseOrder()).toList();
         for (final var increment : increments) {
             final var index = contentIndex.get(increment);
             final var key = getPrimaryContentCriteria(currentMetadata);
             if (index.containsKey(key)) {
-                for (final var metadata : index.get(key)) {
-                    if (!hasContentChanged(metadata, currentMetadata)) {
-                        return metadata;
-                    }
+                final var byPath = new TreeMap<>(index.get(key).stream()
+                        .filter(metadata -> !hasContentChanged(metadata, currentMetadata))
+                        .collect(Collectors.toMap(FileMetadata::getAbsolutePath, Function.identity())));
+                if (!byPath.isEmpty()) {
+                    return byPath.getOrDefault(currentMetadata.getAbsolutePath(), byPath.firstEntry().getValue());
                 }
             }
         }
@@ -131,8 +133,13 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
                     .computeIfAbsent(getPrimaryContentCriteria(metadata), k -> new ArrayList<>())
                     .add(metadata));
         });
-        filesFromManifests.get(filesFromManifests.lastKey()).entrySet().stream()
-                .filter(entry -> entry.getValue().getStatus() != Change.DELETED)
-                .forEach(entry -> nameIndexMap.put(entry.getValue().getAbsolutePath().toString(), entry.getValue()));
+        //populate files in reverse manifest order to ensure each file has the latest metadata saved
+        filesFromManifests.keySet().stream()
+                .sorted(Comparator.reverseOrder())
+                .map(filesFromManifests::get)
+                .forEachOrdered(files -> files.entrySet().stream()
+                        .filter(entry -> entry.getValue().getStatus() != Change.DELETED)
+                        //put the file only if it is not already in the index
+                        .forEach(entry -> nameIndexMap.putIfAbsent(entry.getValue().getAbsolutePath().toString(), entry.getValue())));
     }
 }

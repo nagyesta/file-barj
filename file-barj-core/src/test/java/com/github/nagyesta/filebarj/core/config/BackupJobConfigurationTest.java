@@ -38,6 +38,7 @@ class BackupJobConfigurationTest extends TempFileAwareTest {
 
         //then
         Assertions.assertEquals(expected, actual);
+        Assertions.assertEquals(expected.getBackupType(), actual.getBackupType());
         Assertions.assertEquals(expected.hashCode(), actual.hashCode());
         Assertions.assertEquals(expected.getChunkSizeMebibyte(), actual.getChunkSizeMebibyte());
         Assertions.assertIterableEquals(expected.getSources(), actual.getSources());
@@ -63,6 +64,7 @@ class BackupJobConfigurationTest extends TempFileAwareTest {
 
         //then
         Assertions.assertEquals(expected, actual);
+        Assertions.assertEquals(expected.getBackupType(), actual.getBackupType());
         Assertions.assertEquals(expected.hashCode(), actual.hashCode());
         Assertions.assertEquals(expected.getChunkSizeMebibyte(), actual.getChunkSizeMebibyte());
         Assertions.assertIterableEquals(expected.getSources(), actual.getSources());

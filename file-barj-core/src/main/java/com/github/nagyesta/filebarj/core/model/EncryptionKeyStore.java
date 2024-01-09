@@ -44,13 +44,13 @@ public class EncryptionKeyStore {
     @NonNull
     @JsonProperty("backup_versions")
     private SortedSet<Integer> versions;
-        /**
+    /**
      * The byte arrays containing the data encryption keys (DEK) encrypted with the key encryption
      * key (KEK).
      */
     @JsonProperty("encryption_keys")
     private Map<Integer, Map<Integer, String>> encryptionKeys;
-        /**
+    /**
      * The unencrypted data encryption keys (DEK) which were just generated. This property is not
      * serialized.
      */
@@ -65,14 +65,14 @@ public class EncryptionKeyStore {
      * and returns the key which was used for data index encryption.
      *
      * @param kekPrivateKey The private key we need to use for decryption.
+     * @param version       The version of the backup
      * @return The decrypted DEK
      */
     @NotNull
     @JsonIgnore
-    @SuppressWarnings("checkstyle:TodoComment")
     public SecretKey dataIndexDecryptionKey(
-            @NonNull final PrivateKey kekPrivateKey) {
-        return decryptionKeyByIndex(kekPrivateKey, versions.first(), 0);
+            @NonNull final PrivateKey kekPrivateKey, final int version) {
+        return decryptionKeyByIndex(kekPrivateKey, version, 0);
     }
 
     /**

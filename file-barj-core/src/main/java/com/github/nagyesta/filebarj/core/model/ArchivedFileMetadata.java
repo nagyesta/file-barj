@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
@@ -7,6 +8,7 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.jackson.Jacksonized;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,4 +49,21 @@ public class ArchivedFileMetadata {
     @NonNull
     @JsonProperty("files")
     private Set<UUID> files;
+
+    /**
+     * Copies the metadata except the Id and the files.
+     * The Id is replaced with a random one and the files are cleared.
+     *
+     * @return The new instance
+     */
+    @JsonIgnore
+    public ArchivedFileMetadata copyArchiveDetails() {
+        return ArchivedFileMetadata.builder()
+                .id(UUID.randomUUID())
+                .archiveLocation(archiveLocation)
+                .archivedHash(archivedHash)
+                .originalHash(originalHash)
+                .files(new HashSet<>())
+                .build();
+    }
 }

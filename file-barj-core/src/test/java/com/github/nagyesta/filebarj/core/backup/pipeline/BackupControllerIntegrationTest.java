@@ -62,7 +62,7 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         final var indexFile = new File(job.getDestinationDirectory().toString(), indexName);
         Assertions.assertTrue(indexFile.exists());
         final var indexBytes = Files.readAllBytes(indexFile.toPath());
-        final var indexDecryptionKey = actualManifest.dataIndexDecryptionKey(keyPair.getPrivate());
+        final var indexDecryptionKey = actualManifest.dataIndexDecryptionKey(keyPair.getPrivate(), actualManifest.getVersions().first());
         final var indexDecrypted = decrypt(indexBytes, 0, indexBytes.length, indexDecryptionKey);
         final var indexProperties = new Properties();
         indexProperties.load(new ByteArrayInputStream(Objects.requireNonNull(indexDecrypted)));
@@ -132,7 +132,7 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
     }
 
     @Test
-    void testConstructorShouldDefaultToFullBackupWhenCalledWithZeroManifests() throws IOException {
+    void testConstructorShouldDefaultToFullBackupWhenCalledWithZeroManifests() {
         //given
         final var sourceDirectory = Path.of(testDataRoot.toString(), "source");
         final var keyPair = EncryptionUtil.generateRsaKeyPair();

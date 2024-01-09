@@ -18,6 +18,8 @@ import java.util.Base64;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
+
 /**
  * Main controller of the execution.
  */
@@ -86,15 +88,23 @@ public class Controller {
                         .map(entry -> new RestoreTarget(entry.getKey(), entry.getValue()))
                         .collect(Collectors.toSet())
         );
+        final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping restore operation...");
         new RestoreController(properties.getBackupSource(), properties.getPrefix(), kek)
                 .execute(restoreTargets, properties.getThreads(), properties.isDryRun());
+        final var endTimeMillis = System.currentTimeMillis();
+        final var durationMillis = (endTimeMillis - startTimeMillis);
+        log.info("Restore operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 
     protected void doBackup(final BackupProperties properties) throws IOException {
         final var config = new ObjectMapper().reader().readValue(properties.getConfig().toFile(), BackupJobConfiguration.class);
+        final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping backup operation...");
         new BackupController(config, false)
                 .execute(properties.getThreads());
+        final var endTimeMillis = System.currentTimeMillis();
+        final var durationMillis = (endTimeMillis - startTimeMillis);
+        log.info("Backup operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 }

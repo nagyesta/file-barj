@@ -22,10 +22,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import static com.github.nagyesta.filebarj.core.common.ManifestManagerImplTest.A_SECOND;
+
 public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
 
     @Test
-    void testMergeForRestoreShouldKeepLatestFileSetWhenCalledWithValidIncrementalData() throws IOException {
+    void testMergeForRestoreShouldKeepLatestFileSetWhenCalledWithValidIncrementalData() throws IOException, InterruptedException {
         //given
         final var underTest = new ManifestManagerImpl();
         final var destinationDirectory = testDataRoot.resolve("destination");
@@ -63,14 +65,13 @@ public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
                 .archiveLocation(ArchiveEntryLocator.builder().backupIncrement(0).entryName(origArchiveId).build())
                 .originalHash(origFile1.getOriginalHash())
                 .build());
+        Thread.sleep(A_SECOND);
         final var incremental = underTest.generateManifest(config, BackupType.INCREMENTAL, 1);
         FileUtils.deleteQuietly(file2.toFile());
         final var incFile1 = parser.parse(file1.toFile(), config);
-        final var incFile2 = parser.parse(file2.toFile(), config);
         final var incArchiveId = UUID.randomUUID();
         incFile1.setArchiveMetadataId(incArchiveId);
         incremental.getFiles().put(incFile1.getId(), incFile1);
-        incremental.getFiles().put(incFile2.getId(), incFile2);
         incremental.getArchivedEntries().put(incArchiveId, ArchivedFileMetadata.builder()
                 .id(incArchiveId)
                 .files(Set.of(incFile1.getId()))
@@ -84,7 +85,9 @@ public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
 
         //then
         Assertions.assertNotNull(actual);
-        Assertions.assertEquals(1, actual.getFiles().size());
-        Assertions.assertEquals(Map.of(incFile1.getId(), incFile1), actual.getFiles().get(original.getFileNamePrefix()));
+        Assertions.assertEquals(2, actual.getFiles().size());
+        //The deleted file can be filtered out
+        Assertions.assertEquals(Map.of(origFile1.getId(), origFile1), actual.getFiles().get(original.getFileNamePrefix()));
+        Assertions.assertEquals(incremental.getFiles(), actual.getFiles().get(incremental.getFileNamePrefix()));
     }
 }
