@@ -3,15 +3,21 @@ package com.github.nagyesta.filebarj.job;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import static org.mockito.Mockito.*;
+
 class MainTest {
 
     @Test
-    void testMainShouldThrowExceptionWhenUnknownTaskSelected() {
+    void testMainShouldNotThrowExceptionWhenUnknownTaskSelected() {
         //given
+        final var args = new String[] {};
+        final var underTest = spy(new Main());
+        doNothing().when(underTest).exitWithError();
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> Main.main(new String[0]));
+        Assertions.assertDoesNotThrow(() -> underTest.execute(args));
 
-        //then + exception
+        //then
+        verify(underTest).exitWithError();
     }
 }
