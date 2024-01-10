@@ -14,8 +14,22 @@ public class Main {
      *
      * @param args the command line arguments
      */
-    public static void main(final String[] args) throws Exception {
-        final var controller = new Controller(args, System.console());
-        controller.run();
+    public static void main(final String[] args) {
+        new Main().execute(args);
     }
+
+    void execute(final String[] args) {
+        try {
+            final var controller = new Controller(args, System.console());
+            controller.run();
+        } catch (final Exception e) {
+            log.error("Execution failed: ", e);
+            exitWithError();
+        }
+    }
+
+    void exitWithError() {
+        System.exit(1);
+    }
+
 }

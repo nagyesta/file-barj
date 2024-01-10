@@ -32,6 +32,7 @@ import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.*;
 import static com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil.newCipherInputStream;
 import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStream.MEBIBYTE;
 import static org.apache.commons.io.FilenameUtils.normalizeNoEndSeparator;
+import static org.apache.commons.io.FilenameUtils.separatorsToUnix;
 
 /**
  * Provides {@link java.io.FileInputStream} instances reading entries from BaRJ cargo archive files.
@@ -39,6 +40,7 @@ import static org.apache.commons.io.FilenameUtils.normalizeNoEndSeparator;
 @Slf4j
 public class BarjCargoArchiveFileInputStreamSource {
 
+    private static final int MAX_NUMBER_OF_EXAMPLES = 10;
     private final IoFunction<InputStream, InputStream> decompressionFunction;
     private final String hashAlgorithm;
     @Getter
@@ -372,21 +374,31 @@ public class BarjCargoArchiveFileInputStreamSource {
                 .map(FilenameUtils::separatorsToUnix)
                 .collect(Collectors.toSet());
         final var slipping = paths.stream()
-                .filter(path -> !path.equals(normalizeNoEndSeparator(path)))
+                .filter(path -> !path.equals(separatorsToUnix(normalizeNoEndSeparator(path))))
                 .collect(Collectors.toSet());
         if (!slipping.isEmpty()) {
-            throw new ArchiveIntegrityException("The following paths are not normalized: " + slipping);
+            throw new ArchiveIntegrityException("The following paths are not normalized: " + getExamples(slipping));
         }
     }
 
-    @NonNull
+    private String getExamples(final Set<String> slippingSet) {
+        var examples = slippingSet.stream()
+                .limit(MAX_NUMBER_OF_EXAMPLES)
+                .collect(Collectors.joining(", "));
+        if (slippingSet.size() > MAX_NUMBER_OF_EXAMPLES) {
+            examples += ", ... +" + (slippingSet.size() - MAX_NUMBER_OF_EXAMPLES) + " more";
+        }
+        return examples;
+    }
+
+    @NotNull
     private List<Path> getAllFiles() {
         return chunkPaths.values().stream()
                 .sorted()
                 .toList();
     }
 
-    @NonNull
+    @NotNull
     private List<IoFunction<InputStream, InputStream>> restoreTransformationSteps(
             @Nullable final SecretKey key, final long skipBytes, final long length) {
         return List.of(input -> new FixedRangeInputStream(input, skipBytes, length),
