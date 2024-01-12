@@ -69,7 +69,7 @@ jobs:
           rm -rf ${{ runner.temp }}/.gnupg/
       - name: 'Upload Test reports - Core'
         if: always()
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
           name: test-report-file-barj-core
           path: |
@@ -78,7 +78,7 @@ jobs:
           retention-days: 5
       - name: 'Upload Test reports - Job'
         if: always()
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
           name: test-report-file-barj-job
           path: |
@@ -87,7 +87,7 @@ jobs:
           retention-days: 5
       - name: 'Upload Test reports - Stream IO'
         if: always()
-        uses: actions/upload-artifact@c7d193f32edcb7bfad88892161225aeda64e9392 # v4.0.0
+        uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
         with:
           name: test-report-file-barj-stream-io
           path: |
