@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -55,21 +54,30 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
     /**
      * Stores the given files in the archive.
      *
-     * @param fileMetadataList The list of file metadata we should store
+     * @param groupedFileMetadataList The list of file metadata we should store
      * @return the list of archived files
      * @throws ArchivalException When the file cannot be archived due to an I/O error from the stream
      */
     public List<ArchivedFileMetadata> storeEntries(
-            @NonNull final List<FileMetadata> fileMetadataList) throws ArchivalException {
-        final var list = fileMetadataList.stream().map(fileMetadata -> {
-            if (fileMetadata == null) {
-                throw new IllegalArgumentException("File metadata cannot be null");
+            @NonNull final List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
+        final var list = groupedFileMetadataList.stream().map(fileMetadataList -> {
+            if (fileMetadataList == null || fileMetadataList.isEmpty()) {
+                throw new IllegalArgumentException("File metadata list cannot be null or empty");
             }
+            final var fileMetadata = fileMetadataList.get(0);
             try {
                 log.debug("Storing {}", fileMetadata.getAbsolutePath());
                 fileMetadata.assertContentSource();
                 final var archivedFileMetadata = generateArchiveFileMetadata(fileMetadata);
-                return archiveContentAndUpdateMetadata(fileMetadata, archivedFileMetadata);
+                return archiveContentAndUpdateMetadata(fileMetadata, archivedFileMetadata)
+                        .thenApply(archived -> {
+                            fileMetadataList.stream().skip(1).forEach(duplicate -> {
+                                warnIfHashDoesNotMatch(duplicate, archived);
+                                duplicate.setArchiveMetadataId(archived.getId());
+                                archived.getFiles().add(duplicate.getId());
+                            });
+                            return archived;
+                        });
             } catch (final Exception e) {
                 log.error("Failed to store {}", fileMetadata.getAbsolutePath(), e);
                 throw new ArchivalException("Failed to store " + fileMetadata.getAbsolutePath(), e);
@@ -103,10 +111,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
         return futureSource.thenApplyAsync(boundarySource -> {
             archivedFileMetadata.setOriginalHash(boundarySource.getContentBoundary().getOriginalHash());
             archivedFileMetadata.setArchivedHash(boundarySource.getContentBoundary().getArchivedHash());
-            if (!Objects.equals(archivedFileMetadata.getOriginalHash(), fileMetadata.getOriginalHash())) {
-                log.warn("The hash changed between delta calculation and archival for: " + fileMetadata.getAbsolutePath()
-                        + " The archive might contain corrupt data for the file.");
-            }
+            warnIfHashDoesNotMatch(fileMetadata, archivedFileMetadata);
             //commit
             fileMetadata.setArchiveMetadataId(archivedFileMetadata.getId());
             return archivedFileMetadata;
