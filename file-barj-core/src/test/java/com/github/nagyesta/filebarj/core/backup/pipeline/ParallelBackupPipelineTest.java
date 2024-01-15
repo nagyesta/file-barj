@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 class ParallelBackupPipelineTest extends TempFileAwareTest {
@@ -50,8 +51,23 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
         //given
         final var manifest = getManifest();
         final var underTest = new ParallelBackupPipeline(manifest, 1);
-        final var list = new ArrayList<FileMetadata>();
+        final var list = new ArrayList<List<FileMetadata>>();
         list.add(null);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.storeEntries(list));
+
+        //then + exception
+    }
+
+    @SuppressWarnings({"resource"})
+    @Test
+    void testStoreEntriesShouldThrowExceptionWhenCalledWithAnEmptyListEntryInTheList() throws IOException {
+        //given
+        final var manifest = getManifest();
+        final var underTest = new ParallelBackupPipeline(manifest, 1);
+        final var list = new ArrayList<List<FileMetadata>>();
+        list.add(List.of());
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.storeEntries(list));

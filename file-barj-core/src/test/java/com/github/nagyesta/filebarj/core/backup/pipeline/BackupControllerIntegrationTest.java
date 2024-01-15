@@ -32,9 +32,14 @@ import java.security.KeyPair;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy.KEEP_EACH;
+import static com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP;
+
 class BackupControllerIntegrationTest extends TempFileAwareTest {
 
-    private static final String IMG_PNG = "01-img.png";
+    private static final String IMG_A_PNG = "01-img-a.png";
+    private static final String IMG_B_PNG = "01-img-b.png";
+    private static final String IMG_C_PNG = "01-img-c.png";
     private static final String IMG_LINK_PNG = "02-img-link.png";
 
     @ParameterizedTest
@@ -44,13 +49,91 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
 
         final var sourceDirectory = Path.of(testDataRoot.toString(), "source");
-        final var image = new File(sourceDirectory.toString(), IMG_PNG);
+        final var image = new File(sourceDirectory.toString(), IMG_A_PNG);
         final var exampleFile = getExampleFile();
         FileUtils.copyFile(exampleFile, image);
         final var imageLink = new File(sourceDirectory.toString(), IMG_LINK_PNG);
         Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
 
-        final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory);
+        final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_EACH);
+        final var underTest = new BackupController(job, false);
+
+        //when
+        underTest.execute(threads);
+        final var actualManifest = underTest.getManifest();
+
+        //then
+        final var indexName = actualManifest.getIndexFileName();
+        final var indexFile = new File(job.getDestinationDirectory().toString(), indexName);
+        Assertions.assertTrue(indexFile.exists());
+        final var indexBytes = Files.readAllBytes(indexFile.toPath());
+        final var indexDecryptionKey = actualManifest.dataIndexDecryptionKey(keyPair.getPrivate(), actualManifest.getVersions().first());
+        final var indexDecrypted = decrypt(indexBytes, 0, indexBytes.length, indexDecryptionKey);
+        final var indexProperties = new Properties();
+        indexProperties.load(new ByteArrayInputStream(Objects.requireNonNull(indexDecrypted)));
+        //verify the archive contains the expected files
+        final var dirName = indexProperties.get("00000001.path");
+        final var name1 = indexProperties.get("00000002.path");
+        final var name2 = indexProperties.get("00000003.path");
+        final var expectedFileNames = actualManifest.getFiles().values().stream()
+                .map(FileMetadata::getArchiveMetadataId)
+                .filter(Objects::nonNull)
+                .map(uuid -> "/0/" + uuid)
+                .collect(Collectors.toCollection(TreeSet::new));
+        final var actualFileNames = new TreeSet<>(Set.of(name1, name2));
+        Assertions.assertEquals("/0", dirName);
+        Assertions.assertIterableEquals(expectedFileNames, actualFileNames);
+        //verify the archive contains no more files
+        Assertions.assertFalse(indexProperties.containsKey("00000004.path"));
+
+        //read data file content
+        final var fileNames = actualManifest.getDataFileNames();
+        Assertions.assertEquals(1, fileNames.size());
+        final var dataFile = new File(job.getDestinationDirectory().toString(), fileNames.get(0));
+        Assertions.assertTrue(dataFile.exists());
+        final var dataBytes = Files.readAllBytes(dataFile.toPath());
+        //verify file contents
+        final var indexMap = Map.of(name1, "00000002", name2, "00000003");
+        for (final var entry : actualManifest.getFiles().entrySet()) {
+            final var v = entry.getValue();
+            final var id = v.getArchiveMetadataId();
+            if (id == null) {
+                continue;
+            }
+            final var idx = indexMap.get("/0/" + id);
+            final var start = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.start.idx")));
+            final var end = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.end.idx")));
+            final var locator = Objects.requireNonNull(ArchiveEntryLocator.fromEntryPath("/0/" + id));
+            final var key = actualManifest.dataDecryptionKey(keyPair.getPrivate(), locator);
+            final var fileContent = decrypt(dataBytes, start, end - start, key);
+            final byte[] originalBytes;
+            if (v.getFileType() == FileType.SYMBOLIC_LINK) {
+                originalBytes = exampleFile.getAbsolutePath().getBytes();
+            } else {
+                originalBytes = Files.readAllBytes(v.getAbsolutePath());
+            }
+            Assertions.assertArrayEquals(originalBytes, fileContent);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 2})
+    void testExecuteShouldCollapseDuplicatesWhenInputDataHasDuplicates(final int threads) throws IOException {
+        //given
+        final var keyPair = EncryptionUtil.generateRsaKeyPair();
+
+        final var sourceDirectory = Path.of(testDataRoot.toString(), "source");
+        final var image1 = new File(sourceDirectory.toString(), IMG_A_PNG);
+        final var exampleFile = getExampleFile();
+        FileUtils.copyFile(exampleFile, image1);
+        final var image2 = new File(sourceDirectory.toString(), IMG_B_PNG);
+        FileUtils.copyFile(exampleFile, image2);
+        final var image3 = new File(sourceDirectory.toString(), IMG_C_PNG);
+        FileUtils.copyFile(exampleFile, image3);
+        final var imageLink = new File(sourceDirectory.toString(), IMG_LINK_PNG);
+        Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
+
+        final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_ONE_PER_BACKUP);
         final var underTest = new BackupController(job, false);
 
         //when
@@ -116,13 +199,13 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
     void testExecuteShouldThrowExceptionWhenCalledWithZeroOrLess(final int threads) throws IOException {
         //given
         final var sourceDirectory = Path.of(testDataRoot.toString(), "source");
-        final var image = new File(sourceDirectory.toString(), IMG_PNG);
+        final var image = new File(sourceDirectory.toString(), IMG_A_PNG);
         final var exampleFile = getExampleFile();
         FileUtils.copyFile(exampleFile, image);
         final var imageLink = new File(sourceDirectory.toString(), IMG_LINK_PNG);
         Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
-        final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory);
+        final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_EACH);
         final var underTest = new BackupController(job, false);
 
         //when
@@ -136,7 +219,7 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         //given
         final var sourceDirectory = Path.of(testDataRoot.toString(), "source");
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
-        final var job = getConfiguration(BackupType.INCREMENTAL, keyPair, sourceDirectory);
+        final var job = getConfiguration(BackupType.INCREMENTAL, keyPair, sourceDirectory, KEEP_EACH);
 
         //when
         final var underTest = new BackupController(job, false);
@@ -149,7 +232,8 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
     private BackupJobConfiguration getConfiguration(
             final BackupType backupType,
             final KeyPair keyPair,
-            final Path sourceDirectory) {
+            final Path sourceDirectory,
+            final DuplicateHandlingStrategy duplicateHandlingStrategy) {
         final var destinationDirectory = Path.of(testDataRoot.toString(), "destination");
         final var backupSource = BackupSource.builder()
                 .path(sourceDirectory)
@@ -159,7 +243,7 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
                 .fileNamePrefix("test")
                 .compression(CompressionAlgorithm.BZIP2)
                 .hashAlgorithm(HashAlgorithm.SHA256)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                .duplicateStrategy(duplicateHandlingStrategy)
                 .destinationDirectory(destinationDirectory)
                 .encryptionKey(keyPair.getPublic())
                 .sources(Set.of(backupSource))

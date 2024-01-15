@@ -70,21 +70,29 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
     /**
      * Stores the given files in the archive.
      *
-     * @param fileMetadataList The list of file metadata we should store
+     * @param groupedFileMetadataList The list of file metadata we should store grouped by their
+     *                                contents (each list in this list represents duplicates of the
+     *                                same file)
      * @return the list of archived files
      * @throws ArchivalException When the file cannot be archived due to an I/O error from the stream
      */
     public List<ArchivedFileMetadata> storeEntries(
-            @NonNull final List<FileMetadata> fileMetadataList) throws ArchivalException {
-        return fileMetadataList.stream().map(fileMetadata -> {
-            if (fileMetadata == null) {
-                throw new IllegalArgumentException("File metadata cannot be null");
+            @NonNull final List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
+        return groupedFileMetadataList.stream().map(fileMetadataList -> {
+            if (fileMetadataList == null || fileMetadataList.isEmpty()) {
+                throw new IllegalArgumentException("File metadata list cannot be null or empty");
             }
+            final var fileMetadata = fileMetadataList.get(0);
             try {
                 log.debug("Storing {}", fileMetadata.getAbsolutePath());
                 fileMetadata.assertContentSource();
                 final var archivedFileMetadata = generateArchiveFileMetadata(fileMetadata);
                 archiveContentAndUpdateMetadata(fileMetadata, archivedFileMetadata);
+                fileMetadataList.stream().skip(1).forEach(duplicate -> {
+                    warnIfHashDoesNotMatch(duplicate, archivedFileMetadata);
+                    archivedFileMetadata.getFiles().add(duplicate.getId());
+                    duplicate.setArchiveMetadataId(archivedFileMetadata.getId());
+                });
                 return archivedFileMetadata;
             } catch (final Exception e) {
                 log.error("Failed to store {}", fileMetadata.getAbsolutePath(), e);
@@ -152,12 +160,23 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
         }
         archivedFileMetadata.setOriginalHash(source.getContentBoundary().getOriginalHash());
         archivedFileMetadata.setArchivedHash(source.getContentBoundary().getArchivedHash());
+        warnIfHashDoesNotMatch(fileMetadata, archivedFileMetadata);
+        //commit
+        fileMetadata.setArchiveMetadataId(archivedFileMetadata.getId());
+    }
+
+    /**
+     * Logs a warning if the hash of the file changed between delta calculation and archival.
+     *
+     * @param fileMetadata         the file metadata
+     * @param archivedFileMetadata the archived file metadata
+     */
+    protected void warnIfHashDoesNotMatch(final FileMetadata fileMetadata, final ArchivedFileMetadata archivedFileMetadata) {
         if (!Objects.equals(archivedFileMetadata.getOriginalHash(), fileMetadata.getOriginalHash())) {
             log.warn("The hash changed between delta calculation and archival for: " + fileMetadata.getAbsolutePath()
                     + " The archive might contain corrupt data for the file.");
+            fileMetadata.setError("The hash changed between delta calculation and archival.");
         }
-        //commit
-        fileMetadata.setArchiveMetadataId(archivedFileMetadata.getId());
     }
 
     private ArchiveEntryLocator createArchiveEntryLocator(final UUID archiveId) {

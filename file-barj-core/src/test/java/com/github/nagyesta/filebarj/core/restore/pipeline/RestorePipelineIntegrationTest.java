@@ -202,6 +202,25 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         //then + exception
     }
 
+    @Test
+    void testEvaluateRestoreSuccessShouldNotThrowExceptionWhenCalledWithoutRestoringBackup() throws IOException {
+        //given
+        final var backupController = executeABackup();
+        final var backupDirectory = testDataRoot.resolve("backup-dir");
+        final var restoreDirectory = testDataRoot.resolve("restore-dir");
+        final var manifest = backupController.getManifest();
+        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var sourceDirectory = getSourceDirectory(backupController);
+        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+
+        //when
+        underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList());
+
+        //then no exception
+    }
+
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testRestoreDirectoriesShouldThrowExceptionWhenCalledWithNull() throws IOException {

@@ -111,6 +111,10 @@ public class RestorePipeline {
                 .map(FileMetadata::getAbsolutePath)
                 .collect(Collectors.toSet());
         final var files = manifest.getFilesOfLastManifest();
+        files.values().stream()
+                .filter(fileMetadata -> fileMetadata.getError() != null)
+                .forEach(fileMetadata -> log.warn("File {} might be corrupted. The following error was saved during backup:\n  {}",
+                        fileMetadata.getAbsolutePath(), fileMetadata.getError()));
         final var entries = manifest.getArchivedEntriesOfLastManifest();
         final var restoreScope = new RestoreScope(files, entries, changeStatus, pathsToRestore);
         final var filesWithContentChanges = restoreScope.getChangedContentSourcesByPath();

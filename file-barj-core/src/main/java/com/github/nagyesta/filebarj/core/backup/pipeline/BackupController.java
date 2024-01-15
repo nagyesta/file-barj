@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
+import com.github.nagyesta.filebarj.core.backup.worker.DefaultBackupScopePartitioner;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
@@ -31,7 +32,7 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutput
 /**
  * Controller implementation for the backup process.
  */
-@SuppressWarnings({"checkstyle:TodoComment", "ConstantValue"})
+@SuppressWarnings({"checkstyle:TodoComment"})
 @Slf4j
 public class BackupController {
     private static final int BATCH_SIZE = 250000;
@@ -152,17 +153,20 @@ public class BackupController {
                     .filter(metadata -> metadata.getStatus().isStoreContent())
                     .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
                     .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
-            final var scope = this.backupFileSet.values().stream()
-                    .filter(metadata -> metadata.getStatus().isStoreContent())
-                    .filter(metadata -> metadata.getFileType().isContentSource())
-                    .toList();
+            final var config = manifest.getConfiguration();
+            final var duplicateStrategy = config.getDuplicateStrategy();
+            final var hashAlgorithm = config.getHashAlgorithm();
+            final var scope = new DefaultBackupScopePartitioner(BATCH_SIZE, duplicateStrategy, hashAlgorithm)
+                    .partitionBackupScope(backupFileSet.values());
             try {
-                for (var i = 0; i < scope.size(); i += BATCH_SIZE) {
-                    final var batch = scope.subList(i, Math.min(i + BATCH_SIZE, scope.size()));
+                for (final var batch : scope) {
                     final var archived = pipeline.storeEntries(batch);
                     archived.forEach(entry -> manifest.getArchivedEntries().put(entry.getId(), entry));
                 }
-                scope.forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
+                scope.stream()
+                        .flatMap(Collection::stream)
+                        .flatMap(Collection::stream)
+                        .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
             } catch (final Exception e) {
                 throw new ArchivalException("Failed to store files: " + e.getMessage(), e);
             }

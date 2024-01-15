@@ -1,10 +1,12 @@
 package com.github.nagyesta.filebarj.core.config.enums;
 
+import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.io.stream.internal.OptionalDigestOutputStream;
 import lombok.Getter;
 import lombok.ToString;
 
 import java.io.OutputStream;
+import java.util.function.Function;
 
 /**
  * Defines the supported hash algorithms used for hash calculations.
@@ -12,10 +14,18 @@ import java.io.OutputStream;
 @Getter
 @ToString
 public enum HashAlgorithm {
+
     /**
      * No hash calculation needed.
      */
-    NONE(null),
+    NONE(null) {
+        @Override
+        public Function<FileMetadata, String> fileGroupingFunction() {
+            return fileMetadata -> fileMetadata.getAbsolutePath().getFileName().toString()
+                    + SEPARATOR + fileMetadata.getOriginalSizeBytes()
+                    + SEPARATOR + fileMetadata.getLastModifiedUtcEpochSeconds();
+        }
+    },
     /**
      * MD5.
      */
@@ -32,6 +42,8 @@ public enum HashAlgorithm {
      * SHA-512.
      */
     SHA512("SHA-512");
+
+    private static final String SEPARATOR = "_";
 
     private final String algorithmName;
 
@@ -53,5 +65,15 @@ public enum HashAlgorithm {
      */
     public OptionalDigestOutputStream decorate(final OutputStream stream) {
         return new OptionalDigestOutputStream(stream, this.getAlgorithmName());
+    }
+
+    /**
+     * Returns the file metadata grouping function for the hash algorithm.
+     *
+     * @return the grouping function
+     */
+    public Function<FileMetadata, String> fileGroupingFunction() {
+        return fileMetadata -> fileMetadata.getOriginalHash()
+                + SEPARATOR + fileMetadata.getOriginalSizeBytes();
     }
 }

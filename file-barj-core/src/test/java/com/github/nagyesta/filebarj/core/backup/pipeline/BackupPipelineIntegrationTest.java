@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 class BackupPipelineIntegrationTest extends TempFileAwareTest {
 
@@ -26,12 +27,12 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
     @Test
     void testStoreEntryShouldAddFileEntryToArchiveWhenNoEncryptionIsUsed() {
         //given
-        final var config = getConfiguration();
+        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
         final var file = getRegularFileMetadata(config);
         final var manifest = getManifest(config);
         try (var underTest = new BackupPipeline(manifest)) {
             //when
-            final var actual = underTest.storeEntries(List.of(file));
+            final var actual = underTest.storeEntries(List.of(List.of(file)));
             underTest.close();
             final var files = underTest.getDataFilesWritten();
             final var indexFile = underTest.getIndexFileWritten();
@@ -46,14 +47,38 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @Test
+    void testStoreEntryShouldAddFileEntryOnlyOnceToArchiveWhenCalledWithDuplicatesAndKeepOnePerBackupStrategyIsUsed() {
+        //given
+        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP);
+        final var file1 = getRegularFileMetadata(config);
+        final var file2 = getRegularFileMetadata(config);
+        final var file3 = getRegularFileMetadata(config);
+        final var manifest = getManifest(config);
+        try (var underTest = new BackupPipeline(manifest)) {
+            //when
+            final var actual = underTest.storeEntries(List.of(List.of(file1, file2, file3)));
+            underTest.close();
+            final var files = underTest.getDataFilesWritten();
+            final var indexFile = underTest.getIndexFileWritten();
+
+            //then
+            final var expected = getExpected(indexFile, file1, file2, file3);
+            Assertions.assertEquals(expected, actual.get(0));
+            Assertions.assertEquals(1, files.size());
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
     void testStoreEntryShouldAddSymbolicLinkEntryToArchiveWhenNoEncryptionIsUsed() throws IOException {
         //given
-        final var config = getConfiguration();
+        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
         final var file = getSymbolicLinkMetadata(config);
         final var manifest = getManifest(config);
         try (var underTest = new BackupPipeline(manifest)) {
             //when
-            final var actual = underTest.storeEntries(List.of(file));
+            final var actual = underTest.storeEntries(List.of(List.of(file)));
             underTest.close();
             final var files = underTest.getDataFilesWritten();
             final var indexFile = underTest.getIndexFileWritten();
@@ -81,7 +106,7 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
     @Test
     void testStoreEntityShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var config = getConfiguration();
+        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
         final var manifest = getManifest(config);
         try (var underTest = new BackupPipeline(manifest)) {
             //when
@@ -96,10 +121,10 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
     @Test
     void testStoreEntityShouldThrowExceptionWhenCalledWithNullInList() {
         //given
-        final var config = getConfiguration();
+        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
         final var manifest = getManifest(config);
         try (var underTest = new BackupPipeline(manifest)) {
-            final List<FileMetadata> list = new ArrayList<>();
+            final List<List<FileMetadata>> list = new ArrayList<>();
             list.add(null);
 
             //when
@@ -111,8 +136,9 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
         }
     }
 
+    @SuppressWarnings("DataFlowIssue")
     private static ArchivedFileMetadata getExpected(
-            final Path indexFile, final FileMetadata file) throws IOException {
+            final Path indexFile, final FileMetadata... files) throws IOException {
         final var properties = new Properties();
         final var zipContentStream = Files.newInputStream(indexFile);
         properties.load(new GzipCompressorInputStream(zipContentStream));
@@ -120,9 +146,9 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
         return ArchivedFileMetadata.builder()
                 .id(locator.getEntryName())
                 .archiveLocation(locator)
-                .originalHash(file.getOriginalHash())
+                .originalHash(files[0].getOriginalHash())
                 .archivedHash(properties.getProperty("00000002.content.arch.hash"))
-                .files(Set.of(file.getId()))
+                .files(Arrays.stream(files).map(FileMetadata::getId).collect(Collectors.toSet()))
                 .build();
     }
 
@@ -156,13 +182,13 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
         return parser.parse(testFile, config);
     }
 
-    private BackupJobConfiguration getConfiguration() {
+    private BackupJobConfiguration getConfiguration(final DuplicateHandlingStrategy duplicateStrategy) {
         return BackupJobConfiguration.builder()
                 .compression(CompressionAlgorithm.GZIP)
                 .sources(Set.of())
                 .backupType(BackupType.FULL)
                 .fileNamePrefix("pipeline-prefix-")
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                .duplicateStrategy(duplicateStrategy)
                 .destinationDirectory(testDataRoot)
                 .hashAlgorithm(HashAlgorithm.SHA512)
                 .build();
