@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ForkJoinPool;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -141,7 +142,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNull() throws IOException {
+    void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
         //given
         final var backupController = executeABackup();
         final var backupDirectory = testDataRoot.resolve("backup-dir");
@@ -155,14 +156,14 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.finalizePermissions(null));
+                () -> underTest.finalizePermissions(null, mock(ForkJoinPool.class)));
 
         //then + exception
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testRestoreFilesShouldThrowExceptionWhenCalledWithNull() throws IOException {
+    void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullMap() throws IOException {
         //given
         final var backupController = executeABackup();
         final var backupDirectory = testDataRoot.resolve("backup-dir");
@@ -176,14 +177,14 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.restoreFiles(null, 1));
+                () -> underTest.finalizePermissions(manifest.getFiles().values().stream().toList(), null));
 
         //then + exception
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNull() throws IOException {
+    void testRestoreFilesShouldThrowExceptionWhenCalledWithNullContentSources() throws IOException {
         //given
         final var backupController = executeABackup();
         final var backupDirectory = testDataRoot.resolve("backup-dir");
@@ -197,7 +198,73 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.evaluateRestoreSuccess(null));
+                () -> underTest.restoreFiles(null, mock(ForkJoinPool.class)));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testRestoreFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
+        //given
+        final var backupController = executeABackup();
+        final var backupDirectory = testDataRoot.resolve("backup-dir");
+        final var restoreDirectory = testDataRoot.resolve("restore-dir");
+        final var manifest = backupController.getManifest();
+        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var sourceDirectory = getSourceDirectory(backupController);
+        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var contentSources = manifest.getFiles().values().stream()
+                .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
+                .toList();
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.restoreFiles(contentSources, null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
+        //given
+        final var backupController = executeABackup();
+        final var backupDirectory = testDataRoot.resolve("backup-dir");
+        final var restoreDirectory = testDataRoot.resolve("restore-dir");
+        final var manifest = backupController.getManifest();
+        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var sourceDirectory = getSourceDirectory(backupController);
+        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.evaluateRestoreSuccess(null, mock(ForkJoinPool.class)));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
+        //given
+        final var backupController = executeABackup();
+        final var backupDirectory = testDataRoot.resolve("backup-dir");
+        final var restoreDirectory = testDataRoot.resolve("restore-dir");
+        final var manifest = backupController.getManifest();
+        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var sourceDirectory = getSourceDirectory(backupController);
+        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList(), null));
 
         //then + exception
     }
@@ -215,10 +282,15 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
 
-        //when
-        underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList());
+        final var threadPool = new ForkJoinPool(1);
+        try {
+            //when
+            underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList(), threadPool);
 
-        //then no exception
+            //then no exception
+        } finally {
+            threadPool.shutdownNow();
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -285,10 +357,15 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
                 .filter(f -> f.getArchiveMetadataId() != null)
                 .toList();
 
-        //when
-        underTest.restoreDirectories(scope);
-        underTest.restoreFiles(scopeMap, threads);
-        underTest.finalizePermissions(scope);
+        final var threadPool = new ForkJoinPool(threads);
+        try {
+            //when
+            underTest.restoreDirectories(scope);
+            underTest.restoreFiles(scopeMap, threadPool);
+            underTest.finalizePermissions(scope, threadPool);
+        } finally {
+            threadPool.shutdownNow();
+        }
 
         //then
         final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);

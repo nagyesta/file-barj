@@ -1,6 +1,5 @@
 package com.github.nagyesta.filebarj.core.common;
 
-import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
@@ -17,13 +16,11 @@ public class HashingFileMetadataChangeDetector extends BaseFileMetadataChangeDet
     /**
      * Creates a new instance with the previous manifests.
      *
-     * @param configuration      The backup configuration
      * @param filesFromManifests The files found in the previous manifests
      */
     protected HashingFileMetadataChangeDetector(
-            @NotNull final BackupJobConfiguration configuration,
             @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests) {
-        super(configuration, filesFromManifests);
+        super(filesFromManifests);
     }
 
     @Override

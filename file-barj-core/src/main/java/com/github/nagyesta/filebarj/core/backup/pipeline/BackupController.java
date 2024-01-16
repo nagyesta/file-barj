@@ -3,7 +3,7 @@ package com.github.nagyesta.filebarj.core.backup.pipeline;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.worker.DefaultBackupScopePartitioner;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
-import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetectorFactory;
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
@@ -13,7 +13,7 @@ import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.util.FileTypeStatsUtil;
+import com.github.nagyesta.filebarj.core.util.StatLogUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import lombok.Getter;
 import lombok.NonNull;
@@ -23,6 +23,8 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -36,7 +38,7 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutput
 @Slf4j
 public class BackupController {
     private static final int BATCH_SIZE = 250000;
-    private final FileMetadataParser metadataParser = new FileMetadataParserLocal();
+    private final FileMetadataParser metadataParser = FileMetadataParserFactory.newInstance();
     private final ManifestManager manifestManager = new ManifestManagerImpl();
     @Getter
     private final BackupIncrementManifest manifest;
@@ -46,6 +48,7 @@ public class BackupController {
     private boolean readyToUse = true;
     private final ReentrantLock executionLock = new ReentrantLock();
     private FileMetadataChangeDetector changeDetector;
+    private ForkJoinPool threadPool;
 
     /**
      * Creates a new instance and initializes it for the specified job.
@@ -77,13 +80,20 @@ public class BackupController {
         executionLock.lock();
         try {
             if (readyToUse) {
+                this.threadPool = new ForkJoinPool(threads);
                 listAffectedFilesFromBackupSources();
                 calculateBackupDelta();
                 executeBackup(threads);
                 saveManifest();
                 readyToUse = false;
+            } else {
+                throw new IllegalStateException("Backup already executed. Please create a new controller instance.");
             }
         } finally {
+            if (threadPool != null) {
+                threadPool.shutdownNow();
+                threadPool = null;
+            }
             executionLock.unlock();
         }
     }
@@ -97,10 +107,16 @@ public class BackupController {
                 })
                 .collect(Collectors.toCollection(TreeSet::new));
         log.info("Found {} unique paths in backup sources. Parsing metadata...", uniquePaths.size());
-        this.filesFound = uniquePaths.parallelStream()
-                .map(path -> metadataParser.parse(path.toFile(), manifest.getConfiguration()))
-                .collect(Collectors.toList());
-        FileTypeStatsUtil.logStatistics(filesFound,
+        final var doneCount = new AtomicInteger(0);
+        this.filesFound = threadPool.submit(() -> uniquePaths.parallelStream()
+                .map(path -> {
+                    final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
+                    StatLogUtil.logIfThresholdReached(doneCount.incrementAndGet(), uniquePaths.size(),
+                            (done, total) -> log.info("Parsed {} of {} unique paths.", done, total));
+                    return fileMetadata;
+                })
+                .collect(Collectors.toList())).join();
+        StatLogUtil.logStatistics(filesFound,
                 (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
     }
 
@@ -110,14 +126,19 @@ public class BackupController {
         previousManifests.forEach((key, value) -> previousFiles.put(value.getFileNamePrefix(), value.getFiles()));
         if (!previousManifests.isEmpty()) {
             changeDetector = FileMetadataChangeDetectorFactory.create(manifest.getConfiguration(), previousFiles);
-            this.filesFound.parallelStream().forEach(this::findPreviousVersionToReuseOrAddToBackupFileSet);
+            log.info("Trying to find unchanged files in previous backup increments");
+            threadPool.submit(() -> this.filesFound.parallelStream()
+                    .forEach(this::findPreviousVersionToReuseOrAddToBackupFileSet)).join();
         } else {
             this.filesFound.forEach(file -> backupFileSet.put(file.getAbsolutePath(), file));
         }
         if (!manifest.getFiles().isEmpty()) {
-            FileTypeStatsUtil.logStatistics(manifest.getFiles().values(),
+            StatLogUtil.logStatistics(manifest.getFiles().values(),
                     (type, count) -> log.info("Found {} matching {} items in previous backup increments.", count, type));
         }
+        final var changeStats = filesFound.stream()
+                .collect(Collectors.groupingBy(FileMetadata::getStatus, Collectors.counting()));
+        log.info("Detected changes: {}", changeStats);
         filesFound = null;
     }
 
@@ -186,6 +207,11 @@ public class BackupController {
     }
 
     private void findPreviousVersionToReuseOrAddToBackupFileSet(@NotNull final FileMetadata file) {
+        if (file.getFileType() == FileType.DIRECTORY) {
+            updateDirectoryChangeStatus(file);
+            manifest.getFiles().put(file.getId(), file);
+            return;
+        }
         final var previousVersion = changeDetector.findMostRelevantPreviousVersion(file);
         if (previousVersion != null) {
             final var change = changeDetector.classifyChange(previousVersion, file);
@@ -193,12 +219,17 @@ public class BackupController {
             if (previousVersion.getFileType().isContentSource() && change.isLinkPreviousContent()) {
                 usePreviousVersionInCurrentIncrement(previousVersion, file);
                 return;
-            } else if (file.getFileType() == FileType.DIRECTORY) {
-                manifest.getFiles().put(file.getId(), file);
-                return;
             }
         }
         backupFileSet.put(file.getAbsolutePath(), file);
+    }
+
+    private void updateDirectoryChangeStatus(@NotNull final FileMetadata file) {
+        final var previousVersion = changeDetector.findPreviousVersionByAbsolutePath(file.getAbsolutePath());
+        if (previousVersion != null) {
+            final var change = changeDetector.classifyChange(previousVersion, file);
+            file.setStatus(change);
+        }
     }
 
     @NotNull

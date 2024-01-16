@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-class FileMetadataParserLocalTest extends TempFileAwareTest {
+class FileMetadataParserTest extends TempFileAwareTest {
 
     public static Stream<Arguments> permissionSource() {
         return Stream.<Arguments>builder()
@@ -42,11 +42,33 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
                 .build();
     }
 
+    @Test
+    void testNewInstanceShouldReturnPosixVariantWhenTheOsIsNotWindows() {
+        //given
+
+        //when
+        final var actual = FileMetadataParserFactory.newInstance(false);
+
+        //then
+        Assertions.assertEquals(PosixFileMetadataParser.class, actual.getClass());
+    }
+
+    @Test
+    void testNewInstanceShouldReturnWindowsVariantWhenTheOsIsWindows() {
+        //given
+
+        //when
+        final var actual = FileMetadataParserFactory.newInstance(true);
+
+        //then
+        Assertions.assertEquals(WindowsFileMetadataParser.class, actual.getClass());
+    }
+
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testParseShouldThrowExceptionWhenTheFileIsNull() {
         //given
-        final var underTest = new FileMetadataParserLocal();
+        final var underTest = FileMetadataParserFactory.newInstance();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -59,7 +81,7 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
     @Test
     void testParseShouldThrowExceptionWhenTheConfigurationIsNull() {
         //given
-        final var underTest = new FileMetadataParserLocal();
+        final var underTest = FileMetadataParserFactory.newInstance();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -71,7 +93,7 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
     @Test
     void testParseShouldReturnDefaultEntityWhenTheFileDoesNotExist() {
         //given
-        final var underTest = new FileMetadataParserLocal();
+        final var underTest = FileMetadataParserFactory.newInstance();
         final var unknownFile = new File("unknown");
 
         //when
@@ -86,7 +108,7 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
     @Test
     void testParseShouldParseFileInformationWhenTheRegularFileExistAndAccessible() throws Exception {
         //given
-        final var underTest = new FileMetadataParserLocal();
+        final var underTest = FileMetadataParserFactory.newInstance();
         final var tempFile = File.createTempFile(".file-barj-test-file-", ".txt", testDataRoot.toFile());
         final var tempFilePath = tempFile.toPath();
         final var content = "test";
@@ -127,7 +149,7 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
     @Test
     void testParseShouldParseFileInformationWhenTheSymbolicLinkExistAndAccessible() throws Exception {
         //given
-        final var underTest = new FileMetadataParserLocal();
+        final var underTest = FileMetadataParserFactory.newInstance();
         final var tempFile = File.createTempFile(".file-barj-test-file-", ".txt", testDataRoot.toFile());
         final var linkPath = Files.createSymbolicLink(
                 Path.of(testDataRoot.toAbsolutePath().toString(), "file-barj-link-" + UUID.randomUUID()),
@@ -160,7 +182,7 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
     @Test
     void testParseShouldParseFileInformationWhenTheDirectoryExistAndAccessible() throws Exception {
         //given
-        final var underTest = new FileMetadataParserLocal();
+        final var underTest = FileMetadataParserFactory.newInstance();
 
         //when
         final var tempDirPath = testDataRoot.toAbsolutePath();
@@ -194,11 +216,11 @@ class FileMetadataParserLocalTest extends TempFileAwareTest {
         //given
 
         //when
-        final var actual = new FileMetadataParserLocal.Permissions(canRead, canWrite, canExecute);
+        final var actual = new PosixFileMetadataParser.Permissions(canRead, canWrite, canExecute);
 
         //then
-        Assertions.assertEquals(FileMetadataParserLocal.DEFAULT_OWNER, actual.owner());
-        Assertions.assertEquals(FileMetadataParserLocal.DEFAULT_OWNER, actual.group());
+        Assertions.assertEquals(PosixFileMetadataParser.DEFAULT_OWNER, actual.owner());
+        Assertions.assertEquals(PosixFileMetadataParser.DEFAULT_OWNER, actual.group());
         Assertions.assertEquals(expected, actual.permissions());
     }
 

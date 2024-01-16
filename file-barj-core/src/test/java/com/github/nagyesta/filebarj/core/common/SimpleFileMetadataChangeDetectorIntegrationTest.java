@@ -4,7 +4,7 @@ import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterLocal;
+import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -67,10 +67,11 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         waitASecond();
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
         //reset the lat modified timestamp to simulate a restore
-        new FileMetadataSetterLocal(new RestoreTargets(Set.of(new RestoreTarget(testDataRoot, testDataRoot)))).setTimestamps(orig);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(testDataRoot, testDataRoot)));
+        FileMetadataSetterFactory.newInstance(restoreTargets).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(CONFIGURATION, manifests);
+        final var underTest = new SimpleFileMetadataChangeDetector(manifests);
 
         //when
         final var relevant = underTest.findMostRelevantPreviousVersion(restored);
@@ -95,7 +96,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(CONFIGURATION, manifests);
+        final var underTest = new SimpleFileMetadataChangeDetector(manifests);
 
         //when
         final var actual = underTest.findMostRelevantPreviousVersion(curr);

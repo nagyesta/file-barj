@@ -141,8 +141,11 @@ subprojects {
                 }
                 excludes = mutableListOf(
                         "com.github.nagyesta.filebarj.core.backup.FileParseException",
+                        "com.github.nagyesta.filebarj.core.backup.worker.WindowsFileMetadataParser",
+                        "com.github.nagyesta.filebarj.core.restore.worker.WindowsFileMetadataSetter",
                         "com.github.nagyesta.filebarj.job.Main",
-                        "com.github.nagyesta.filebarj.job.Controller")
+                        "com.github.nagyesta.filebarj.job.Controller"
+                )
             }
         }
         doLast {

@@ -2,7 +2,7 @@ package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
-import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFileAwareTest {
 
     private static final int ONE_SECOND = 1000;
-    static final FileMetadataParser PARSER = new FileMetadataParserLocal();
+    static final FileMetadataParser PARSER = FileMetadataParserFactory.newInstance();
     static final BackupJobConfiguration CONFIGURATION = BackupJobConfiguration.builder()
             .fileNamePrefix("prefix")
             .sources(Set.of())
@@ -134,11 +134,11 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
     }
 
     protected SimpleFileMetadataChangeDetector getDefaultSimpleFileMetadataChangeDetector(final FileMetadata prev) {
-        return new SimpleFileMetadataChangeDetector(CONFIGURATION, Map.of("test", Map.of(prev.getId(), prev)));
+        return new SimpleFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)));
     }
 
     protected HashingFileMetadataChangeDetector getDefaultHashingFileMetadataChangeDetector(final FileMetadata prev) {
-        return new HashingFileMetadataChangeDetector(CONFIGURATION, Map.of("test", Map.of(prev.getId(), prev)));
+        return new HashingFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)));
     }
 
     protected FileMetadata createMetadata(

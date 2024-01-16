@@ -3,9 +3,10 @@ package com.github.nagyesta.filebarj.core.restore.worker;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.util.OsUtil;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -16,18 +17,20 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-import static com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal.DEFAULT_OWNER;
+import static com.github.nagyesta.filebarj.core.backup.worker.PosixFileMetadataParser.DEFAULT_OWNER;
 
 /**
- * Local implementation of {@link FileMetadataSetter}.
+ * Posix compliant implementation of {@link FileMetadataSetter}.
  */
+@Getter
 @Slf4j
-public class FileMetadataSetterLocal implements FileMetadataSetter {
+public class PosixFileMetadataSetter implements FileMetadataSetter {
 
     /**
      * The full access permission string.
      */
     public static final String FULL_ACCESS = "rwxrwxrwx";
+
     private final RestoreTargets restoreTargets;
 
     /**
@@ -35,7 +38,7 @@ public class FileMetadataSetterLocal implements FileMetadataSetter {
      *
      * @param restoreTargets the mappings of the root paths where we would like to restore
      */
-    public FileMetadataSetterLocal(@NonNull final RestoreTargets restoreTargets) {
+    public PosixFileMetadataSetter(@NonNull final RestoreTargets restoreTargets) {
         this.restoreTargets = restoreTargets;
     }
 
@@ -111,41 +114,44 @@ public class FileMetadataSetterLocal implements FileMetadataSetter {
         }
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void doSetPermissions(final Path filePath, final Set<PosixFilePermission> posixFilePermissions) {
+    /**
+     * Sets the permissions on the specified file.
+     *
+     * @param filePath             the path
+     * @param posixFilePermissions the permissions
+     */
+    protected void doSetPermissions(
+            @NotNull final Path filePath,
+            @NotNull final Set<PosixFilePermission> posixFilePermissions) {
         performIoTaskAndHandleException(() -> {
-            try {
-                final var attributeView = getPosixFileAttributeView(filePath);
-                final var currentPermissions = attributeView.readAttributes().permissions();
-                final var targetString = PosixFilePermissions.toString(posixFilePermissions);
-                final var currentString = PosixFilePermissions.toString(currentPermissions);
-                if (!targetString.equals(currentString)) {
-                    attributeView.setPermissions(posixFilePermissions);
-                }
-                return null;
-            } catch (final UnsupportedOperationException e) {
-                //POSIX is not supported on the current FS/OS
-                final var file = filePath.toFile();
-                file.setExecutable(posixFilePermissions.contains(PosixFilePermission.OWNER_EXECUTE));
-                file.setReadable(posixFilePermissions.contains(PosixFilePermission.OWNER_READ));
-                file.setWritable(posixFilePermissions.contains(PosixFilePermission.OWNER_WRITE));
-                return null;
+            final var attributeView = getPosixFileAttributeView(filePath);
+            final var currentPermissions = attributeView.readAttributes().permissions();
+            final var targetString = PosixFilePermissions.toString(posixFilePermissions);
+            final var currentString = PosixFilePermissions.toString(currentPermissions);
+            if (!targetString.equals(currentString)) {
+                attributeView.setPermissions(posixFilePermissions);
             }
+            return null;
         });
     }
 
     @Override
     public void setHiddenStatus(final @NonNull FileMetadata metadata) {
-        if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
-            return;
+        //no-op
+    }
+
+    /**
+     * Performs the specified IO task and ignores any exceptions.
+     *
+     * @param task the task
+     * @param <T>  the return type
+     */
+    protected <T> void performIoTaskAndHandleException(final Callable<T> task) {
+        try {
+            task.call();
+        } catch (final Exception e) {
+            throw new IllegalStateException(e);
         }
-        final var absolutePath = restoreTargets.mapToRestorePath(metadata.getAbsolutePath());
-        performIoTaskAndHandleException(() -> {
-            if (OsUtil.isWindows() && metadata.getHidden()) {
-                Runtime.getRuntime().exec(new String[]{"attrib", "+H", absolutePath.toString()}).waitFor();
-            }
-            return null;
-        });
     }
 
     @NonNull
@@ -155,14 +161,6 @@ public class FileMetadataSetterLocal implements FileMetadataSetter {
             throw new UnsupportedOperationException("POSIX is not supported on the current FS/OS");
         }
         return attributeView;
-    }
-
-    private <T> void performIoTaskAndHandleException(final Callable<T> task) {
-        try {
-            task.call();
-        } catch (final Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 
     @NonNull

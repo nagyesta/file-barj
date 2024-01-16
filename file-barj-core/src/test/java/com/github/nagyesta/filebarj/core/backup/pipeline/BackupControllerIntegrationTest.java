@@ -215,6 +215,26 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
     }
 
     @Test
+    void testExecuteShouldThrowExceptionWhenCalledTwiceOnTheSameInstance() throws IOException {
+        //given
+        final var sourceDirectory = Path.of(testDataRoot.toString(), "source");
+        final var image = new File(sourceDirectory.toString(), IMG_A_PNG);
+        final var exampleFile = getExampleFile();
+        FileUtils.copyFile(exampleFile, image);
+        final var imageLink = new File(sourceDirectory.toString(), IMG_LINK_PNG);
+        Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
+        final var keyPair = EncryptionUtil.generateRsaKeyPair();
+        final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_EACH);
+        final var underTest = new BackupController(job, false);
+
+        //when
+        underTest.execute(1);
+        Assertions.assertThrows(IllegalStateException.class, () -> underTest.execute(1));
+
+        //then + exception
+    }
+
+    @Test
     void testConstructorShouldDefaultToFullBackupWhenCalledWithZeroManifests() {
         //given
         final var sourceDirectory = Path.of(testDataRoot.toString(), "source");

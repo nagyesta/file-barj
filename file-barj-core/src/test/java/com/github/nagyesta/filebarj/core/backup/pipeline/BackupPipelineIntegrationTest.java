@@ -1,7 +1,7 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
-import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
@@ -167,7 +167,7 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
         final var testFile = getExampleFile();
         final var link = Path.of(testDataRoot.toAbsolutePath().toString(), UUID.randomUUID() + "-link.png");
         Files.createSymbolicLink(link, testFile.toPath());
-        final var parser = new FileMetadataParserLocal();
+        final var parser = FileMetadataParserFactory.newInstance();
         return parser.parse(link.toFile(), config);
     }
 
@@ -178,7 +178,7 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
 
     private FileMetadata getRegularFileMetadata(final BackupJobConfiguration config) {
         final var testFile = getExampleFile();
-        final var parser = new FileMetadataParserLocal();
+        final var parser = FileMetadataParserFactory.newInstance();
         return parser.parse(testFile, config);
     }
 
