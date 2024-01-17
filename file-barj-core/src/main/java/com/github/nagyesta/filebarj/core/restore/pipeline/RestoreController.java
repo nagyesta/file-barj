@@ -6,7 +6,7 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.util.FileTypeStatsUtil;
+import com.github.nagyesta.filebarj.core.util.StatLogUtil;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.security.PrivateKey;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
@@ -27,8 +28,8 @@ public class RestoreController {
     private final RestoreManifest manifest;
     private final PrivateKey kek;
     private final Path backupDirectory;
-    private boolean readyToUse = true;
     private final ReentrantLock executionLock = new ReentrantLock();
+    private ForkJoinPool threadPool;
 
     /**
      * Creates a new instance and initializes it for the specified job.
@@ -52,7 +53,7 @@ public class RestoreController {
         log.info("Merging {} manifests", manifests.size());
         manifest = manifestManager.mergeForRestore(manifests);
         final var filesOfLastManifest = manifest.getFilesOfLastManifest();
-        FileTypeStatsUtil.logStatistics(filesOfLastManifest.values(),
+        StatLogUtil.logStatistics(filesOfLastManifest.values(),
                 (type, count) -> log.info("Found {} {} items in merged backup", count, type));
     }
 
@@ -72,29 +73,31 @@ public class RestoreController {
         }
         executionLock.lock();
         try {
-            if (readyToUse) {
-                final var allEntries = manifest.getFilesOfLastManifest().values().stream().toList();
-                final var contentSources = manifest.getExistingContentSourceFilesOfLastManifest();
-                final long totalBackupSize = allEntries.stream()
-                        .map(FileMetadata::getOriginalSizeBytes)
-                        .reduce(0L, Long::sum);
-                restoreTargets.restoreTargets()
-                        .forEach(target -> log.info("Restoring {} to {}", target.backupPath(), target.restorePath()));
-                log.info("Starting restore of {} MiB backup content (delta not known yet)", totalBackupSize / MEBIBYTE);
-                final var startTimeMillis = System.currentTimeMillis();
-                final var pipeline = createRestorePipeline(restoreTargets, dryRun);
-                pipeline.restoreDirectories(allEntries.stream()
-                        .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
-                        .toList());
-                pipeline.restoreFiles(contentSources, threads);
-                pipeline.finalizePermissions(allEntries);
-                pipeline.evaluateRestoreSuccess(allEntries);
-                final var endTimeMillis = System.currentTimeMillis();
-                final var durationMillis = (endTimeMillis - startTimeMillis);
-                log.info("Restore completed. File operations took: {}", toProcessSummary(durationMillis));
-                readyToUse = false;
-            }
+            this.threadPool = new ForkJoinPool(threads);
+            final var allEntries = manifest.getFilesOfLastManifest().values().stream().toList();
+            final var contentSources = manifest.getExistingContentSourceFilesOfLastManifest();
+            final long totalBackupSize = allEntries.stream()
+                    .map(FileMetadata::getOriginalSizeBytes)
+                    .reduce(0L, Long::sum);
+            restoreTargets.restoreTargets()
+                    .forEach(target -> log.info("Restoring {} to {}", target.backupPath(), target.restorePath()));
+            log.info("Starting restore of {} MiB backup content (delta not known yet)", totalBackupSize / MEBIBYTE);
+            final var startTimeMillis = System.currentTimeMillis();
+            final var pipeline = createRestorePipeline(restoreTargets, dryRun);
+            pipeline.restoreDirectories(allEntries.stream()
+                    .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
+                    .toList());
+            pipeline.restoreFiles(contentSources, threadPool);
+            pipeline.finalizePermissions(allEntries, threadPool);
+            pipeline.evaluateRestoreSuccess(allEntries, threadPool);
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Restore completed. File operations took: {}", toProcessSummary(durationMillis));
         } finally {
+            if (threadPool != null) {
+                threadPool.shutdownNow();
+                threadPool = null;
+            }
             executionLock.unlock();
         }
     }

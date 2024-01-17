@@ -24,9 +24,9 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 /**
- * Local file specific implementation of the {@link FileMetadataParser}.
+ * POSIX compliant implementation of the {@link FileMetadataParser}.
  */
-public class FileMetadataParserLocal implements FileMetadataParser {
+public class PosixFileMetadataParser implements FileMetadataParser {
 
     /**
      * Default owner, in case the POSIX permissions are not available.
@@ -66,16 +66,30 @@ public class FileMetadataParserLocal implements FileMetadataParser {
                 .build();
     }
 
-    private Permissions posixPermissions(final File file) {
+    /**
+     * Parses the permissions in POSIX format.
+     *
+     * @param file the file
+     * @return the permissions
+     */
+    protected Permissions posixPermissions(final File file) {
         return performIoTaskAndHandleException(
-                () -> {
-                    try {
-                        return new Permissions(Files.readAttributes(file.toPath(), PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS));
-                    } catch (final UnsupportedOperationException e) {
-                        //POSIX is not supported on the current FS/OS
-                        return new Permissions(file.canRead(), file.canWrite(), file.canExecute());
-                    }
-                });
+                () -> new Permissions(Files.readAttributes(file.toPath(), PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS)));
+    }
+
+    /**
+     * Performs an IO task and handles exceptions.
+     *
+     * @param task the task
+     * @param <T>  the return type
+     * @return the result of the task
+     */
+    protected <T> T performIoTaskAndHandleException(final Callable<T> task) {
+        try {
+            return task.call();
+        } catch (final Exception e) {
+            throw new FileParseException(e);
+        }
     }
 
     private BasicFileAttributes basicAttributes(final File file) {
@@ -97,7 +111,7 @@ public class FileMetadataParserLocal implements FileMetadataParser {
 
     private String doCalculateHash(final File file, final FileType type, final HashAlgorithm hash) {
         return performIoTaskAndHandleException(() -> {
-                try (var stream = type.streamContent(file.toPath());
+            try (var stream = type.streamContent(file.toPath());
                  var hashStream = hash.decorate(OutputStream.nullOutputStream())) {
                 IOUtils.copy(stream, hashStream);
                 hashStream.flush();
@@ -107,15 +121,7 @@ public class FileMetadataParserLocal implements FileMetadataParser {
 
     }
 
-    private <T> T performIoTaskAndHandleException(final Callable<T> task) {
-        try {
-            return task.call();
-        } catch (final Exception e) {
-            throw new FileParseException(e);
-        }
-    }
-
-    record Permissions(String owner, String group, String permissions) {
+    protected record Permissions(String owner, String group, String permissions) {
 
         Permissions(final boolean canRead, final boolean canWrite, final boolean canExecute) {
             this(DEFAULT_OWNER, DEFAULT_OWNER, asString(canRead, canWrite, canExecute));

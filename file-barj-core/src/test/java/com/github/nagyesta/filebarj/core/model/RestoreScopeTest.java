@@ -2,7 +2,7 @@ package com.github.nagyesta.filebarj.core.model;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
-import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
@@ -33,7 +33,7 @@ class RestoreScopeTest extends TempFileAwareTest {
     private static final String DIR_LINK_3_TXT = "dir/link3.txt";
     private static final String DIR_FILE_4_TXT = "dir/file4.txt";
     private static final String DIR_LINK_4_TXT = "dir/link4.txt";
-    private final FileMetadataParser fileMetadataParser = new FileMetadataParserLocal();
+    private final FileMetadataParser fileMetadataParser = FileMetadataParserFactory.newInstance();
     private final BackupJobConfiguration config = mock(BackupJobConfiguration.class);
     private Path dir;
     @SuppressWarnings("FieldCanBeLocal")

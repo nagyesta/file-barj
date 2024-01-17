@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Special pipeline implementation for dry-run restore. Tha actual restore process is not executed,
@@ -38,7 +39,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
     }
 
     @Override
-    public void evaluateRestoreSuccess(@NotNull final List<FileMetadata> files) {
+    public void evaluateRestoreSuccess(@NotNull final List<FileMetadata> files, @NotNull final ForkJoinPool threadPool) {
         //no-op
     }
 

@@ -1,7 +1,5 @@
 package com.github.nagyesta.filebarj.core.common;
 
-import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
-import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -9,11 +7,8 @@ import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * The base implementation of the {@link FileMetadataChangeDetector}.
@@ -29,16 +24,14 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     /**
      * Creates a new instance with the previous manifests.
      *
-     * @param configuration      The backup configuration
      * @param filesFromManifests The files found in the previous manifests
      */
     protected BaseFileMetadataChangeDetector(
-            @NotNull final BackupJobConfiguration configuration,
             @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests) {
         this.filesFromManifests = new TreeMap<>(filesFromManifests);
         final SortedMap<String, Map<T, List<FileMetadata>>> contentIndex = new TreeMap<>();
         final Map<String, FileMetadata> nameIndex = new TreeMap<>();
-        index(configuration, this.filesFromManifests, contentIndex, nameIndex);
+        index(this.filesFromManifests, contentIndex, nameIndex);
         this.contentIndex = contentIndex;
         this.nameIndex = nameIndex;
     }
@@ -69,22 +62,24 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     public FileMetadata findMostRelevantPreviousVersion(
             @NonNull final FileMetadata currentMetadata) {
         final var increments = filesFromManifests.keySet().stream().sorted(Comparator.reverseOrder()).toList();
+        final var previousSamePath = nameIndex.getOrDefault(currentMetadata.getAbsolutePath().toString(), null);
+        if (previousSamePath != null && !hasContentChanged(previousSamePath, currentMetadata)) {
+                return previousSamePath;
+        }
         for (final var increment : increments) {
             final var index = contentIndex.get(increment);
             final var key = getPrimaryContentCriteria(currentMetadata);
             if (index.containsKey(key)) {
-                final var byPath = new TreeMap<>(index.get(key).stream()
+                final var byPath = new TreeMap<Path, FileMetadata>();
+                index.get(key).stream()
                         .filter(metadata -> !hasContentChanged(metadata, currentMetadata))
-                        .collect(Collectors.toMap(FileMetadata::getAbsolutePath, Function.identity())));
+                        .forEach(metadata -> byPath.put(metadata.getAbsolutePath(), metadata));
                 if (!byPath.isEmpty()) {
                     return byPath.getOrDefault(currentMetadata.getAbsolutePath(), byPath.firstEntry().getValue());
                 }
             }
         }
-        if (nameIndex.containsKey(currentMetadata.getAbsolutePath().toString())) {
-            return nameIndex.get(currentMetadata.getAbsolutePath().toString());
-        }
-        return null;
+        return previousSamePath;
     }
 
     @Nullable
@@ -99,7 +94,7 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     public Change classifyChange(
             @NonNull final FileMetadata previousMetadata,
             @NonNull final FileMetadata currentMetadata) {
-        if (!Files.exists(currentMetadata.getAbsolutePath())) {
+        if (currentMetadata.getFileType() == FileType.MISSING) {
             return Change.DELETED;
         } else if (previousMetadata.getFileType() == FileType.MISSING) {
             return Change.NEW;
@@ -123,12 +118,10 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     protected abstract T getPrimaryContentCriteria(@NotNull FileMetadata metadata);
 
     private void index(
-            @NotNull final BackupJobConfiguration configuration,
             @NotNull final SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests,
             @NotNull final SortedMap<String, Map<T, List<FileMetadata>>> contentIndexMap,
             @NotNull final Map<String, FileMetadata> nameIndexMap) {
         filesFromManifests.forEach((increment, files) -> {
-            final var ignoreHash = configuration.getHashAlgorithm().equals(HashAlgorithm.NONE);
             files.forEach((uuid, metadata) -> contentIndexMap.computeIfAbsent(increment, k -> new HashMap<>())
                     .computeIfAbsent(getPrimaryContentCriteria(metadata), k -> new ArrayList<>())
                     .add(metadata));

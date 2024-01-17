@@ -27,9 +27,9 @@ public class FileMetadataChangeDetectorFactory {
             throw new IllegalArgumentException("Previous manifests cannot be empty");
         }
         if (configuration.getHashAlgorithm() == HashAlgorithm.NONE) {
-            return new SimpleFileMetadataChangeDetector(configuration, filesFromManifests);
+            return new SimpleFileMetadataChangeDetector(filesFromManifests);
         } else {
-            return new HashingFileMetadataChangeDetector(configuration, filesFromManifests);
+            return new HashingFileMetadataChangeDetector(filesFromManifests);
         }
     }
 }

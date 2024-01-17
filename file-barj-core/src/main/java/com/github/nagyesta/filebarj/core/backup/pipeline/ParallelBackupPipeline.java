@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -60,6 +61,9 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
      */
     public List<ArchivedFileMetadata> storeEntries(
             @NonNull final List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
+        final var fileCount = groupedFileMetadataList.stream().filter(Objects::nonNull).mapToInt(List::size).sum();
+        final var entryCount = groupedFileMetadataList.size();
+        log.info("Storing the file content of {} entries ({} files) in parallel", entryCount, fileCount);
         final var list = groupedFileMetadataList.stream().map(fileMetadataList -> {
             if (fileMetadataList == null || fileMetadataList.isEmpty()) {
                 throw new IllegalArgumentException("File metadata list cannot be null or empty");
@@ -83,7 +87,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
                 throw new ArchivalException("Failed to store " + fileMetadata.getAbsolutePath(), e);
             }
         }).toList();
-        log.info("Asked for archival of {} files asynchronously.", list.size());
+        log.info("Asked for archival of {} entries asynchronously.", list.size());
         final var result = new ArrayList<ArchivedFileMetadata>();
         for (final var future : list) {
             try {

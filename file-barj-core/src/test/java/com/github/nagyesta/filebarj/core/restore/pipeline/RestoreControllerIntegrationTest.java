@@ -3,7 +3,8 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
-import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserLocal;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
@@ -146,7 +147,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         //then
         final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
-        final var metadataParser = new FileMetadataParserLocal();
+        final var metadataParser = FileMetadataParserFactory.newInstance();
         for (final var sourceFile : sourceFiles) {
             final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
             assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
@@ -206,7 +207,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         underTest.execute(restoreTargets, threads, false);
 
         //then
-        final var metadataParser = new FileMetadataParserLocal();
+        final var metadataParser = FileMetadataParserFactory.newInstance();
         for (final var sourceFile : sourceFiles) {
             final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
             assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
@@ -323,7 +324,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         underTest.execute(restoreTargets, threads, false);
 
         //then
-        final var metadataParser = new FileMetadataParserLocal();
+        final var metadataParser = FileMetadataParserFactory.newInstance();
         for (final var sourceFile : sourceFiles) {
             final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
             assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
@@ -400,7 +401,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         //then
         final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
-        final var metadataParser = new FileMetadataParserLocal();
+        final var metadataParser = FileMetadataParserFactory.newInstance();
         for (final var sourceFile : originalFiles) {
             final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
             assertFileIsFullyRestored(sourceFile, restoredFile, metadataParser, configuration);
@@ -467,15 +468,14 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var internal = realRestorePath.resolve("folder/internal.png");
         final var external = realRestorePath.resolve("external.png");
         final var folder = realRestorePath.resolve("folder");
-        Stream.of(internal, external, folder).forEach(file -> {
-            Assertions.assertFalse(Files.exists(file), "File should not exist: " + file);
-        });
+        Stream.of(internal, external, folder)
+                .forEach(file -> Assertions.assertFalse(Files.exists(file), "File should not exist: " + file));
     }
 
     private static void assertFileIsFullyRestored(
             final Path sourceFile,
             final Path restoredFile,
-            final FileMetadataParserLocal metadataParser,
+            final FileMetadataParser metadataParser,
             final BackupJobConfiguration configuration) throws IOException {
         final var expectedBytes = Files.readAllBytes(sourceFile);
         Assertions.assertTrue(restoredFile.toFile().exists());
@@ -487,7 +487,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     private static void assertFileMetadataMatches(
             final Path sourceFile,
             final Path restoredFile,
-            final FileMetadataParserLocal metadataParser,
+            final FileMetadataParser metadataParser,
             final BackupJobConfiguration configuration) {
         final var actualMetadata = metadataParser.parse(restoredFile.toFile(), configuration);
         final var expectedMetadata = metadataParser.parse(sourceFile.toFile(), configuration);
