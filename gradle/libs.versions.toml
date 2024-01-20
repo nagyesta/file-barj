@@ -18,7 +18,7 @@ jackson = { strictly = "2.16.1" }
 jetbrainsAnnotations = "24.1.0"
 
 abortMissionPlugin = "5.0.0"
-indexScanPlugin = "2.6.2"
+indexScanPlugin = "2.7.0"
 lombokPlugin = "8.4"
 shadowPlugin = "8.1.1"
 gitVersionerPlugin = "1.6.7"
