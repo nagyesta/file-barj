@@ -39,6 +39,7 @@ File BaRJ comes with the following features
 - Backup archive integrity checks
 - Restore/unpack previous backup
 - Duplicate handling (storing duplicates of the same file only once)
+- Deletes left-over files from the restore directory (if they had been in scope for the backup)
 
 ### Planned features
 
@@ -54,3 +55,4 @@ File BaRJ comes with the following features
 # Limitations
 
 - The file permissions are only captured from the point of view of the current user on Windows or other non-POSIX compliant systems.
+- Restoring a backup on a different OS is not working well (See #94).

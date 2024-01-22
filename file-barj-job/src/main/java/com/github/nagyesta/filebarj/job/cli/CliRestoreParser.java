@@ -22,6 +22,7 @@ public class CliRestoreParser extends GenericCliParser<RestoreProperties> {
     private static final String KEY_ALIAS = "key-alias";
     private static final String PREFIX = "prefix";
     private static final String TARGET = "target-mapping";
+    private static final String DELETE_MISSING = "delete-missing";
 
     private static Options createOptions() {
         return new Options()
@@ -38,6 +39,13 @@ public class CliRestoreParser extends GenericCliParser<RestoreProperties> {
                         .argName("boolean")
                         .type(Boolean.class)
                         .desc("Only simulates file operations if provided.").build())
+                .addOption(Option.builder()
+                        .longOpt(DELETE_MISSING)
+                        .numberOfArgs(1)
+                        .argName("boolean")
+                        .type(Boolean.class)
+                        .desc("Allow deleting the files from the target directory that are matching the backup source patterns "
+                                + "but are not present in the backup increment.").build())
                 .addOption(Option.builder()
                         .longOpt(BACKUP_SOURCE)
                         .required()
@@ -89,6 +97,7 @@ public class CliRestoreParser extends GenericCliParser<RestoreProperties> {
         super("java -jar file-barj-job.jar --" + Task.RESTORE.getCommand(), createOptions(), args, commandLine -> {
             final var threads = Integer.parseInt(commandLine.getOptionValue(THREADS, "1"));
             final var dryRun = Boolean.parseBoolean(commandLine.getOptionValue(DRY_RUN, "false"));
+            final var deleteMissing = Boolean.parseBoolean(commandLine.getOptionValue(DELETE_MISSING, "false"));
             final var backupSource = Path.of(commandLine.getOptionValue(BACKUP_SOURCE)).toAbsolutePath();
             final var prefix = commandLine.getOptionValue(PREFIX);
             final var targets = new HashMap<Path, Path>();
@@ -118,6 +127,7 @@ public class CliRestoreParser extends GenericCliParser<RestoreProperties> {
             return RestoreProperties.builder()
                     .threads(threads)
                     .dryRun(dryRun)
+                    .deleteFilesNotInBackup(deleteMissing)
                     .backupSource(backupSource)
                     .keyProperties(keyProperties)
                     .prefix(prefix)

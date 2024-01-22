@@ -4,6 +4,7 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetectorFactory;
+import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
@@ -103,12 +104,10 @@ public class RestorePipeline {
      * @param contentSources the files with content to restore
      * @param threadPool     the thread pool we can use for parallel processing
      */
-    @SuppressWarnings("checkstyle:TodoComment")
     public void restoreFiles(
             @NonNull final Collection<FileMetadata> contentSources,
             @NonNull final ForkJoinPool threadPool) {
         log.info("Restoring {} items", contentSources.size());
-        //TODO: Deletions should not be ignored. We need to perform them in a separate step
         final var changeStatus = detectChanges(contentSources, threadPool, false);
         final var pathsToRestore = contentSources.stream()
                 .map(FileMetadata::getAbsolutePath)
@@ -159,6 +158,50 @@ public class RestorePipeline {
         final var changedCount = StatLogUtil.countsByType(filesWithMetadataChanges);
         changedCount.keySet().forEach(type -> log.info("Finalized metadata for {} of {} {} entries.",
                 changedCount.get(type), totalCount.get(type), type));
+    }
+
+    /**
+     * Deletes the left-over files in the restore target.
+     *
+     * @param deleteLeftOverFiles True if we should delete left-over files
+     * @param threadPool          The thread pool we can use for parallel processing
+     */
+    public void deleteLeftOverFiles(final boolean deleteLeftOverFiles, @NonNull final ForkJoinPool threadPool) {
+        if (!deleteLeftOverFiles) {
+            log.info("Skipping left-over files deletion...");
+            return;
+        }
+        log.info("Deleting left-over files (if any)...");
+        final var files = manifest.getFilesOfLastManifest().values();
+        final var modifiedSources = manifest.getConfiguration().getSources().stream()
+                .map(source -> BackupSource.builder()
+                        .path(restoreTargets.mapToRestorePath(source.getPath()))
+                        .includePatterns(source.getIncludePatterns())
+                        .excludePatterns(source.getExcludePatterns())
+                        .build())
+                .collect(Collectors.toSet());
+        final var pathsInRestoreTarget = modifiedSources.stream()
+                .map(BackupSource::listMatchingFilePaths)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+        final var pathsInBackup = threadPool.submit(() -> files.parallelStream()
+                .map(FileMetadata::getAbsolutePath)
+                .map(restoreTargets::mapToRestorePath)
+                .collect(Collectors.toSet())).join();
+        final var counter = new AtomicInteger(0);
+        threadPool.submit(() -> pathsInRestoreTarget.parallelStream()
+                .filter(path -> !pathsInBackup.contains(path))
+                .sorted(Comparator.reverseOrder())
+                .forEachOrdered(path -> {
+                    try {
+                        log.info("Deleting left-over file: {}", path);
+                        deleteIfExists(path);
+                        counter.incrementAndGet();
+                    } catch (final IOException e) {
+                        throw new ArchivalException("Failed to delete left-over file: " + path, e);
+                    }
+                })).join();
+        log.info("Deleted {} left-over files.", counter.get());
     }
 
     /**
@@ -585,7 +628,7 @@ public class RestorePipeline {
         final var path = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         log.debug("Restoring directory: {}", path);
         try {
-            if (Files.exists(path) && !Files.isDirectory(path)) {
+            if (Files.exists(path, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
                 deleteIfExists(path);
             }
             createDirectory(path);

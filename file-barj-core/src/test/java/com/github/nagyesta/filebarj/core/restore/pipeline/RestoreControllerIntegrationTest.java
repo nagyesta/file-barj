@@ -5,10 +5,7 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
-import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
-import com.github.nagyesta.filebarj.core.config.BackupSource;
-import com.github.nagyesta.filebarj.core.config.RestoreTarget;
-import com.github.nagyesta.filebarj.core.config.RestoreTargets;
+import com.github.nagyesta.filebarj.core.config.*;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
@@ -24,6 +21,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -40,12 +38,12 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     public static Stream<Arguments> restoreParameterProvider() {
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
         return Stream.<Arguments>builder()
-                .add(Arguments.of(null, null, 1, HashAlgorithm.SHA256))
-                .add(Arguments.of(null, null, 2, HashAlgorithm.NONE))
-                .add(Arguments.of(null, null, 500, HashAlgorithm.MD5))
-                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 1, HashAlgorithm.NONE))
-                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 2, HashAlgorithm.MD5))
-                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 500, HashAlgorithm.SHA256))
+                .add(Arguments.of(null, null, 1, HashAlgorithm.SHA256, true))
+                .add(Arguments.of(null, null, 2, HashAlgorithm.NONE, false))
+                .add(Arguments.of(null, null, 500, HashAlgorithm.MD5, true))
+                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 1, HashAlgorithm.NONE, false))
+                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 2, HashAlgorithm.MD5, true))
+                .add(Arguments.of(keyPair.getPublic(), keyPair.getPrivate(), 500, HashAlgorithm.SHA256, false))
                 .build();
     }
 
@@ -65,7 +63,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testExecuteShouldThrowExceptionWhenCalledWithNullPath() throws IOException {
+    void testExecuteShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -77,7 +75,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null);
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.execute(null, 1, false));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.execute(null));
 
         //then + exception
     }
@@ -99,7 +97,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.execute(restoreTargets, 0, false));
+                () -> underTest.execute(RestoreTask.builder()
+                        .restoreTargets(restoreTargets)
+                        .threads(0)
+                        .dryRun(false)
+                        .build()));
 
         //then + exception
     }
@@ -143,7 +145,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
 
         //when
-        underTest.execute(restoreTargets, threads, false);
+        underTest.execute(RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(false)
+                .build());
 
         //then
         final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
@@ -204,7 +210,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(realRestorePath.resolve("folder"), restoredA);
 
         //when
-        underTest.execute(restoreTargets, threads, false);
+        underTest.execute(RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(false)
+                .build());
 
         //then
         final var metadataParser = FileMetadataParserFactory.newInstance();
@@ -223,7 +233,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldOnlySimulateRestoreWhenTargetFilesAlreadyExistWithDifferentContentAndDryRunIsUsed(
             final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash) throws IOException {
+            final int threads, final HashAlgorithm hash, final boolean deleteLeftOver) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -267,7 +277,12 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(restoredFolder, restoredA);
 
         //when
-        underTest.execute(restoreTargets, threads, true);
+        underTest.execute(RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(true)
+                .deleteFilesNotInBackup(deleteLeftOver)
+                .build());
 
         //then
         Assertions.assertTrue(restoredA.toFile().exists());
@@ -321,7 +336,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(realRestorePath.resolve("external.png"), externalLinkTarget);
 
         //when
-        underTest.execute(restoreTargets, threads, false);
+        underTest.execute(RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(false)
+                .build());
 
         //then
         final var metadataParser = FileMetadataParserFactory.newInstance();
@@ -340,7 +359,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldRestoreFilesToDestinationWhenExecutedWithIncrementalBackup(
             final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash) throws IOException, InterruptedException {
+            final int threads, final HashAlgorithm hash, final boolean deleteLeftOver) throws IOException, InterruptedException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -376,7 +395,18 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         new BackupController(configuration, true).execute(1);
 
-        FileUtils.delete(deleted.toFile());
+        final var restoreFullBackup = new RestoreController(
+                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var restoreTask = RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(false)
+                .deleteFilesNotInBackup(deleteLeftOver)
+                .build();
+        restoreFullBackup.execute(restoreTask);
+
+        Files.delete(deleted);
         final var expectedChangedContent = "changed content";
         Files.writeString(changed, expectedChangedContent);
         final var added = sourceDir.resolve("added.png");
@@ -391,13 +421,12 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         Thread.sleep(A_SECOND);
         new BackupController(configuration, false).execute(1);
-
+        //recreate restore controller to read new backup increment
         final var underTest = new RestoreController(
                 backupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
 
         //when
-        underTest.execute(restoreTargets, threads, false);
+        underTest.execute(restoreTask);
 
         //then
         final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
@@ -416,8 +445,8 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Assertions.assertEquals(externalLinkTarget, restoredExternal);
         final var restoredAddedLink = Files.readSymbolicLink(realRestorePath.resolve("folder/added-external.png")).toAbsolutePath();
         Assertions.assertEquals(restoredAddedLink, restoredExternal);
-        Assertions.assertTrue(Files.notExists(realRestorePath.resolve("deleted.txt")));
-        Assertions.assertTrue(Files.notExists(realRestorePath.resolve("folder/deleted.png")));
+        Assertions.assertEquals(deleteLeftOver, Files.notExists(realRestorePath.resolve("deleted.txt")));
+        Assertions.assertEquals(deleteLeftOver, Files.notExists(realRestorePath.resolve("folder/deleted.png")));
         assertFileMetadataMatches(sourceFolder, realRestorePath.resolve("folder"), metadataParser, configuration);
     }
 
@@ -457,7 +486,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
 
         //when
-        underTest.execute(restoreTargets, threads, true);
+        underTest.execute(RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(true)
+                .build());
 
         //then
         final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
@@ -478,7 +511,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
             final FileMetadataParser metadataParser,
             final BackupJobConfiguration configuration) throws IOException {
         final var expectedBytes = Files.readAllBytes(sourceFile);
-        Assertions.assertTrue(restoredFile.toFile().exists());
+        Assertions.assertTrue(Files.exists(restoredFile, LinkOption.NOFOLLOW_LINKS), "File should exist: " + restoredFile);
         final var actualBytes = Files.readAllBytes(restoredFile);
         Assertions.assertArrayEquals(expectedBytes, actualBytes);
         assertFileMetadataMatches(sourceFile, restoredFile, metadataParser, configuration);
@@ -491,14 +524,22 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
             final BackupJobConfiguration configuration) {
         final var actualMetadata = metadataParser.parse(restoredFile.toFile(), configuration);
         final var expectedMetadata = metadataParser.parse(sourceFile.toFile(), configuration);
-        Assertions.assertEquals(expectedMetadata.getHidden(), actualMetadata.getHidden());
-        Assertions.assertEquals(expectedMetadata.getOwner(), actualMetadata.getOwner());
-        Assertions.assertEquals(expectedMetadata.getGroup(), actualMetadata.getGroup());
-        Assertions.assertEquals(expectedMetadata.getPosixPermissions(), actualMetadata.getPosixPermissions());
-        Assertions.assertEquals(expectedMetadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
-        Assertions.assertEquals(expectedMetadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
-        Assertions.assertEquals(expectedMetadata.getOriginalSizeBytes(), actualMetadata.getOriginalSizeBytes());
-        Assertions.assertEquals(expectedMetadata.getOriginalHash(), actualMetadata.getOriginalHash());
+        Assertions.assertEquals(expectedMetadata.getHidden(), actualMetadata.getHidden(),
+                "File should be hidden: " + restoredFile);
+        Assertions.assertEquals(expectedMetadata.getOwner(), actualMetadata.getOwner(),
+                "File should be owned by user: " + restoredFile);
+        Assertions.assertEquals(expectedMetadata.getGroup(), actualMetadata.getGroup(),
+                "File should be owned by group: " + restoredFile);
+        Assertions.assertEquals(expectedMetadata.getPosixPermissions(), actualMetadata.getPosixPermissions(),
+                "File should have correct permissions: " + restoredFile);
+        Assertions.assertEquals(expectedMetadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds(),
+                "File should have correct last modified time: " + restoredFile);
+        Assertions.assertEquals(expectedMetadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds(),
+                "File should have correct creation time: " + restoredFile);
+        Assertions.assertEquals(expectedMetadata.getOriginalSizeBytes(), actualMetadata.getOriginalSizeBytes(),
+                "File should have correct size: " + restoredFile);
+        Assertions.assertEquals(expectedMetadata.getOriginalHash(), actualMetadata.getOriginalHash(),
+                "File should have correct hash: " + restoredFile);
     }
 
     private File getExampleResource() {

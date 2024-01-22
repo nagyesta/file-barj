@@ -58,4 +58,15 @@ class RestoreTargetsTest extends TempFileAwareTest {
 
         //then + exception
     }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testConstructorShouldThrowExceptionWhenCalledWithNull() {
+        //given
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new RestoreTargets(null));
+
+        //then + exception
+    }
 }

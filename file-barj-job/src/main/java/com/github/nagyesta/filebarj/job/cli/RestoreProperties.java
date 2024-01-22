@@ -22,4 +22,5 @@ public class RestoreProperties {
     private final Map<Path, Path> targets;
     private final int threads;
     private final boolean dryRun;
+    private final boolean deleteFilesNotInBackup;
 }
