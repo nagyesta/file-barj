@@ -37,7 +37,7 @@ public class PosixFileMetadataParser implements FileMetadataParser {
     @Override
     public FileMetadata parse(
             @NonNull final File file, @NonNull final BackupJobConfiguration configuration) {
-        if (!file.exists()) {
+        if (!Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
             return FileMetadata.builder()
                     .id(UUID.randomUUID())
                     .absolutePath(file.toPath().toAbsolutePath())

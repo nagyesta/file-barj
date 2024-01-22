@@ -59,6 +59,7 @@ java -jar build/libs/file-barj-job.jar \
      --prefix backup-job-file-prefix \
      --target-mapping /original/path=/restore/path \
      --dry-run true \
+     --delete-missing true \
      --key-store keys.p12 \
      --key-alias alias \
      --threads 2

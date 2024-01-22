@@ -373,6 +373,27 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         Assertions.assertEquals(externalLinkTarget, restoredExternal);
     }
 
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testDeleteLeftOverFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
+        //given
+        final var backupController = executeABackup();
+        final var backupDirectory = testDataRoot.resolve("backup-dir");
+        final var restoreDirectory = testDataRoot.resolve("restore-dir");
+        final var manifest = backupController.getManifest();
+        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var sourceDirectory = getSourceDirectory(backupController);
+        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.deleteLeftOverFiles(true, null));
+
+        //then + exception
+    }
+
     private Path getSourceDirectory(final BackupController backupController) {
         return backupController.getManifest().getConfiguration().getSources().stream()
                 .findAny()

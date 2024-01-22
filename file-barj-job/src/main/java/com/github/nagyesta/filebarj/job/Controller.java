@@ -5,6 +5,7 @@ import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
+import com.github.nagyesta.filebarj.core.config.RestoreTask;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import com.github.nagyesta.filebarj.job.cli.*;
@@ -90,8 +91,14 @@ public class Controller {
         );
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping restore operation...");
+        final var restoreTask = RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(properties.getThreads())
+                .dryRun(properties.isDryRun())
+                .deleteFilesNotInBackup(properties.isDeleteFilesNotInBackup())
+                .build();
         new RestoreController(properties.getBackupSource(), properties.getPrefix(), kek)
-                .execute(restoreTargets, properties.getThreads(), properties.isDryRun());
+                .execute(restoreTask);
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
         log.info("Restore operation completed. Total time: {}", toProcessSummary(durationMillis));

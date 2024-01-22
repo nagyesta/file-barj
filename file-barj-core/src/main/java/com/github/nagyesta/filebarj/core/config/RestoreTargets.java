@@ -11,7 +11,7 @@ import java.util.Set;
  *
  * @param restoreTargets the restore targets
  */
-public record RestoreTargets(Set<RestoreTarget> restoreTargets) {
+public record RestoreTargets(@NonNull Set<RestoreTarget> restoreTargets) {
 
     /**
      * Converts the original path to the restore path.

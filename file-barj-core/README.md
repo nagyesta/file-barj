@@ -40,10 +40,10 @@ at its core.
 implementation("com.github.nagyesta.file-barj:file-barj-core:+")
 ```
 
-### Creating a backup configuration
+### Writing an archive
 
 ```java
-
+//configuring the backup job
 final var configuration = BackupJobConfiguration.builder()
         .backupType(BackupType.FULL)
         .fileNamePrefix("test")
@@ -57,22 +57,28 @@ final var configuration = BackupJobConfiguration.builder()
         .chunkSizeMebibyte(1)
         .encryptionKey(null)
         .build();
-```
-
-### Writing an archive
-
-```java
 final var backupController = new BackupController(configuration, false);
+
+//executing the backup
 backupController.execute(1);
 ```
 
 ### Reading an archive
 
 ```java
-final var restoreController = new RestoreController(Path.of("/tmp/backup"), "test", null);
+//configuring the restore job
 final var restoreTargets = new RestoreTargets(
         Set.of(new RestoreTarget(Path.of("/source/dir"), Path.of("/tmp/restore/to"))));
-restoreController.execute(restoreTargets, 1, false);
+final var restoreTask = RestoreTask.builder()
+        .restoreTargets(restoreTargets)
+        .dryRun(true)
+        .threads(1)
+        .deleteFilesNotInBackup(false)
+        .build();
+final var restoreController = new RestoreController(Path.of("/tmp/backup"), "test", null);
+
+//executing the restore
+restoreController.execute(restoreTask);
 ```
 
 ## Further reading
