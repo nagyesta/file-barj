@@ -6,14 +6,17 @@ import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
+import com.github.nagyesta.filebarj.core.inspect.pipeline.IncrementInspectionController;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import com.github.nagyesta.filebarj.job.cli.*;
 import com.github.nagyesta.filebarj.job.util.KeyStoreUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Console;
 import java.io.IOException;
+import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
@@ -62,9 +65,44 @@ public class Controller {
                         .toArray(String[]::new), console).getResult();
                 doGenerateKey(keyStoreProperties);
                 break;
+            case INSPECT_CONTENT:
+                final var inspectContentProperties = new CliInspectContentParser(Arrays.stream(args)
+                        .skip(1)
+                        .toArray(String[]::new), console).getResult();
+                doInspectContent(inspectContentProperties);
+                break;
+            case INSPECT_INCREMENTS:
+                final var inspectIncrementsProperties = new CliInspectIncrementsParser(Arrays.stream(args)
+                        .skip(1)
+                        .toArray(String[]::new), console).getResult();
+                doInspectIncrements(inspectIncrementsProperties);
+                break;
             default:
                 throw new IllegalArgumentException("No task found.");
         }
+    }
+
+    protected void doInspectContent(final InspectIncrementContentsProperties properties) {
+        final var kek = getPrivateKey(properties.getKeyProperties());
+        final var startTimeMillis = System.currentTimeMillis();
+        log.info("Bootstrapping inspect content operation...");
+        final var pointInTimeEpochSeconds = properties.getPointInTimeEpochSeconds();
+        new IncrementInspectionController(properties.getBackupSource(), properties.getPrefix(), kek)
+                .inspectContent(pointInTimeEpochSeconds, properties.getOutputFile());
+        final var endTimeMillis = System.currentTimeMillis();
+        final var durationMillis = (endTimeMillis - startTimeMillis);
+        log.info("Increment content inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
+    }
+
+    protected void doInspectIncrements(final InspectIncrementsProperties properties) {
+        final var kek = getPrivateKey(properties.getKeyProperties());
+        final var startTimeMillis = System.currentTimeMillis();
+        log.info("Bootstrapping inspect increments operation...");
+        new IncrementInspectionController(properties.getBackupSource(), properties.getPrefix(), kek)
+                .inspectIncrements(System.out);
+        final var endTimeMillis = System.currentTimeMillis();
+        final var durationMillis = (endTimeMillis - startTimeMillis);
+        log.info("Increment increments inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 
     protected void doGenerateKey(final KeyStoreProperties properties) {
@@ -78,12 +116,7 @@ public class Controller {
     }
 
     protected void doRestore(final RestoreProperties properties) {
-        final var kek = Optional.ofNullable(properties.getKeyProperties())
-                .map(keyStoreProperties -> KeyStoreUtil
-                        .readPrivateKey(
-                                keyStoreProperties.getKeyStore(), keyStoreProperties.getAlias(),
-                                keyStoreProperties.getPassword(), keyStoreProperties.getPassword()))
-                .orElse(null);
+        final var kek = getPrivateKey(properties.getKeyProperties());
         final var restoreTargets = new RestoreTargets(
                 properties.getTargets().entrySet().stream()
                         .map(entry -> new RestoreTarget(entry.getKey(), entry.getValue()))
@@ -113,5 +146,15 @@ public class Controller {
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
         log.info("Backup operation completed. Total time: {}", toProcessSummary(durationMillis));
+    }
+
+    @Nullable
+    private static PrivateKey getPrivateKey(final KeyStoreProperties keyProperties) {
+        return Optional.ofNullable(keyProperties)
+                .map(keyStoreProperties -> KeyStoreUtil
+                        .readPrivateKey(
+                                keyStoreProperties.getKeyStore(), keyStoreProperties.getAlias(),
+                                keyStoreProperties.getPassword(), keyStoreProperties.getPassword()))
+                .orElse(null);
     }
 }

@@ -19,7 +19,15 @@ public enum Task {
     /**
      * Generating a key pair for the encryption.
      */
-    GEN_KEYS("gen-keys");
+    GEN_KEYS("gen-keys"),
+    /**
+     * Listing the increments of a backup.
+     */
+    INSPECT_INCREMENTS("inspect-increments"),
+    /**
+     * Listing the contents of a backup increment.
+     */
+    INSPECT_CONTENT("inspect-content");
 
     private final String command;
 

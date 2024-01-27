@@ -65,6 +65,34 @@ java -jar build/libs/file-barj-job.jar \
      --threads 2
 ```
 
+### Inspecting the available increments of a backup
+
+Execute the following command (assuming that your executable is named accordingly).
+
+```commandline
+java -jar build/libs/file-barj-job.jar \
+     --inspect-increments \
+     --backup-source /backup/directory/path \
+     --prefix backup-job-file-prefix \
+     --key-store keys.p12 \
+     --key-alias alias
+```
+
+### Inspecting the content of a backup increment
+
+Execute the following command (assuming that your executable is named accordingly).
+
+```commandline
+java -jar build/libs/file-barj-job.jar \
+     --inspect-content \
+     --backup-source /backup/directory/path \
+     --prefix backup-job-file-prefix \
+     --key-store keys.p12 \
+     --key-alias alias \
+     --output-file /path/to/output.tsv \
+     --at-epoch-seconds 123456
+```
+
 ## Further reading
 
 Please read more about configuring the BaRJ backup jobs [here](https://github.com/nagyesta/file-barj/wiki/Backup-job-configuration-tips).

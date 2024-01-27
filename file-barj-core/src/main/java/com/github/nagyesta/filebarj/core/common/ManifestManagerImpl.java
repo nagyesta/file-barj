@@ -107,6 +107,23 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     @Override
+    public SortedMap<Long, BackupIncrementManifest> loadAll(
+            @NonNull final Path destinationDirectory,
+            @NonNull final String fileNamePrefix,
+            @Nullable final PrivateKey privateKey) {
+        try (var pathStream = Files.list(destinationDirectory)) {
+            final var manifestFiles = pathStream
+                    .filter(path -> path.getFileName().toString().startsWith(fileNamePrefix))
+                    .filter(path -> path.getFileName().toString().endsWith(".manifest.cargo"))
+                    .sorted(Comparator.comparing(Path::getFileName).reversed())
+                    .toList();
+            return loadAllManifests(manifestFiles, privateKey);
+        } catch (final IOException e) {
+            throw new ArchivalException("Failed to load manifest files.", e);
+        }
+    }
+
+    @Override
     public SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(final BackupJobConfiguration job) {
         final var historyFolder = job.getDestinationDirectory().resolve(".history");
         if (!Files.exists(historyFolder)) {
@@ -190,6 +207,29 @@ public class ManifestManagerImpl implements ManifestManager {
                 if (manifest.getBackupType() == BackupType.FULL) {
                     break;
                 }
+            } catch (final Exception e) {
+                //ignore for now, the set of manifests will be verified later
+                log.debug("Failed to load manifest file: {}", path, e);
+            }
+        }
+        return manifests;
+    }
+
+    @NotNull
+    private SortedMap<Long, BackupIncrementManifest> loadAllManifests(
+            @NotNull final List<Path> manifestFiles,
+            @Nullable final PrivateKey privateKey) {
+        final SortedMap<Long, BackupIncrementManifest> manifests = new TreeMap<>();
+        for (final var path : manifestFiles) {
+            try (var fileStream = new FileInputStream(path.toFile());
+                 var bufferedStream = new BufferedInputStream(fileStream);
+                 var cryptoStream = new ManifestCipherInputStream(bufferedStream, privateKey);
+                 var gzipStream = new GZIPInputStream(cryptoStream);
+                 var reader = new InputStreamReader(gzipStream, StandardCharsets.UTF_8)) {
+                final var manifest = mapper.readerFor(BackupIncrementManifest.class)
+                        .readValue(reader, BackupIncrementManifest.class);
+                validate(manifest, ValidationRules.Persisted.class);
+                manifests.put(manifest.getStartTimeUtcEpochSeconds(), manifest);
             } catch (final Exception e) {
                 //ignore for now, the set of manifests will be verified later
                 log.debug("Failed to load manifest file: {}", path, e);

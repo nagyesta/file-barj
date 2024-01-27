@@ -1,8 +1,9 @@
 package com.github.nagyesta.filebarj.job.cli;
 
-import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NonNull;
+import lombok.experimental.SuperBuilder;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -11,13 +12,9 @@ import java.util.Map;
  * The parsed command line arguments of a restore task.
  */
 @Data
-@Builder
-public class RestoreProperties {
-    @NonNull
-    private final Path backupSource;
-    private final KeyStoreProperties keyProperties;
-    @NonNull
-    private final String prefix;
+@SuperBuilder
+@EqualsAndHashCode(callSuper = true)
+public class RestoreProperties extends BackupFileProperties {
     @NonNull
     private final Map<Path, Path> targets;
     private final int threads;

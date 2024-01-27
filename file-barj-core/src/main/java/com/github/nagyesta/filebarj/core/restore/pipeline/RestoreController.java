@@ -50,7 +50,7 @@ public class RestoreController {
         final ManifestManager manifestManager = new ManifestManagerImpl();
         //TODO: allow restoring earlier versions
         log.info("Loading backup manifests for restore from: {}", backupDirectory);
-        final var manifests = manifestManager.load(backupDirectory, fileNamePrefix, kek, Integer.MAX_VALUE);
+        final var manifests = manifestManager.load(backupDirectory, fileNamePrefix, kek, Long.MAX_VALUE);
         log.info("Merging {} manifests", manifests.size());
         manifest = manifestManager.mergeForRestore(manifests);
         final var filesOfLastManifest = manifest.getFilesOfLastManifest();

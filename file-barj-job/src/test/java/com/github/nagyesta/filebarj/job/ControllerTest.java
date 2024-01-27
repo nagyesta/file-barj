@@ -76,4 +76,56 @@ class ControllerTest {
         //then
         verify(underTest).doBackup(any());
     }
+
+    @Test
+    void testInspectContentShouldBeCalledWhenRequiredRestoreParametersArePassed() throws Exception {
+        //given
+        final var prefix = "prefix";
+        final var backup = Path.of("backup-dir");
+        final var store = Path.of("key-store.p12");
+        final var password = new char[]{'a', 'b', 'c'};
+        final var args = new String[]{
+                "--inspect-content",
+                "--backup-source", backup.toString(),
+                "--prefix", prefix,
+                "--key-store", store.toString(),
+                "--output-file", backup.resolve("backup-content.csv").toString(),
+                "--at-epoch-seconds", Long.MAX_VALUE + ""
+        };
+        final var console = mock(Console.class);
+        when(console.readPassword(anyString())).thenReturn(password);
+        final var underTest = spy(new Controller(args, console));
+        doNothing().when(underTest).doInspectContent(any());
+
+        //when
+        underTest.run();
+
+        //then
+        verify(underTest).doInspectContent(any());
+    }
+
+    @Test
+    void testInspectIncrementsShouldBeCalledWhenRequiredRestoreParametersArePassed() throws Exception {
+        //given
+        final var prefix = "prefix";
+        final var backup = Path.of("backup-dir");
+        final var store = Path.of("key-store.p12");
+        final var password = new char[]{'a', 'b', 'c'};
+        final var args = new String[]{
+                "--inspect-increments",
+                "--backup-source", backup.toString(),
+                "--prefix", prefix,
+                "--key-store", store.toString()
+        };
+        final var console = mock(Console.class);
+        when(console.readPassword(anyString())).thenReturn(password);
+        final var underTest = spy(new Controller(args, console));
+        doNothing().when(underTest).doInspectIncrements(any());
+
+        //when
+        underTest.run();
+
+        //then
+        verify(underTest).doInspectIncrements(any());
+    }
 }
