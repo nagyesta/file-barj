@@ -15,7 +15,31 @@ public class CliKeyGenParser extends GenericCliParser<KeyStoreProperties> {
     private static final String KEY_STORE = "key-store";
     private static final String KEY_ALIAS = "key-alias";
 
-    private static Options createOptions() {
+    /**
+     * Creates a new {@link CliKeyGenParser} instance and sets the input arguments.
+     *
+     * @param args    the command line arguments
+     * @param console the console we should use for password input
+     */
+    public CliKeyGenParser(final String[] args, final Console console) {
+        super("java -jar file-barj-job.jar --" + Task.GEN_KEYS.getCommand(), args, commandLine -> {
+            final var store = Path.of(commandLine.getOptionValue(KEY_STORE)).toAbsolutePath();
+            final var alias = commandLine.getOptionValue(KEY_ALIAS, "default");
+            final var password = console.readPassword("Enter password for the key store: ");
+            final var passwordRepeat = console.readPassword("Repeat password for the key store: ");
+            if (password == null || !Arrays.equals(password, passwordRepeat)) {
+                throw new IllegalArgumentException("ERROR: Passwords do not match.");
+            }
+            return KeyStoreProperties.builder()
+                    .keyStore(store)
+                    .password(password)
+                    .alias(alias)
+                    .build();
+        });
+    }
+
+    @Override
+    protected Options createOptions() {
         return new Options()
                 .addOption(Option.builder()
                         .longOpt(KEY_STORE)
@@ -31,28 +55,5 @@ public class CliKeyGenParser extends GenericCliParser<KeyStoreProperties> {
                         .type(String.class)
                         .argName("alias")
                         .desc("The alias of the key inside the P12 store. Default: default").build());
-    }
-
-    /**
-     * Creates a new {@link CliKeyGenParser} instance and sets the input arguments.
-     *
-     * @param args    the command line arguments
-     * @param console the console we should use for password input
-     */
-    public CliKeyGenParser(final String[] args, final Console console) {
-        super("java -jar file-barj-job.jar --" + Task.GEN_KEYS.getCommand(), createOptions(), args, commandLine -> {
-            final var store = Path.of(commandLine.getOptionValue(KEY_STORE)).toAbsolutePath();
-            final var alias = commandLine.getOptionValue(KEY_ALIAS, "default");
-            final var password = console.readPassword("Enter password for the key store: ");
-            final var passwordRepeat = console.readPassword("Repeat password for the key store: ");
-            if (password == null || !Arrays.equals(password, passwordRepeat)) {
-                throw new IllegalArgumentException("ERROR: Passwords do not match.");
-            }
-            return KeyStoreProperties.builder()
-                    .keyStore(store)
-                    .password(password)
-                    .alias(alias)
-                    .build();
-        });
     }
 }

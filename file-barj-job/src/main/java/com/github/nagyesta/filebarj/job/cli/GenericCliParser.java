@@ -11,7 +11,7 @@ import java.util.function.Function;
  * @param <T> the type of the parsed data
  */
 @Getter
-public class GenericCliParser<T> {
+public abstract class GenericCliParser<T> {
 
     private static final int MAX_WIDTH = 120;
     private T result;
@@ -20,12 +20,12 @@ public class GenericCliParser<T> {
      * Creates a new instance and sets the input arguments.
      *
      * @param command   the command
-     * @param options   the options
      * @param args      the command line arguments
      * @param evaluator the evaluation function
      */
-    public GenericCliParser(final String command, final Options options, final String[] args, final Function<CommandLine, T> evaluator) {
+    public GenericCliParser(final String command, final String[] args, final Function<CommandLine, T> evaluator) {
         final var parser = new DefaultParser();
+        final var options = createOptions();
         try {
             if (args == null || args.length == 0) {
                 throw new ParseException("Missing command line arguments.");
@@ -37,4 +37,11 @@ public class GenericCliParser<T> {
             throw new IllegalArgumentException("Failed to parse command line arguments: ", e);
         }
     }
+
+    /**
+     * Creates the options for the command line parser.
+     *
+     * @return the options
+     */
+    protected abstract Options createOptions();
 }

@@ -40,8 +40,8 @@ public interface ManifestManager {
     void persist(@NonNull BackupIncrementManifest manifest);
 
     /**
-     * Loads the manifests which belong to the provided backup considering the latest manifest
-     * before the provided time stamp.
+     * Loads the manifests which belong to the provided backup. Only includes manifests starting
+     * with the latest full backup before the provided time stamp.
      *
      * @param destinationDirectory    the directory where the backup files are stored
      * @param fileNamePrefix          the prefix of the backup files
@@ -49,13 +49,28 @@ public interface ManifestManager {
      *                                If null, the manifests will not be decrypted.
      * @param latestBeforeEpochMillis defines the time stamp until which the manifests should be
      *                                considered
-     * @return the map of loaded manifests
+     * @return the map of loaded manifests keyed by their versions
      */
     SortedMap<Integer, BackupIncrementManifest> load(
             @NonNull Path destinationDirectory,
             @NonNull String fileNamePrefix,
             @Nullable PrivateKey privateKey,
             long latestBeforeEpochMillis);
+
+    /**
+     * Loads all manifests which belong to the provided backup. Contains manifests for all
+     * increments even if many full backups have been created.
+     *
+     * @param destinationDirectory    the directory where the backup files are stored
+     * @param fileNamePrefix          the prefix of the backup files
+     * @param privateKey              the RSA key we want to use to decrypt the manifests (optional).
+     *                                If null, the manifests will not be decrypted.
+     * @return the map of loaded manifests keyed by their timestamps
+     */
+    SortedMap<Long, BackupIncrementManifest> loadAll(
+            @NonNull Path destinationDirectory,
+            @NonNull String fileNamePrefix,
+            @Nullable PrivateKey privateKey);
 
     /**
      * Merges the provided manifests for a restore process.

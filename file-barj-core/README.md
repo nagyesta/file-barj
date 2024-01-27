@@ -81,6 +81,21 @@ final var restoreController = new RestoreController(Path.of("/tmp/backup"), "tes
 restoreController.execute(restoreTask);
 ```
 
+### Inspecting an archive
+
+```java
+//configuring the inspection job
+final var backupDir = Path.of("/backup/directory");
+final var outputFile = Path.of("/backup/directory");
+final var controller = new IncrementInspectionController(backupDir, "file-prefix", null);
+
+//list the summary of the available increments
+controller.inspectIncrements(System.out);
+
+//list the contents of the latest backup increment
+controller.inspectContent(Long.MAX_VALUE, outputFile);
+```
+
 ## Further reading
 
 Please read more about the BaRJ backup jobs [here](https://github.com/nagyesta/file-barj/wiki/Backup-job-configuration-tips).
