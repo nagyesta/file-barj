@@ -76,19 +76,19 @@ jobs:
         run: |
           rm -rf ${{ runner.temp }}/.gnupg/
       - name: Upload coverage to Codecov - Core
-        uses: codecov/codecov-action@4fe8c5f003fae66aa5ebb77cfd3e7bfbbda0b6b0 # v3.1.5
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3.1.6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-core/build/reports/jacoco/report.xml
           flags: core
       - name: Upload coverage to Codecov - Job
-        uses: codecov/codecov-action@4fe8c5f003fae66aa5ebb77cfd3e7bfbbda0b6b0 # v3.1.5
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3.1.6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-job/build/reports/jacoco/report.xml
           flags: job
       - name: Upload coverage to Codecov - Stream IO
-        uses: codecov/codecov-action@4fe8c5f003fae66aa5ebb77cfd3e7bfbbda0b6b0 # v3.1.5
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3.1.6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-stream-io/build/reports/jacoco/report.xml
