@@ -25,6 +25,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -395,17 +396,6 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         new BackupController(configuration, true).execute(1);
 
-        final var restoreFullBackup = new RestoreController(
-                backupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
-        final var restoreTask = RestoreTask.builder()
-                .restoreTargets(restoreTargets)
-                .threads(threads)
-                .dryRun(false)
-                .deleteFilesNotInBackup(deleteLeftOver)
-                .build();
-        restoreFullBackup.execute(restoreTask);
-
         Files.delete(deleted);
         final var expectedChangedContent = "changed content";
         Files.writeString(changed, expectedChangedContent);
@@ -419,8 +409,24 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var addedLinkExternal = sourceDir.resolve("folder/added-external.png");
         Files.createSymbolicLink(addedLinkExternal, externalLinkTarget);
 
+        final var fullBackupTime = Instant.now().getEpochSecond();
         Thread.sleep(A_SECOND);
         new BackupController(configuration, false).execute(1);
+        //create restore controller to read full backup increment
+        final var restoreFullBackup = new RestoreController(
+                backupDir, configuration.getFileNamePrefix(), decryptionKey, fullBackupTime);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var restoreTask = RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(false)
+                .deleteFilesNotInBackup(deleteLeftOver)
+                .build();
+        restoreFullBackup.execute(restoreTask);
+        //verify, that the restore used the earlier increment
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        Assertions.assertTrue(Files.exists(realRestorePath.resolve("folder/deleted.png")));
+
         //recreate restore controller to read new backup increment
         final var underTest = new RestoreController(
                 backupDir, configuration.getFileNamePrefix(), decryptionKey);
@@ -429,7 +435,6 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         underTest.execute(restoreTask);
 
         //then
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
         final var metadataParser = FileMetadataParserFactory.newInstance();
         for (final var sourceFile : originalFiles) {
             final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());

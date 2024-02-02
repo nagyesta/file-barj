@@ -38,6 +38,10 @@ File BaRJ comes with the following features
 - Backup archive splitting to configurable chunks
 - Backup archive integrity checks
 - Restore/unpack previous backup
+  - Using latest increment
+  - Using a selected earlier increment
+- Inspect available backup increments
+- Inspect content of a backup increment
 - Duplicate handling (storing duplicates of the same file only once)
 - Deletes left-over files from the restore directory (if they had been in scope for the backup)
 

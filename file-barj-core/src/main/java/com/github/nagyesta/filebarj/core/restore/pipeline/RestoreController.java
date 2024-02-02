@@ -40,17 +40,32 @@ public class RestoreController {
      * @param kek             The key encryption key we want to use to decrypt the files (optional).
      *                        If null, no decryption will be performed.
      */
-    @SuppressWarnings("checkstyle:TodoComment")
+    public RestoreController(
+            @NotNull final Path backupDirectory,
+            @NotNull final String fileNamePrefix,
+            @Nullable final PrivateKey kek) {
+        this(backupDirectory, fileNamePrefix, kek, Long.MAX_VALUE);
+    }
+
+    /**
+     * Creates a new instance and initializes it for the specified job.
+     *
+     * @param backupDirectory the directory where the backup files are located
+     * @param fileNamePrefix  the prefix of the backup file names
+     * @param kek             The key encryption key we want to use to decrypt the files (optional).
+     *                        If null, no decryption will be performed.
+     * @param atPointInTime   the point in time to restore from (inclusive).
+     */
     public RestoreController(
             @NonNull final Path backupDirectory,
             @NonNull final String fileNamePrefix,
-            @Nullable final PrivateKey kek) {
+            @Nullable final PrivateKey kek,
+            final long atPointInTime) {
         this.kek = kek;
         this.backupDirectory = backupDirectory;
         final ManifestManager manifestManager = new ManifestManagerImpl();
-        //TODO: allow restoring earlier versions
         log.info("Loading backup manifests for restore from: {}", backupDirectory);
-        final var manifests = manifestManager.load(backupDirectory, fileNamePrefix, kek, Long.MAX_VALUE);
+        final var manifests = manifestManager.load(backupDirectory, fileNamePrefix, kek, atPointInTime);
         log.info("Merging {} manifests", manifests.size());
         manifest = manifestManager.mergeForRestore(manifests);
         final var filesOfLastManifest = manifest.getFilesOfLastManifest();

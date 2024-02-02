@@ -130,7 +130,7 @@ public class Controller {
                 .dryRun(properties.isDryRun())
                 .deleteFilesNotInBackup(properties.isDeleteFilesNotInBackup())
                 .build();
-        new RestoreController(properties.getBackupSource(), properties.getPrefix(), kek)
+        new RestoreController(properties.getBackupSource(), properties.getPrefix(), kek, properties.getPointInTimeEpochSeconds())
                 .execute(restoreTask);
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);

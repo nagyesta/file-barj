@@ -75,7 +75,8 @@ final var restoreTask = RestoreTask.builder()
         .threads(1)
         .deleteFilesNotInBackup(false)
         .build();
-final var restoreController = new RestoreController(Path.of("/tmp/backup"), "test", null);
+final var pointInTime = 123456L;
+final var restoreController = new RestoreController(Path.of("/tmp/backup"), "test", null, pointInTime);
 
 //executing the restore
 restoreController.execute(restoreTask);

@@ -62,6 +62,7 @@ java -jar build/libs/file-barj-job.jar \
      --delete-missing true \
      --key-store keys.p12 \
      --key-alias alias \
+     --at-epoch-seconds 123456 \
      --threads 2
 ```
 

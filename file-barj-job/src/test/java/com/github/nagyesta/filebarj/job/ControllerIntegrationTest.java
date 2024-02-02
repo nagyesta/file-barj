@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.Console;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -20,6 +21,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ControllerIntegrationTest extends TempFileAwareTest {
+
+    private static final long A_SECOND = 1000;
 
     @Test
     void testEndToEndFlowShouldWorkWhenCalledWithValidParameters() throws Exception {
@@ -34,7 +37,8 @@ class ControllerIntegrationTest extends TempFileAwareTest {
         Files.createDirectories(originalDirectory);
         final var txtFileName = "file1.txt";
         final var txt = originalDirectory.resolve(txtFileName);
-        Files.writeString(txt, "test");
+        final var originalTxtContent = "test";
+        Files.writeString(txt, originalTxtContent);
         final var backupDirectory = testDataRoot.resolve("backup");
         final var keyStoreArgs = new String[]{
                 "--gen-keys",
@@ -48,7 +52,7 @@ class ControllerIntegrationTest extends TempFileAwareTest {
         //given we have a backup configuration
         final var config = testDataRoot.resolve("config.json");
         new ObjectMapper().writeValue(config.toFile(), BackupJobConfiguration.builder()
-                .backupType(BackupType.FULL)
+                .backupType(BackupType.INCREMENTAL)
                 .fileNamePrefix(prefix)
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .destinationDirectory(backupDirectory)
@@ -65,9 +69,36 @@ class ControllerIntegrationTest extends TempFileAwareTest {
         //when backup is executed
         new Controller(backupArgs, console).run();
 
+        final var atEpochSeconds = Instant.now().getEpochSecond();
+        Thread.sleep(A_SECOND);
+        final var modifiedTxtContent = "updated value";
+        Files.writeString(txt, modifiedTxtContent);
+
+        //when another backup increment is executed
+        new Controller(backupArgs, console).run();
+
         //given we prepare for restore
         final var restoreDirectory = testDataRoot.resolve("restore");
-        final var restoreArgs = new String[]{
+        final var restoreFullArgs = new String[]{
+                "--restore",
+                "--target-mapping", originalDirectory + "=" + restoreDirectory,
+                "--backup-source", backupDirectory.toString(),
+                "--prefix", prefix,
+                "--key-store", keyStore.toString(),
+                "--key-alias", alias,
+                "--at-epoch-seconds", atEpochSeconds + ""
+        };
+
+        //when restore is executed
+        new Controller(restoreFullArgs, console).run();
+
+        //then the original content of the  file exists in the restore directory
+        final var restoredTxt = restoreDirectory.resolve(txtFileName);
+        Assertions.assertTrue(Files.exists(restoredTxt));
+        Assertions.assertEquals(originalTxtContent, Files.readString(restoredTxt));
+
+        //then restore the latest backup increment
+        final var restoreLatestArgs = new String[]{
                 "--restore",
                 "--target-mapping", originalDirectory + "=" + restoreDirectory,
                 "--backup-source", backupDirectory.toString(),
@@ -76,13 +107,12 @@ class ControllerIntegrationTest extends TempFileAwareTest {
                 "--key-alias", alias
         };
 
-        //when restore is executed
-        new Controller(restoreArgs, console).run();
+        //when restore is executed with the last increment
+        new Controller(restoreLatestArgs, console).run();
 
         //then the file exists in the restore directory
-        final var restoredTxt = restoreDirectory.resolve(txtFileName);
         Assertions.assertTrue(Files.exists(restoredTxt));
-        Assertions.assertEquals(Files.readString(txt), Files.readString(restoredTxt));
+        Assertions.assertEquals(modifiedTxtContent, Files.readString(restoredTxt));
 
         //given we inspect the versions
         final var inspectIncrementsArgs = new String[]{
