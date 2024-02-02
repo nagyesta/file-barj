@@ -6,6 +6,7 @@ import org.apache.commons.cli.Options;
 
 import java.io.Console;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -19,6 +20,7 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
     private static final String DRY_RUN = "dry-run";
     private static final String TARGET = "target-mapping";
     private static final String DELETE_MISSING = "delete-missing";
+    private static final String AT_EPOCH_SECONDS = "at-epoch-seconds";
 
     /**
      * Creates a new {@link CliRestoreParser} instance and sets the input arguments.
@@ -33,6 +35,8 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
             final var deleteMissing = Boolean.parseBoolean(commandLine.getOptionValue(DELETE_MISSING, "false"));
             final var backupSource = Path.of(commandLine.getOptionValue(BACKUP_SOURCE)).toAbsolutePath();
             final var prefix = commandLine.getOptionValue(PREFIX);
+            final var nowEpochSeconds = Instant.now().getEpochSecond() + "";
+            final var atPointInTime = Long.parseLong(commandLine.getOptionValue(AT_EPOCH_SECONDS, nowEpochSeconds));
             final var targets = new HashMap<Path, Path>();
             if (commandLine.hasOption(TARGET)) {
                 final var mappings = commandLine.getOptionValues(TARGET);
@@ -55,6 +59,7 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                     .keyProperties(keyProperties)
                     .prefix(prefix)
                     .targets(targets)
+                    .pointInTimeEpochSeconds(atPointInTime)
                     .build();
         });
     }
@@ -89,6 +94,14 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                         .argName("from_dir=to_dir")
                         .desc("Defines where the files should be restored to by defining mappings that can specify which from_dir"
                                 + " of the backup source should be restored to which to_dir (as if the two were equivalent). Optional.")
+                        .build())
+                .addOption(Option.builder()
+                        .longOpt(AT_EPOCH_SECONDS)
+                        .numberOfArgs(1)
+                        .argName("epoch_seconds")
+                        .required(false)
+                        .type(Long.class)
+                        .desc("The date and time using UTC epoch seconds at which the content should be restored.")
                         .build());
     }
 }

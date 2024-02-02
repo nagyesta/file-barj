@@ -20,4 +20,5 @@ public class RestoreProperties extends BackupFileProperties {
     private final int threads;
     private final boolean dryRun;
     private final boolean deleteFilesNotInBackup;
+    private final long pointInTimeEpochSeconds;
 }
