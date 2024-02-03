@@ -4,6 +4,7 @@ import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
+import com.github.nagyesta.filebarj.core.inspect.worker.ManifestToSummaryConverter;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -66,6 +67,8 @@ public class RestoreController {
         final ManifestManager manifestManager = new ManifestManagerImpl();
         log.info("Loading backup manifests for restore from: {}", backupDirectory);
         final var manifests = manifestManager.load(backupDirectory, fileNamePrefix, kek, atPointInTime);
+        final var header = new ManifestToSummaryConverter().convertToSummaryString(manifests.get(manifests.lastKey()));
+        log.info("Latest backup manifest: {}", header);
         log.info("Merging {} manifests", manifests.size());
         manifest = manifestManager.mergeForRestore(manifests);
         final var filesOfLastManifest = manifest.getFilesOfLastManifest();
@@ -86,8 +89,8 @@ public class RestoreController {
         executionLock.lock();
         try {
             this.threadPool = new ForkJoinPool(restoreTask.getThreads());
-            final var allEntries = manifest.getFilesOfLastManifest().values().stream().toList();
-            final var contentSources = manifest.getExistingContentSourceFilesOfLastManifest();
+            final var allEntries = manifest.getFilesOfLastManifestFilteredBy(restoreTask.getPathFilter()).values().stream().toList();
+            final var contentSources = manifest.getExistingContentSourceFilesOfLastManifestFilteredBy(restoreTask.getPathFilter());
             final long totalBackupSize = allEntries.stream()
                     .map(FileMetadata::getOriginalSizeBytes)
                     .reduce(0L, Long::sum);
@@ -100,7 +103,7 @@ public class RestoreController {
                     .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
                     .toList());
             pipeline.restoreFiles(contentSources, threadPool);
-            pipeline.deleteLeftOverFiles(restoreTask.isDeleteFilesNotInBackup(), threadPool);
+            pipeline.deleteLeftOverFiles(restoreTask.getIncludedPath(), restoreTask.isDeleteFilesNotInBackup(), threadPool);
             pipeline.finalizePermissions(allEntries, threadPool);
             pipeline.evaluateRestoreSuccess(allEntries, threadPool);
             final var endTimeMillis = System.currentTimeMillis();

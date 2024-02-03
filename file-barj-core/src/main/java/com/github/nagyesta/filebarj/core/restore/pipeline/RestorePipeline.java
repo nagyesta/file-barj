@@ -41,6 +41,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
@@ -163,15 +164,22 @@ public class RestorePipeline {
     /**
      * Deletes the left-over files in the restore target.
      *
+     * @param includedPath        The root path included in the restore task
      * @param deleteLeftOverFiles True if we should delete left-over files
      * @param threadPool          The thread pool we can use for parallel processing
      */
-    public void deleteLeftOverFiles(final boolean deleteLeftOverFiles, @NonNull final ForkJoinPool threadPool) {
+    public void deleteLeftOverFiles(final Path includedPath, final boolean deleteLeftOverFiles, @NonNull final ForkJoinPool threadPool) {
         if (!deleteLeftOverFiles) {
             log.info("Skipping left-over files deletion...");
             return;
         }
-        log.info("Deleting left-over files (if any)...");
+        final var pathRestriction = Optional.ofNullable(includedPath)
+                .map(restoreTargets::mapToRestorePath)
+                .map(included -> (Predicate<Path>) path -> path.equals(included) || path.startsWith(included))
+                .orElse(path -> true);
+        log.info("Deleting left-over files (if any){}", Optional.ofNullable(includedPath)
+                .map(path -> " limited to path: " + path)
+                .orElse(""));
         final var files = manifest.getFilesOfLastManifest().values();
         final var modifiedSources = manifest.getConfiguration().getSources().stream()
                 .map(source -> BackupSource.builder()
@@ -183,6 +191,7 @@ public class RestorePipeline {
         final var pathsInRestoreTarget = modifiedSources.stream()
                 .map(BackupSource::listMatchingFilePaths)
                 .flatMap(Collection::stream)
+                .filter(pathRestriction)
                 .collect(Collectors.toSet());
         final var pathsInBackup = threadPool.submit(() -> files.parallelStream()
                 .map(FileMetadata::getAbsolutePath)
