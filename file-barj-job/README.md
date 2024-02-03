@@ -63,6 +63,7 @@ java -jar build/libs/file-barj-job.jar \
      --key-store keys.p12 \
      --key-alias alias \
      --at-epoch-seconds 123456 \
+     --include-path /original/path/filter \
      --threads 2
 ```
 

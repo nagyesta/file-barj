@@ -129,6 +129,7 @@ public class Controller {
                 .threads(properties.getThreads())
                 .dryRun(properties.isDryRun())
                 .deleteFilesNotInBackup(properties.isDeleteFilesNotInBackup())
+                .includedPath(properties.getIncludedPath())
                 .build();
         new RestoreController(properties.getBackupSource(), properties.getPrefix(), kek, properties.getPointInTimeEpochSeconds())
                 .execute(restoreTask);

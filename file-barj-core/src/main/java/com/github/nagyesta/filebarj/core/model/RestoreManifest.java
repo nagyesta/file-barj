@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.model;
 
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
+import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -9,9 +10,12 @@ import lombok.experimental.SuperBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import javax.crypto.SecretKey;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Data
 @SuperBuilder
@@ -83,14 +87,42 @@ public class RestoreManifest extends EncryptionKeyStore {
     }
 
     /**
-     * The map of all files in the manifest. This is a read-only view of the files map.
+     * The map of all files in the manifest which are matching the provided predicate and their
+     * parent directories. This is a read-only view of the files map.
      *
+     * @param predicate the predicate filtering the paths to be returned
      * @return the map
      */
-    public List<FileMetadata> getExistingContentSourceFilesOfLastManifest() {
+    public Map<UUID, FileMetadata> getFilesOfLastManifestFilteredBy(
+            final Predicate<Path> predicate) {
+        final var filesOfLastManifest = getFilesOfLastManifest();
+        final var allDirectories = filesOfLastManifest.values().stream()
+                .filter(fileMetadata -> fileMetadata.getFileType() == FileType.DIRECTORY)
+                .map(FileMetadata::getAbsolutePath)
+                .collect(Collectors.toSet());
+        final var foundPaths = filesOfLastManifest.values().stream()
+                .map(FileMetadata::getAbsolutePath)
+                .filter(predicate)
+                .flatMap(path -> parents(allDirectories, path))
+                .collect(Collectors.toSet());
+        return filesOfLastManifest.entrySet().stream()
+                .filter(e -> foundPaths.contains(e.getValue().getAbsolutePath()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    /**
+     * The map of all files in the manifest which are matching the provided predicate and their
+     * parent directories.. This is a read-only view of the files map.
+     *
+     * @param predicate the predicate filtering the paths to be returned
+     * @return the list
+     */
+    public List<FileMetadata> getExistingContentSourceFilesOfLastManifestFilteredBy(
+            final Predicate<Path> predicate) {
         return getFilesOfLastManifest().values().stream()
                 .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
                 .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
+                .filter(fileMetadata -> predicate.test(fileMetadata.getAbsolutePath()))
                 .toList();
     }
 
@@ -101,5 +133,12 @@ public class RestoreManifest extends EncryptionKeyStore {
      */
     public Map<UUID, ArchivedFileMetadata> getArchivedEntriesOfLastManifest() {
         return archivedEntries.get(fileNamePrefixes.lastKey());
+    }
+
+    private Stream<Path> parents(final Set<Path> directories, final Path path) {
+        return Optional.ofNullable(path.getParent())
+                .filter(directories::contains)
+                .map(parent -> Stream.concat(Stream.of(path), parents(directories, parent)))
+                .orElse(Stream.of(path));
     }
 }

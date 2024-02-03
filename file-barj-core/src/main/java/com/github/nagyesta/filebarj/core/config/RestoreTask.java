@@ -4,6 +4,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
 
+import java.nio.file.Path;
+import java.util.Optional;
+import java.util.function.Predicate;
+
 /**
  * Defines the parameters of a restore task.
  */
@@ -29,4 +33,19 @@ public class RestoreTask {
      * are not in the backup increment when true.
      */
     private final boolean deleteFilesNotInBackup;
+    /**
+     * The root path of the backup entries (directory or file) to include during the restore.
+     */
+    private final Path includedPath;
+
+    /**
+     * Returns the path filter for this restore task based on the included path.
+     *
+     * @return the path filter
+     */
+    public Predicate<Path> getPathFilter() {
+        return Optional.ofNullable(includedPath)
+                .map(includedPath -> (Predicate<Path>) path -> path.equals(includedPath) || path.startsWith(includedPath))
+                .orElse(path -> true);
+    }
 }

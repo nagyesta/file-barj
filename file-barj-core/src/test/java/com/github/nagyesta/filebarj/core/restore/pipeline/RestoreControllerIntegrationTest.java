@@ -168,6 +168,86 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
+    void testExecuteShouldRestoreOnlyIncludedFilesToDestinationWhenExecutedWithIncludeFilter(
+            final PublicKey encryptionKey, final PrivateKey decryptionKey,
+            final int threads, final HashAlgorithm hash) throws IOException {
+        //given
+        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+        final var movedBackupDir = testDataRoot.resolve("moved-backup-dir" + UUID.randomUUID());
+        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+        final var configuration = getBackupJobConfiguration(BackupType.FULL, sourceDir, backupDir, encryptionKey, hash);
+
+        final var aPng = sourceDir.resolve("A.png");
+        final var bPng = sourceDir.resolve("B.png");
+        final var cPng = sourceDir.resolve("C.png");
+        final var sourceFiles = List.of(aPng, bPng, cPng);
+        for (final var sourceFile : sourceFiles) {
+            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+        }
+        final var sourceFolder = sourceDir.resolve("folder");
+        Files.createDirectories(sourceFolder);
+
+        final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
+        Files.createSymbolicLink(sourceLinkInternal, aPng);
+        final var sourceLinkExternal = sourceDir.resolve("external.png");
+        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+        Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
+
+        final var backupController = new BackupController(configuration, true);
+        backupController.execute(1);
+
+        Files.move(backupDir, movedBackupDir);
+
+        final var underTest = new RestoreController(
+                movedBackupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var restoredAPng = realRestorePath.resolve(aPng.getFileName().toString());
+        final var restoredBPng = realRestorePath.resolve(bPng.getFileName().toString());
+        final var restoredCPng = realRestorePath.resolve(cPng.getFileName().toString());
+        final var restoredFolder = realRestorePath.resolve("folder");
+        final var restoredExternal = realRestorePath.resolve("external.png");
+
+        final var metadataParser = FileMetadataParserFactory.newInstance();
+
+        //when "A.png" is restored
+        underTest.execute(RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(false)
+                .deleteFilesNotInBackup(true)
+                .includedPath(aPng)
+                .build());
+
+        //then nothing else exists
+        assertFileIsFullyRestored(aPng, restoredAPng, metadataParser, configuration);
+        Assertions.assertTrue(Files.notExists(restoredBPng, LinkOption.NOFOLLOW_LINKS));
+        Assertions.assertTrue(Files.notExists(restoredCPng, LinkOption.NOFOLLOW_LINKS));
+        Assertions.assertTrue(Files.notExists(restoredFolder, LinkOption.NOFOLLOW_LINKS));
+        Assertions.assertTrue(Files.notExists(restoredExternal, LinkOption.NOFOLLOW_LINKS));
+
+        //when the "folder" is restored
+        underTest.execute(RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(threads)
+                .dryRun(false)
+                .deleteFilesNotInBackup(true)
+                .includedPath(sourceDir.resolve("folder"))
+                .build());
+
+        //then both "A.png" and the full contents of the "folder" are restored
+        assertFileIsFullyRestored(aPng, restoredAPng, metadataParser, configuration);
+        Assertions.assertTrue(Files.notExists(restoredBPng, LinkOption.NOFOLLOW_LINKS));
+        Assertions.assertTrue(Files.notExists(restoredCPng, LinkOption.NOFOLLOW_LINKS));
+        final var restoredInternal = Files.readSymbolicLink(realRestorePath.resolve("folder/internal.png")).toAbsolutePath();
+        Assertions.assertEquals(sourceDir.relativize(aPng), realRestorePath.relativize(restoredInternal));
+        Assertions.assertTrue(Files.notExists(restoredExternal, LinkOption.NOFOLLOW_LINKS));
+        assertFileMetadataMatches(sourceFolder, restoredFolder, metadataParser, configuration);
+    }
+
+    @ParameterizedTest
+    @MethodSource("restoreParameterProvider")
     void testExecuteShouldRestoreFilesToDestinationWhenTargetFilesAlreadyExistWithDifferentContent(
             final PublicKey encryptionKey, final PrivateKey decryptionKey,
             final int threads, final HashAlgorithm hash) throws IOException {

@@ -40,6 +40,8 @@ File BaRJ comes with the following features
 - Restore/unpack previous backup
   - Using latest increment
   - Using a selected earlier increment
+  - Restoring all files from the backup
+  - Restoring only some included files (partial restore)
 - Inspect available backup increments
 - Inspect content of a backup increment
 - Duplicate handling (storing duplicates of the same file only once)

@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Optional;
 
 /**
  * Parser class for the command line arguments of the restore task.
@@ -21,6 +22,7 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
     private static final String TARGET = "target-mapping";
     private static final String DELETE_MISSING = "delete-missing";
     private static final String AT_EPOCH_SECONDS = "at-epoch-seconds";
+    private static final String INCLUDED_PATH = "include-path";
 
     /**
      * Creates a new {@link CliRestoreParser} instance and sets the input arguments.
@@ -37,6 +39,9 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
             final var prefix = commandLine.getOptionValue(PREFIX);
             final var nowEpochSeconds = Instant.now().getEpochSecond() + "";
             final var atPointInTime = Long.parseLong(commandLine.getOptionValue(AT_EPOCH_SECONDS, nowEpochSeconds));
+            final var includedPath = Optional.ofNullable(commandLine.getOptionValue(INCLUDED_PATH))
+                    .map(Path::of)
+                    .orElse(null);
             final var targets = new HashMap<Path, Path>();
             if (commandLine.hasOption(TARGET)) {
                 final var mappings = commandLine.getOptionValues(TARGET);
@@ -60,6 +65,7 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                     .prefix(prefix)
                     .targets(targets)
                     .pointInTimeEpochSeconds(atPointInTime)
+                    .includedPath(includedPath)
                     .build();
         });
     }
@@ -102,6 +108,15 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                         .required(false)
                         .type(Long.class)
                         .desc("The date and time using UTC epoch seconds at which the content should be restored.")
+                        .build())
+                .addOption(Option.builder()
+                        .longOpt(INCLUDED_PATH)
+                        .numberOfArgs(1)
+                        .argName("path_from_backup")
+                        .required(false)
+                        .type(Path.class)
+                        .desc("Path of the file or directory which should be restored from the backup. Optional. If not provided,"
+                                + " all files should be restored.")
                         .build());
     }
 }

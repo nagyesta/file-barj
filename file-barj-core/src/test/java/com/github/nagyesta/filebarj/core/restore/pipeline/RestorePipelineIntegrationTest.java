@@ -389,7 +389,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.deleteLeftOverFiles(true, null));
+                () -> underTest.deleteLeftOverFiles(null, true, null));
 
         //then + exception
     }
