@@ -9,6 +9,7 @@ import com.github.nagyesta.filebarj.core.config.*;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.apache.commons.io.FileUtils;
@@ -94,7 +95,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestoreController(
                 configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(backup, restore)));
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(backup), restore)));
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -143,7 +144,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestoreController(
                 movedBackupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
 
         //when
         underTest.execute(RestoreTask.builder()
@@ -153,7 +154,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .build());
 
         //then
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         final var metadataParser = FileMetadataParserFactory.newInstance();
         for (final var sourceFile : sourceFiles) {
             final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
@@ -201,8 +202,8 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestoreController(
                 movedBackupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         final var restoredAPng = realRestorePath.resolve(aPng.getFileName().toString());
         final var restoredBPng = realRestorePath.resolve(bPng.getFileName().toString());
         final var restoredCPng = realRestorePath.resolve(cPng.getFileName().toString());
@@ -217,7 +218,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .threads(threads)
                 .dryRun(false)
                 .deleteFilesNotInBackup(true)
-                .includedPath(aPng)
+                .includedPath(BackupPath.of(aPng))
                 .build());
 
         //then nothing else exists
@@ -233,7 +234,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .threads(threads)
                 .dryRun(false)
                 .deleteFilesNotInBackup(true)
-                .includedPath(sourceDir.resolve("folder"))
+                .includedPath(BackupPath.of(sourceDir).resolve("folder"))
                 .build());
 
         //then both "A.png" and the full contents of the "folder" are restored
@@ -279,8 +280,8 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestoreController(
                 backupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         Files.createDirectories(realRestorePath);
         final var restoredA = realRestorePath.resolve("A.png");
         Files.createFile(restoredA);
@@ -343,8 +344,8 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestoreController(
                 backupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         Files.createDirectories(realRestorePath);
         final var restoredA = realRestorePath.resolve("A.png");
         final var restoredB = realRestorePath.resolve("B.png");
@@ -408,8 +409,8 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestoreController(
                 backupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         Files.createDirectories(realRestorePath);
         Files.copy(sourceDir.resolve("A.png"), realRestorePath.resolve("A.png"));
         Files.copy(sourceDir.resolve("B.png"), realRestorePath.resolve("B.png"));
@@ -495,7 +496,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         //create restore controller to read full backup increment
         final var restoreFullBackup = new RestoreController(
                 backupDir, configuration.getFileNamePrefix(), decryptionKey, fullBackupTime);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
         final var restoreTask = RestoreTask.builder()
                 .restoreTargets(restoreTargets)
                 .threads(threads)
@@ -504,7 +505,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .build();
         restoreFullBackup.execute(restoreTask);
         //verify, that the restore used the earlier increment
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         Assertions.assertTrue(Files.exists(realRestorePath.resolve("folder/deleted.png")));
 
         //recreate restore controller to read new backup increment
@@ -568,7 +569,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestoreController(
                 backupDir, configuration.getFileNamePrefix(), decryptionKey);
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
 
         //when
         underTest.execute(RestoreTask.builder()
@@ -578,7 +579,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .build());
 
         //then
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         for (final var sourceFile : sourceFiles) {
             final var restoredFile = realRestorePath.resolve(sourceFile.getFileName().toString());
             Assertions.assertFalse(Files.exists(restoredFile), "File should not exist: " + restoredFile);
@@ -641,7 +642,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .destinationDirectory(backup)
                 .sources(Set.of(BackupSource.builder()
-                        .path(source)
+                        .path(BackupPath.of(source))
                         .build()))
                 .chunkSizeMebibyte(1)
                 .encryptionKey(encryptionKey)

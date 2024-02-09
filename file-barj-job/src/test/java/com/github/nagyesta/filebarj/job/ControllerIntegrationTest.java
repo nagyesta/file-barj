@@ -6,8 +6,10 @@ import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.job.util.KeyStoreUtil;
+import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -59,7 +61,7 @@ class ControllerIntegrationTest extends TempFileAwareTest {
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .compression(CompressionAlgorithm.BZIP2)
                 .encryptionKey(KeyStoreUtil.readPublicKey(keyStore, alias, password))
-                .sources(Set.of(BackupSource.builder().path(originalDirectory).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(originalDirectory)).build()))
                 .build());
         final var backupArgs = new String[]{
                 "--backup",
@@ -144,7 +146,9 @@ class ControllerIntegrationTest extends TempFileAwareTest {
         //then
         final var actualContent = Files.readAllLines(contentCsv);
         Assertions.assertTrue(actualContent.get(0).contains("hash_sha256"));
-        Assertions.assertTrue(actualContent.get(1).endsWith(originalDirectory.toAbsolutePath().toString()));
-        Assertions.assertTrue(actualContent.get(2).endsWith(txt.toAbsolutePath().toString()));
+        Assertions.assertTrue(actualContent.get(1)
+                .endsWith(FilenameUtils.separatorsToUnix(originalDirectory.toAbsolutePath().toString())));
+        Assertions.assertTrue(actualContent.get(2)
+                .endsWith(FilenameUtils.separatorsToUnix(txt.toAbsolutePath().toString())));
     }
 }

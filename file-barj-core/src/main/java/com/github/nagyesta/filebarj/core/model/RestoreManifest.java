@@ -10,7 +10,6 @@ import lombok.experimental.SuperBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import javax.crypto.SecretKey;
-import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.*;
 import java.util.function.Predicate;
@@ -94,7 +93,7 @@ public class RestoreManifest extends EncryptionKeyStore {
      * @return the map
      */
     public Map<UUID, FileMetadata> getFilesOfLastManifestFilteredBy(
-            final Predicate<Path> predicate) {
+            final Predicate<BackupPath> predicate) {
         final var filesOfLastManifest = getFilesOfLastManifest();
         final var allDirectories = filesOfLastManifest.values().stream()
                 .filter(fileMetadata -> fileMetadata.getFileType() == FileType.DIRECTORY)
@@ -118,7 +117,7 @@ public class RestoreManifest extends EncryptionKeyStore {
      * @return the list
      */
     public List<FileMetadata> getExistingContentSourceFilesOfLastManifestFilteredBy(
-            final Predicate<Path> predicate) {
+            final Predicate<BackupPath> predicate) {
         return getFilesOfLastManifest().values().stream()
                 .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
                 .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
@@ -135,7 +134,7 @@ public class RestoreManifest extends EncryptionKeyStore {
         return archivedEntries.get(fileNamePrefixes.lastKey());
     }
 
-    private Stream<Path> parents(final Set<Path> directories, final Path path) {
+    private Stream<BackupPath> parents(final Set<BackupPath> directories, final BackupPath path) {
         return Optional.ofNullable(path.getParent())
                 .filter(directories::contains)
                 .map(parent -> Stream.concat(Stream.of(path), parents(directories, parent)))

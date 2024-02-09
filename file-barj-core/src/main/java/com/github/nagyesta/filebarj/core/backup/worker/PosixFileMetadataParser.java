@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.backup.worker;
 import com.github.nagyesta.filebarj.core.backup.FileParseException;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -40,7 +41,7 @@ public class PosixFileMetadataParser implements FileMetadataParser {
         if (!Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
             return FileMetadata.builder()
                     .id(UUID.randomUUID())
-                    .absolutePath(file.toPath().toAbsolutePath())
+                    .absolutePath(BackupPath.of(file.toPath().toAbsolutePath()))
                     .fileType(FileType.MISSING)
                     .status(Change.DELETED)
                     .build();
@@ -51,7 +52,7 @@ public class PosixFileMetadataParser implements FileMetadataParser {
         return FileMetadata.builder()
                 .id(UUID.randomUUID())
                 .fileSystemKey(Optional.ofNullable(basicAttributes.fileKey()).map(String::valueOf).orElse(null))
-                .absolutePath(file.toPath().toAbsolutePath())
+                .absolutePath(BackupPath.of(file.toPath().toAbsolutePath()))
                 .owner(posixFileAttributes.owner())
                 .group(posixFileAttributes.group())
                 .posixPermissions(posixFileAttributes.permissions())

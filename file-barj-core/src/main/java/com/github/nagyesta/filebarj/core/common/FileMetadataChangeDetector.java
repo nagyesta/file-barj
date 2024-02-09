@@ -1,11 +1,10 @@
 package com.github.nagyesta.filebarj.core.common;
 
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.nio.file.Path;
 
 /**
  * Detects changes compared to previous backup increments.
@@ -58,7 +57,7 @@ public interface FileMetadataChangeDetector {
      * @return the file metadata
      */
     @Nullable
-    FileMetadata findPreviousVersionByAbsolutePath(@NotNull Path absolutePath);
+    FileMetadata findPreviousVersionByAbsolutePath(@NotNull BackupPath absolutePath);
 
     /**
      * Classifies the nature of the change between the previous and current metadata versions.

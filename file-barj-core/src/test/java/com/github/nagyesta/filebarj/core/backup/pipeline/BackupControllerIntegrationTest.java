@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.ArchiveEntryLocator;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -110,7 +111,7 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
             if (v.getFileType() == FileType.SYMBOLIC_LINK) {
                 originalBytes = exampleFile.getAbsolutePath().getBytes();
             } else {
-                originalBytes = Files.readAllBytes(v.getAbsolutePath());
+                originalBytes = Files.readAllBytes(v.getAbsolutePath().toOsPath());
             }
             Assertions.assertArrayEquals(originalBytes, fileContent);
         }
@@ -188,7 +189,7 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
             if (v.getFileType() == FileType.SYMBOLIC_LINK) {
                 originalBytes = exampleFile.getAbsolutePath().getBytes();
             } else {
-                originalBytes = Files.readAllBytes(v.getAbsolutePath());
+                originalBytes = Files.readAllBytes(v.getAbsolutePath().toOsPath());
             }
             Assertions.assertArrayEquals(originalBytes, fileContent);
         }
@@ -256,7 +257,7 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
             final DuplicateHandlingStrategy duplicateHandlingStrategy) {
         final var destinationDirectory = Path.of(testDataRoot.toString(), "destination");
         final var backupSource = BackupSource.builder()
-                .path(sourceDirectory)
+                .path(BackupPath.of(sourceDirectory))
                 .build();
         return BackupJobConfiguration.builder()
                 .backupType(backupType)

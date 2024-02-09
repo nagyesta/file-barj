@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
@@ -80,7 +81,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -113,7 +114,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -146,7 +147,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -184,7 +185,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -219,7 +220,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -260,7 +261,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -286,7 +287,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -325,7 +326,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(Path.of("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)

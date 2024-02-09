@@ -7,11 +7,13 @@ import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.AppVersion;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
+import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +68,7 @@ class TabSeparatedBackupContentExporterTest extends TempFileAwareTest {
         //given
         final var underTest = new TabSeparatedBackupContentExporter();
         final var fileId = UUID.randomUUID();
-        final var absolutePath = testDataRoot.resolve("path.txt");
+        final var absolutePath = FilenameUtils.separatorsToUnix(testDataRoot.resolve("path.txt").toAbsolutePath().toString());
         final var manifest = BackupIncrementManifest.builder()
                 .files(Map.of(fileId, FileMetadata.builder()
                         .fileSystemKey("key")
@@ -79,7 +81,7 @@ class TabSeparatedBackupContentExporterTest extends TempFileAwareTest {
                         .lastModifiedUtcEpochSeconds(LAST_MODIFIED_UTC_EPOCH_SECONDS)
                         .originalSizeBytes(ORIGINAL_SIZE_BYTES)
                         .originalHash(ORIGINAL_HASH)
-                        .absolutePath(absolutePath)
+                        .absolutePath(BackupPath.ofPathAsIs(absolutePath))
                         .fileType(FileType.REGULAR_FILE)
                         .status(Change.NEW)
                         .build()))

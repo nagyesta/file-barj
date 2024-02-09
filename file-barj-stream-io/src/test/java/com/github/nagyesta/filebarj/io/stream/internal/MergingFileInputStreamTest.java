@@ -103,7 +103,9 @@ class MergingFileInputStreamTest {
                 .map(getClass()::getResource)
                 .filter(Objects::nonNull)
                 .map(URL::getFile)
-                .map(Path::of)
+                .map(File::new)
+                .map(File::toPath)
+                .map(Path::toAbsolutePath)
                 .toList();
     }
 }

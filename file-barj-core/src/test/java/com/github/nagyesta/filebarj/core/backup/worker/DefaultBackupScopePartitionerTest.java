@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.backup.worker;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -90,7 +91,7 @@ class DefaultBackupScopePartitionerTest extends TempFileAwareTest {
     private FileMetadata getFileMetadata(final String hash) {
         return FileMetadata.builder()
                 .id(UUID.randomUUID())
-                .absolutePath(Path.of("test"))
+                .absolutePath(BackupPath.of(Path.of("test")))
                 .originalHash(hash)
                 .originalSizeBytes(1L)
                 .group("test")

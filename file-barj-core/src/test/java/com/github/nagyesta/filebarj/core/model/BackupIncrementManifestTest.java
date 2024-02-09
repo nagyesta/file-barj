@@ -60,7 +60,7 @@ class BackupIncrementManifestTest {
                 .build();
         final var file = FileMetadata.builder()
                 .id(UUID.randomUUID())
-                .absolutePath(Path.of("test", "file", ".path.txt").toAbsolutePath())
+                .absolutePath(BackupPath.of(Path.of("test"), "file", ".path.txt"))
                 .archiveMetadataId(archive.getId())
                 .fileType(FileType.REGULAR_FILE)
                 .owner("owner")
@@ -104,7 +104,7 @@ class BackupIncrementManifestTest {
         //given
         final var file = FileMetadata.builder()
                 .id(UUID.randomUUID())
-                .absolutePath(Path.of("test", "file", "missing.md").toAbsolutePath())
+                .absolutePath(BackupPath.of(Path.of("test"), "file", "missing.md"))
                 .fileType(FileType.SYMBOLIC_LINK)
                 .status(Change.DELETED)
                 .build();
@@ -115,7 +115,7 @@ class BackupIncrementManifestTest {
                 .destinationDirectory(Path.of(TEMP_DIR, "file-barj"))
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .fileNamePrefix("backup-")
-                .sources(Set.of(BackupSource.builder().path(Path.of(TEMP_DIR, "visible-file1.txt")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(Path.of(TEMP_DIR), "visible-file1.txt")).build()))
                 .build();
         final var expected = BackupIncrementManifest.builder()
                 .appVersion(new AppVersion(0, 0, 1))
@@ -254,7 +254,7 @@ class BackupIncrementManifestTest {
                 .destinationDirectory(Path.of(TEMP_DIR, "file-barj"))
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .fileNamePrefix("backup-")
-                .sources(Set.of(BackupSource.builder().path(Path.of(TEMP_DIR, "visible-file1.txt")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(Path.of(TEMP_DIR), "visible-file1.txt")).build()))
                 .build();
     }
 

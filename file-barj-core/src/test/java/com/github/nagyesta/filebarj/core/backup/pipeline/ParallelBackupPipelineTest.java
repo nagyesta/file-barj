@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
@@ -14,7 +15,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -78,7 +78,7 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
     private BackupIncrementManifest getManifest() {
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
         final var backupSource = BackupSource.builder()
-                .path(Path.of(testDataRoot.toString(), "test"))
+                .path(BackupPath.of(testDataRoot, "test"))
                 .build();
         final var job = BackupJobConfiguration.builder()
                 .backupType(BackupType.FULL)

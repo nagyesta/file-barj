@@ -11,10 +11,12 @@ import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.AppVersion;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -43,7 +45,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = testDataRoot.resolve("source-dir");
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -62,7 +64,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = testDataRoot.resolve("source-dir");
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -81,7 +83,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = testDataRoot.resolve("source-dir");
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -97,7 +99,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = testDataRoot.resolve("source-dir");
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -108,6 +110,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testConstructorShouldThrowExceptionWhenCalledWithNullSourcePath() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -126,6 +129,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testConstructorShouldThrowExceptionWhenCalledWithNullTargetPath() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -142,6 +146,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -163,6 +168,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullMap() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -184,6 +190,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testRestoreFilesShouldThrowExceptionWhenCalledWithNullContentSources() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -205,6 +212,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testRestoreFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -229,6 +237,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -250,6 +259,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -270,6 +280,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testEvaluateRestoreSuccessShouldNotThrowExceptionWhenCalledWithoutRestoringBackup() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -295,6 +306,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testRestoreDirectoriesShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -316,6 +328,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2})
+    @Tag("unix-only")
     void testPartialRestoreShouldRestoreFilesToDestinationWhenExecutedWithValidInput(final int threads) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
@@ -344,13 +357,13 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         backupController.execute(1);
         final var manifest = backupController.getManifest();
         final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var restoreTargets = getRestoreTargets(sourceDir, restoreDir);
+        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
 
         final var underTest = new RestorePipeline(restoreManifest, backupDir, restoreTargets, null);
         final var scope = manifest.getFiles().values().stream()
-                .filter(f -> f.getAbsolutePath().equals(sourceLinkExternal)
-                        || f.getAbsolutePath().endsWith("A.png")
-                        || f.getAbsolutePath().equals(sourceDir))
+                .filter(f -> f.getAbsolutePath().toOsPath().equals(sourceLinkExternal)
+                        || f.getAbsolutePath().toOsPath().endsWith("A.png")
+                        || f.getAbsolutePath().toOsPath().equals(sourceDir))
                 .toList();
 
         final var scopeMap = scope.stream()
@@ -368,13 +381,14 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         }
 
         //then
-        final var realRestorePath = restoreTargets.mapToRestorePath(sourceDir);
+        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
         Assertions.assertEquals(externalLinkTarget, restoredExternal);
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testDeleteLeftOverFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -394,14 +408,14 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         //then + exception
     }
 
-    private Path getSourceDirectory(final BackupController backupController) {
+    private BackupPath getSourceDirectory(final BackupController backupController) {
         return backupController.getManifest().getConfiguration().getSources().stream()
                 .findAny()
                 .map(BackupSource::getPath)
-                .orElse(testDataRoot);
+                .orElse(BackupPath.of(testDataRoot));
     }
 
-    private RestoreTargets getRestoreTargets(final Path sourceDir, final Path restoreDir) {
+    private RestoreTargets getRestoreTargets(final BackupPath sourceDir, final Path restoreDir) {
         return new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
     }
 
@@ -429,7 +443,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .destinationDirectory(backup)
                 .sources(Set.of(BackupSource.builder()
-                        .path(source)
+                        .path(BackupPath.of(source))
                         .build()))
                 .chunkSizeMebibyte(1)
                 .encryptionKey(null)

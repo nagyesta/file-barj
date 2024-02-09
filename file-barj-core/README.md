@@ -52,7 +52,7 @@ final var configuration = BackupJobConfiguration.builder()
         .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
         .destinationDirectory(Path.of("/tmp/backup"))
         .sources(Set.of(BackupSource.builder()
-                .path(Path.of("/source/dir"))
+                .path(BackupPath.of(Path.of("/source/dir")))
                 .build()))
         .chunkSizeMebibyte(1)
         .encryptionKey(null)
@@ -68,13 +68,13 @@ backupController.execute(1);
 ```java
 //configuring the restore job
 final var restoreTargets = new RestoreTargets(
-        Set.of(new RestoreTarget(Path.of("/source/dir"), Path.of("/tmp/restore/to"))));
+        Set.of(new RestoreTarget(BackupPath.of("/source/dir"), Path.of("/tmp/restore/to"))));
 final var restoreTask = RestoreTask.builder()
         .restoreTargets(restoreTargets)
         .dryRun(true)
         .threads(1)
         .deleteFilesNotInBackup(false)
-        .includedPath(Path.of("/source/dir")) //optional path filter
+        .includedPath(BackupPath.of("/source/dir")) //optional path filter
         .build();
 final var pointInTime = 123456L;
 final var restoreController = new RestoreController(Path.of("/tmp/backup"), "test", null, pointInTime);

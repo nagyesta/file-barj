@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -74,7 +75,7 @@ class CliRestoreParserTest {
         //given
         final var prefix = "prefix";
         final var backup = Path.of("backup-dir");
-        final var source = Path.of("source-dir");
+        final var source = BackupPath.ofPathAsIs("source-dir");
         final var target = Path.of("target-dir");
         final var dryRun = true;
         final var threads = 2;
@@ -96,8 +97,8 @@ class CliRestoreParserTest {
         Assertions.assertEquals(backup.toAbsolutePath(), actual.getBackupSource());
         Assertions.assertEquals(prefix, actual.getPrefix());
         Assertions.assertEquals(dryRun, actual.isDryRun());
-        Assertions.assertEquals(Set.of(source.toAbsolutePath()), actual.getTargets().keySet());
-        Assertions.assertEquals(target.toAbsolutePath(), actual.getTargets().get(source.toAbsolutePath()));
+        Assertions.assertEquals(Set.of(source), actual.getTargets().keySet());
+        Assertions.assertEquals(target.toAbsolutePath(), actual.getTargets().get(source));
         Assertions.assertNull(actual.getKeyProperties());
     }
 
@@ -106,7 +107,7 @@ class CliRestoreParserTest {
         //given
         final var prefix = "prefix";
         final var backup = Path.of("backup-dir");
-        final var source = Path.of("source-dir");
+        final var source = BackupPath.ofPathAsIs("source-dir");
         final var target = Path.of("target-dir");
         final var store = Path.of("key-store.p12");
         final var dryRun = true;
@@ -134,8 +135,8 @@ class CliRestoreParserTest {
         Assertions.assertEquals(backup.toAbsolutePath(), actual.getBackupSource());
         Assertions.assertEquals(prefix, actual.getPrefix());
         Assertions.assertEquals(dryRun, actual.isDryRun());
-        Assertions.assertEquals(Set.of(source.toAbsolutePath()), actual.getTargets().keySet());
-        Assertions.assertEquals(target.toAbsolutePath(), actual.getTargets().get(source.toAbsolutePath()));
+        Assertions.assertEquals(Set.of(source), actual.getTargets().keySet());
+        Assertions.assertEquals(target.toAbsolutePath(), actual.getTargets().get(source));
         Assertions.assertNotNull(actual.getKeyProperties());
         Assertions.assertEquals(store.toAbsolutePath(), actual.getKeyProperties().getKeyStore());
         Assertions.assertEquals(alias, actual.getKeyProperties().getAlias());

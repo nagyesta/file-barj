@@ -107,7 +107,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
                     attributeView.setGroup(group);
                 }
             }
-        } catch (final FileSystemException | UnsupportedOperationException e) {
+        } catch (final FileSystemException | UnsupportedOperationException | UserPrincipalNotFoundException e) {
             log.warn("Could not set owner and group for {}", filePath, e);
         } catch (final Exception e) {
             throw new IllegalStateException(e);

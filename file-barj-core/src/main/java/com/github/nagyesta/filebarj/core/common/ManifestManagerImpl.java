@@ -137,7 +137,7 @@ public class ManifestManagerImpl implements ManifestManager {
                     .toList();
             final var manifests = loadManifests(manifestFiles, null, Long.MAX_VALUE);
             verifyThatAllIncrementsAreFound(manifests);
-            if (!job.equals(manifests.get(manifests.lastKey()).getConfiguration())) {
+            if (!manifests.isEmpty() && !job.equals(manifests.get(manifests.lastKey()).getConfiguration())) {
                 log.warn("The provided job configuration changed since the last backup. Falling back to FULL backup.");
                 manifests.clear();
             }
@@ -239,9 +239,6 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     private void verifyThatAllIncrementsAreFound(final SortedMap<Integer, BackupIncrementManifest> manifests) {
-        if (manifests.keySet().isEmpty()) {
-            throw new ArchivalException("No manifests found.");
-        }
         final var expectedVersions = IntStream.range(0, manifests.size()).boxed().collect(Collectors.toSet());
         if (!expectedVersions.equals(manifests.keySet())) {
             final var notFound = new TreeSet<>(expectedVersions);
@@ -260,7 +257,7 @@ public class ManifestManagerImpl implements ManifestManager {
 
     private void populateFilesAndArchiveEntries(
             final @NotNull SortedMap<Integer, BackupIncrementManifest> manifests,
-            final @NotNull Set<Path> remainingFiles,
+            final @NotNull Set<BackupPath> remainingFiles,
             final @NotNull Map<String, Map<UUID, FileMetadata>> files,
             final @NotNull Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries) {
         //The merged maps should contain all files and archive entries that are relevant for the
@@ -281,7 +278,7 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     @NotNull
-    private Set<Path> calculateRemainingFilesAndLinks(
+    private Set<BackupPath> calculateRemainingFilesAndLinks(
             @NotNull final BackupIncrementManifest lastIncrementManifest) {
         return lastIncrementManifest.getFiles().values().stream()
                 .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)

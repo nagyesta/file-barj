@@ -10,6 +10,7 @@ import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.ArchiveEntryLocator;
 import com.github.nagyesta.filebarj.core.model.ArchivedFileMetadata;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
@@ -34,7 +35,7 @@ public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
         final var source = testDataRoot.resolve("source");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(source).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(source)).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)

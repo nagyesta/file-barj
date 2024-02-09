@@ -4,7 +4,6 @@ import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import lombok.Data;
 
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -18,9 +17,9 @@ public class RestoreScope {
 
     private final Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator;
 
-    private final Map<Path, FileMetadata> changedContentSourcesByPath;
+    private final Map<BackupPath, FileMetadata> changedContentSourcesByPath;
 
-    private final Set<Path> allKnownPathsInBackup;
+    private final Set<BackupPath> allKnownPathsInBackup;
 
     /**
      * Creates a new instance and preprocesses the restore scope.
@@ -35,8 +34,8 @@ public class RestoreScope {
     public RestoreScope(
             final Map<UUID, FileMetadata> allFilesLatestIncrement,
             final Map<UUID, ArchivedFileMetadata> allArchiveEntriesLatestIncrement,
-            final Map<Path, Change> fileStatusesLatestIncrement,
-            final Set<Path> restoreScope) {
+            final Map<BackupPath, Change> fileStatusesLatestIncrement,
+            final Set<BackupPath> restoreScope) {
         final var fileIdsInContentRestoreScope = allArchiveEntriesLatestIncrement.values().stream()
                 .map(ArchivedFileMetadata::getFiles)
                 .flatMap(Collection::stream)

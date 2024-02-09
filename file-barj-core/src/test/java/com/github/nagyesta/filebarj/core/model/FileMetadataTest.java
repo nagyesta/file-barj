@@ -25,7 +25,7 @@ class FileMetadataTest {
         final var expected = FileMetadata.builder()
                 .id(UUID.randomUUID())
                 .fileSystemKey("fs-key")
-                .absolutePath(Path.of("test", "file", ".path.txt").toAbsolutePath())
+                .absolutePath(BackupPath.of(Path.of("test"), "file", ".path.txt"))
                 .archiveMetadataId(UUID.randomUUID())
                 .fileType(FileType.REGULAR_FILE)
                 .owner("owner")
@@ -55,7 +55,7 @@ class FileMetadataTest {
         //given
         final var expected = FileMetadata.builder()
                 .id(UUID.randomUUID())
-                .absolutePath(Path.of("test", "file", "missing.md").toAbsolutePath())
+                .absolutePath(BackupPath.of(Path.of("test"), "file", "missing.md"))
                 .fileType(FileType.SYMBOLIC_LINK)
                 .status(Change.DELETED)
                 .build();
@@ -74,7 +74,7 @@ class FileMetadataTest {
         //given
         final var underTest = FileMetadata.builder()
                 .id(UUID.randomUUID())
-                .absolutePath(Path.of("test", "dir").toAbsolutePath())
+                .absolutePath(BackupPath.of(Path.of("test"), "dir"))
                 .fileType(FileType.DIRECTORY)
                 .status(Change.NEW)
                 .build();
@@ -94,7 +94,7 @@ class FileMetadataTest {
         //given
         final var underTest = FileMetadata.builder()
                 .id(UUID.randomUUID())
-                .absolutePath(tempFile.toPath().toAbsolutePath())
+                .absolutePath(BackupPath.of(tempFile.toPath().toAbsolutePath()))
                 .fileType(FileType.REGULAR_FILE)
                 .status(Change.NEW)
                 .build();

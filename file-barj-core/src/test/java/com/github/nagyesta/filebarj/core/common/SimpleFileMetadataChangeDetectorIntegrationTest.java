@@ -2,10 +2,12 @@ package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -33,6 +35,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     @SuppressWarnings("checkstyle:ParameterNumber")
     @ParameterizedTest
     @MethodSource("fileContentProvider")
+    @Tag("unix-only")
     void testSimpleChangeDetectorShouldDetectChangesWhenCalled(
             final String name,
             final String prevContent, final FileType prevType, final String prevPermission,
@@ -58,6 +61,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     }
 
     @Test
+    @Tag("unix-only")
     void testSimpleChangeDetectorShouldDetectChangesWhenContentWasRolledBack()
             throws IOException, InterruptedException {
         //given
@@ -67,7 +71,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         waitASecond();
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
         //reset the lat modified timestamp to simulate a restore
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(testDataRoot, testDataRoot)));
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(testDataRoot), testDataRoot)));
         FileMetadataSetterFactory.newInstance(restoreTargets).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
@@ -87,6 +91,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     }
 
     @Test
+    @Tag("unix-only")
     void testFindMostRelevantPreviousVersionByContentShouldFallbackToFilePathWhenContentWasNotMatching()
             throws IOException, InterruptedException {
         //given
@@ -108,6 +113,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testFindMostRelevantPreviousVersionByContentShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -122,6 +128,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testFindPreviousVersionByAbsolutePathShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -136,6 +143,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testIsFromLastIncrementShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -150,6 +158,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasMetadataChangedShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -164,6 +173,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasMetadataChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -178,6 +188,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasContentChangedShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -192,6 +203,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasContentChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -206,6 +218,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testClassifyChangeShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -220,6 +233,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testClassifyChangeShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given

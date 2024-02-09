@@ -42,6 +42,6 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
 
     @NotNull
     private static String getFileName(@NotNull final FileMetadata fileMetadata) {
-        return fileMetadata.getAbsolutePath().getFileName().toString();
+        return fileMetadata.getAbsolutePath().getFileName();
     }
 }

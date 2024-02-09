@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.common;
 
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -7,7 +8,6 @@ import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.nio.file.Path;
 import java.util.*;
 
 /**
@@ -70,7 +70,7 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
             final var index = contentIndex.get(increment);
             final var key = getPrimaryContentCriteria(currentMetadata);
             if (index.containsKey(key)) {
-                final var byPath = new TreeMap<Path, FileMetadata>();
+                final var byPath = new TreeMap<BackupPath, FileMetadata>();
                 index.get(key).stream()
                         .filter(metadata -> !hasContentChanged(metadata, currentMetadata))
                         .forEach(metadata -> byPath.put(metadata.getAbsolutePath(), metadata));
@@ -85,7 +85,7 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     @Nullable
     @Override
     public FileMetadata findPreviousVersionByAbsolutePath(
-            @NonNull final Path absolutePath) {
+            @NonNull final BackupPath absolutePath) {
         return nameIndex.get(absolutePath.toString());
     }
 
