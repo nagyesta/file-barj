@@ -8,10 +8,13 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,8 +26,9 @@ import static com.github.nagyesta.filebarj.core.restore.worker.PosixFileMetadata
 
 class FileMetadataSetterLocalTest extends TempFileAwareTest {
 
-    private static final Path TEST_FILE_PATH = Path.of(
-            Objects.requireNonNull(TempFileAwareTest.class.getResource("/encrypt/FileBarJ-logo-512_decrypted.png")).getFile());
+    private static final Path TEST_FILE_PATH = new File(
+            Objects.requireNonNull(TempFileAwareTest.class.getResource("/encrypt/FileBarJ-logo-512_decrypted.png")).getFile())
+            .toPath().toAbsolutePath();
     public static final BackupJobConfiguration BACKUP_JOB_CONFIGURATION = BackupJobConfiguration.builder()
             .backupType(BackupType.FULL)
             .sources(Set.of())
@@ -36,6 +40,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
             .build();
 
     @Test
+    @Tag("unix-only")
     void testSetMetadataShouldSetPermissionsOwnerGroupAndTimestampsWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -61,6 +66,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testSetMetadataShouldThrowExceptionWhenCalledWithMissingFile() {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -74,6 +80,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testSetInitialPermissionsShouldSetPermissionsToAllowAllWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -95,6 +102,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testSetPermissionsShouldSetPermissionsOnlyWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -103,7 +111,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         final var expectedPath = createFileForExpectedPath(path);
         final var restoreTargets = getRestoreTargets(testDataRoot);
         final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets);
-        Files.setPosixFilePermissions(expectedPath, PosixFilePermissions.fromString(FULL_ACCESS));
+        Files.setPosixFilePermissions(expectedPath.toOsPath(), PosixFilePermissions.fromString(FULL_ACCESS));
         final var original = parser.parse(expectedPath.toFile(), BACKUP_JOB_CONFIGURATION);
 
         //when
@@ -119,10 +127,11 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testSetOwnerAndGroupShouldNotThrowExceptionWhenUserIsNotRoot() throws IOException {
         //given
-        final var sourcePath = createFileForExpectedPath(Path.of("source.png"));
-        Files.setPosixFilePermissions(sourcePath, PosixFilePermissions.fromString(FULL_ACCESS));
+        final var sourcePath = createFileForExpectedPath(BackupPath.of(Path.of("source.png")));
+        Files.setPosixFilePermissions(sourcePath.toOsPath(), PosixFilePermissions.fromString(FULL_ACCESS));
         final var parser = FileMetadataParserFactory.newInstance();
         final var metadata = parser.parse(sourcePath.toFile(), BACKUP_JOB_CONFIGURATION);
         final var restoreTargets = getRestoreTargets(testDataRoot);
@@ -138,9 +147,10 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testSetHiddenStatusShouldNotThrowExceptionWhenCalledWithExistingFile() throws IOException {
         //given
-        final var sourcePath = createFileForExpectedPath(Path.of(".source.png"));
+        final var sourcePath = createFileForExpectedPath(BackupPath.of(Path.of(".source.png")));
         final var parser = FileMetadataParserFactory.newInstance();
         final var metadata = parser.parse(sourcePath.toFile(), BACKUP_JOB_CONFIGURATION);
         final var path = metadata.getAbsolutePath();
@@ -158,6 +168,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testSetTimestampsShouldSetTimestampsWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -231,6 +242,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testSetOwnerAndGroupShouldThrowExceptionWhenCalledWithNull() {
         //given
         final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
@@ -254,14 +266,13 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     private RestoreTargets getRestoreTargets(final Path restoreRoot) {
-        return new RestoreTargets(Set.of(new RestoreTarget(restoreRoot.getRoot().toAbsolutePath(), restoreRoot)));
+        return new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(restoreRoot.getRoot().toAbsolutePath()), restoreRoot)));
     }
 
-    private Path createFileForExpectedPath(final Path path) throws IOException {
-        final var expectedPath = Path.of(testDataRoot.toAbsolutePath().toString(),
-                path.subpath(0, path.getNameCount()).toString());
+    private BackupPath createFileForExpectedPath(final BackupPath path) throws IOException {
+        final var expectedPath = Path.of(testDataRoot.toAbsolutePath().toString(), path.toString());
         Files.createDirectories(expectedPath.getParent());
         Files.createFile(expectedPath);
-        return expectedPath;
+        return BackupPath.of(expectedPath);
     }
 }

@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -53,12 +54,11 @@ class RestoreScopeTest extends TempFileAwareTest {
     private HashMap<UUID, FileMetadata> origFiles;
     @SuppressWarnings("FieldCanBeLocal")
     private HashMap<UUID, ArchivedFileMetadata> origArchived;
-    private List<Path> origScope;
+    private List<BackupPath> origScope;
     private HashMap<UUID, FileMetadata> incFiles;
     private HashMap<UUID, ArchivedFileMetadata> incArchived;
-    private List<Path> incScope;
+    private List<BackupPath> incScope;
 
-    @SuppressWarnings("DataFlowIssue")
     @Override
     @BeforeEach
     protected void setUp() throws IOException {
@@ -74,7 +74,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         link3 = setSymbolicLink(DIR_LINK_3_TXT, file3);
         origFiles = new HashMap<>();
         origArchived = new HashMap<>();
-        origScope = List.of(dir, dir2, file1, file2, file3, link1, link2, link3);
+        origScope = Stream.of(dir, dir2, file1, file2, file3, link1, link2, link3).map(BackupPath::of).toList();
         populateFileAndArchiveMapsWithForFullBackup(origScope, origFiles, origArchived);
         setFileContent(DIR_FILE_1_TXT, "some changed content 1");
         file4 = setFileContent(DIR_FILE_4_TXT, "some new content 4");
@@ -86,7 +86,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         link4 = setSymbolicLink(DIR_LINK_4_TXT, file4);
         incFiles = new HashMap<>();
         incArchived = new HashMap<>();
-        incScope = List.of(dir, file1, file2, file4, link2, link3, link4);
+        incScope = Stream.of(dir, file1, file2, file4, link2, link3, link4).map(BackupPath::of).toList();
         populateFileAndArchiveMapsWithForIncrementalBackup(incScope, origFiles, origArchived, incFiles, incArchived);
     }
 
@@ -125,7 +125,9 @@ class RestoreScopeTest extends TempFileAwareTest {
                 .map(FileMetadata::getAbsolutePath)
                 .collect(Collectors.toCollection(TreeSet::new));
         //add link2 too as symbolic links are always kept in scope
-        final var expectedPaths = new TreeSet<>(Set.of(file1, file2, link2, link3, link4, file4));
+        final var expectedPaths = Stream.of(file1, file2, link2, link3, link4, file4)
+                .map(BackupPath::of)
+                .collect(Collectors.toCollection(TreeSet::new));
         Assertions.assertEquals(expectedPaths, actualPaths);
     }
 
@@ -133,7 +135,7 @@ class RestoreScopeTest extends TempFileAwareTest {
     void testGetContentSourcesInScopeByLocatorShouldFilterArchiveEntriesWhenScopeIsNotFullAndAllFilesAreMissing() {
         //given
         final var changes = markEverythingAsDeleted(incFiles);
-        final var scope = Set.of(dir, file1, file4, link4);
+        final var scope = Stream.of(dir, file1, file4, link4).map(BackupPath::of).collect(Collectors.toSet());
         final var underTest = new RestoreScope(incFiles, incArchived, changes, scope);
 
         //when
@@ -144,7 +146,9 @@ class RestoreScopeTest extends TempFileAwareTest {
                 .map(SortedSet::first)
                 .map(FileMetadata::getAbsolutePath)
                 .collect(Collectors.toCollection(TreeSet::new));
-        final var expectedPaths = new TreeSet<>(Set.of(file1, link4, file4));
+        final var expectedPaths = Stream.of(file1, link4, file4)
+                .map(BackupPath::of)
+                .collect(Collectors.toCollection(TreeSet::new));
         Assertions.assertEquals(expectedPaths, actualPaths);
     }
 
@@ -177,7 +181,9 @@ class RestoreScopeTest extends TempFileAwareTest {
 
         //then
         final var actualPaths = new TreeSet<>(actual.keySet());
-        final var expectedPaths = new TreeSet<>(Set.of(file1, file2, link3, link4, file4));
+        final var expectedPaths = Stream.of(file1, file2, link3, link4, file4)
+                .map(BackupPath::of)
+                .collect(Collectors.toCollection(TreeSet::new));
         Assertions.assertEquals(expectedPaths, actualPaths);
         actual.forEach((path, fileMetadata) -> Assertions.assertEquals(path, fileMetadata.getAbsolutePath()));
     }
@@ -186,7 +192,7 @@ class RestoreScopeTest extends TempFileAwareTest {
     void testGetChangedContentSourcesByPathShouldNotFilterArchiveEntriesWhenScopeIsNotFullAndEverythingIsMissing() {
         //given
         final var changes = markEverythingAsDeleted(incFiles);
-        final var scope = Set.of(dir, file1, file4, link4);
+        final var scope = Stream.of(dir, file1, file4, link4).map(BackupPath::of).collect(Collectors.toSet());
         final var underTest = new RestoreScope(incFiles, incArchived, changes, scope);
 
         //when
@@ -203,7 +209,7 @@ class RestoreScopeTest extends TempFileAwareTest {
     void testGetAllKnownPathsInBackupShouldNotFilterFilesWhenScopeIsNotFullAndSomeFilesAreInExpectedState() {
         //given
         final var changes = markOriginalFilesAsChangedAndNewFilesAsDeleted(incFiles, origScope);
-        final var scope = Set.of(dir, file1, file4, link4);
+        final var scope = Stream.of(dir, file1, file4, link4).map(BackupPath::of).collect(Collectors.toSet());
         final var underTest = new RestoreScope(incFiles, incArchived, changes, scope);
 
         //when
@@ -215,17 +221,17 @@ class RestoreScopeTest extends TempFileAwareTest {
         Assertions.assertEquals(expectedPaths, actualPaths);
     }
 
-    private static Map<Path, Change> markEverythingAsDeleted(
+    private static Map<BackupPath, Change> markEverythingAsDeleted(
             final Map<UUID, FileMetadata> incFiles) {
         return incFiles.values().stream()
                 .map(FileMetadata::getAbsolutePath)
                 .collect(Collectors.toMap(Function.identity(), k -> Change.DELETED));
     }
 
-    private static Map<Path, Change> markOriginalFilesAsChangedAndNewFilesAsDeleted(
+    private static Map<BackupPath, Change> markOriginalFilesAsChangedAndNewFilesAsDeleted(
             final Map<UUID, FileMetadata> incFiles,
-            final List<Path> origScope) {
-        final var changes = new HashMap<Path, Change>();
+            final List<BackupPath> origScope) {
+        final var changes = new HashMap<BackupPath, Change>();
         incFiles.forEach((id, file) -> {
             if (origScope.contains(file.getAbsolutePath())) {
                 if (file.getFileType() == FileType.REGULAR_FILE) {
@@ -241,7 +247,7 @@ class RestoreScopeTest extends TempFileAwareTest {
     }
 
     private void populateFileAndArchiveMapsWithForIncrementalBackup(
-            final List<Path> files,
+            final List<BackupPath> files,
             final Map<UUID, FileMetadata> origFiles,
             final Map<UUID, ArchivedFileMetadata> origArchived,
             final Map<UUID, FileMetadata> incFiles,
@@ -272,7 +278,7 @@ class RestoreScopeTest extends TempFileAwareTest {
     }
 
     private void populateFileAndArchiveMapsWithForFullBackup(
-            final List<Path> files,
+            final List<BackupPath> files,
             final Map<UUID, FileMetadata> origFiles,
             final Map<UUID, ArchivedFileMetadata> origArchived) {
         files.stream()

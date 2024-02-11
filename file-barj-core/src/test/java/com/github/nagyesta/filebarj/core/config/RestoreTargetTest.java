@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core.config;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,11 +29,11 @@ class RestoreTargetTest extends TempFileAwareTest {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var target = testDataRoot.resolve("target-dir" + UUID.randomUUID());
-        final var underTest = new RestoreTarget(source, target);
+        final var underTest = new RestoreTarget(BackupPath.of(source), target);
         final var file = source.resolve(relative).normalize();
 
         //when
-        final var actual = underTest.matchesArchivedFile(file);
+        final var actual = underTest.matchesArchivedFile(BackupPath.of(file));
 
         //then
         Assertions.assertEquals(expected, actual);
@@ -45,8 +46,8 @@ class RestoreTargetTest extends TempFileAwareTest {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var target = testDataRoot.resolve("target-dir" + UUID.randomUUID());
-        final var underTest = new RestoreTarget(source, target);
-        final var sourceFile = source.resolve(relative).normalize();
+        final var underTest = new RestoreTarget(BackupPath.of(source), target);
+        final var sourceFile = BackupPath.of(source).resolve(relative);
         final var targetFile = target.resolve(relative).normalize();
 
 
@@ -67,7 +68,7 @@ class RestoreTargetTest extends TempFileAwareTest {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var target = testDataRoot.resolve("target-dir" + UUID.randomUUID());
-        final var underTest = new RestoreTarget(source, target);
+        final var underTest = new RestoreTarget(BackupPath.of(source), target);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.mapBackupPathToRestorePath(null));

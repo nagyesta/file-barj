@@ -1,10 +1,10 @@
 package com.github.nagyesta.filebarj.core.config;
 
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
 
-import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -36,16 +36,16 @@ public class RestoreTask {
     /**
      * The root path of the backup entries (directory or file) to include during the restore.
      */
-    private final Path includedPath;
+    private final BackupPath includedPath;
 
     /**
      * Returns the path filter for this restore task based on the included path.
      *
      * @return the path filter
      */
-    public Predicate<Path> getPathFilter() {
+    public Predicate<BackupPath> getPathFilter() {
         return Optional.ofNullable(includedPath)
-                .map(includedPath -> (Predicate<Path>) path -> path.equals(includedPath) || path.startsWith(includedPath))
+                .map(includedPath -> (Predicate<BackupPath>) path -> path.equals(includedPath) || path.startsWith(includedPath))
                 .orElse(path -> true);
     }
 }

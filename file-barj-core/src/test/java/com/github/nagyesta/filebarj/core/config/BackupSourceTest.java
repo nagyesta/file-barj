@@ -2,6 +2,8 @@ package com.github.nagyesta.filebarj.core.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
+import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,7 +92,7 @@ class BackupSourceTest extends TempFileAwareTest {
     ) {
         //given
         final var underTest = BackupSource.builder()
-                .path(testDataRoot)
+                .path(BackupPath.of(testDataRoot))
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
@@ -120,7 +122,7 @@ class BackupSourceTest extends TempFileAwareTest {
     ) {
         //given
         final var underTest = BackupSource.builder()
-                .path(testDataRoot)
+                .path(BackupPath.of(testDataRoot))
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
@@ -143,7 +145,7 @@ class BackupSourceTest extends TempFileAwareTest {
     ) {
         //given
         final var underTest = BackupSource.builder()
-                .path(testDataRoot)
+                .path(BackupPath.of(testDataRoot))
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
@@ -160,7 +162,7 @@ class BackupSourceTest extends TempFileAwareTest {
         //given
         final var expectedFile = Path.of(testDataRoot.toString(), ".hidden-file1.txt");
         final var underTest = BackupSource.builder()
-                .path(expectedFile)
+                .path(BackupPath.of(expectedFile))
                 .build();
 
         //when
@@ -173,7 +175,7 @@ class BackupSourceTest extends TempFileAwareTest {
     @Test
     void testListMatchingFilePathsShouldReturnNothingWhenRootDoesNotExist() {
         //given
-        final var expectedFile = Path.of(testDataRoot.toString(), "unknown-file.txt");
+        final var expectedFile = BackupPath.of(testDataRoot, "unknown-file.txt");
         final var underTest = BackupSource.builder()
                 .path(expectedFile)
                 .build();
@@ -188,7 +190,7 @@ class BackupSourceTest extends TempFileAwareTest {
     @Test
     void testListMatchingFilePathsShouldThrowExceptionWhenIncludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
-        final var expectedFile = Path.of(testDataRoot.toString(), "visible-file1.txt");
+        final var expectedFile = BackupPath.of(testDataRoot, "visible-file1.txt");
         final var underTest = BackupSource.builder()
                 .path(expectedFile)
                 .includePatterns(Set.of("**.txt"))
@@ -203,7 +205,7 @@ class BackupSourceTest extends TempFileAwareTest {
     @Test
     void testListMatchingFilePathsShouldThrowExceptionWhenExcludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
-        final var expectedFile = Path.of(testDataRoot.toString(), "visible-file1.txt");
+        final var expectedFile = BackupPath.of(testDataRoot, "visible-file1.txt");
         final var underTest = BackupSource.builder()
                 .path(expectedFile)
                 .excludePatterns(Set.of("**.txt"))
@@ -219,7 +221,7 @@ class BackupSourceTest extends TempFileAwareTest {
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfFullyPopulatedObject() throws JsonProcessingException {
         //given
         final var expected = BackupSource.builder()
-                .path(testDataRoot)
+                .path(BackupPath.of(testDataRoot))
                 .includePatterns(Set.of("visible/**"))
                 .excludePatterns(Set.of("**.txt"))
                 .build();
@@ -237,7 +239,7 @@ class BackupSourceTest extends TempFileAwareTest {
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfMinimalObject() throws JsonProcessingException {
         //given
         final var expected = BackupSource.builder()
-                .path(Path.of(testDataRoot.toString(), "visible-file1.txt"))
+                .path(BackupPath.of(testDataRoot, "visible-file1.txt"))
                 .build();
         final var json = objectMapper.writer().writeValueAsString(expected);
 
@@ -257,7 +259,7 @@ class BackupSourceTest extends TempFileAwareTest {
     ) {
         //given
         final var underTest = BackupSource.builder()
-                .path(testDataRoot)
+                .path(BackupPath.of(testDataRoot))
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
@@ -266,8 +268,11 @@ class BackupSourceTest extends TempFileAwareTest {
         final var actual = underTest.toString();
 
         //then
-        Assertions.assertTrue(actual.contains(testDataRoot.toString()), "Root should be contained in: " + actual);
-        Assertions.assertTrue(actual.contains(excludePatterns.toString()), "Exclude patterns should be contained in: " + actual);
-        Assertions.assertTrue(actual.contains(includePatterns.toString()), "Include patterns should be contained in: " + actual);
+        Assertions.assertTrue(actual.contains(FilenameUtils.separatorsToUnix(testDataRoot.toString())),
+                "Root should be contained in: " + actual);
+        Assertions.assertTrue(actual.contains(FilenameUtils.separatorsToUnix(excludePatterns.toString())),
+                "Exclude patterns should be contained in: " + actual);
+        Assertions.assertTrue(actual.contains(FilenameUtils.separatorsToUnix(includePatterns.toString())),
+                "Include patterns should be contained in: " + actual);
     }
 }

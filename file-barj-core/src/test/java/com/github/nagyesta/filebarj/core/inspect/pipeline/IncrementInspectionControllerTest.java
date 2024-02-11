@@ -7,7 +7,9 @@ import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -86,8 +88,10 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
         //then
         final var actualContents = Files.readAllLines(outputFile);
         Assertions.assertTrue(actualContents.get(0).contains("hash_sha256"));
-        Assertions.assertTrue(actualContents.get(1).endsWith(originalDirectory.toAbsolutePath().toString()));
-        Assertions.assertTrue(actualContents.get(2).endsWith(originalFile.toAbsolutePath().toString()));
+        Assertions.assertTrue(actualContents.get(1)
+                .endsWith(FilenameUtils.separatorsToUnix(originalDirectory.toAbsolutePath().toString())));
+        Assertions.assertTrue(actualContents.get(2)
+                .endsWith(FilenameUtils.separatorsToUnix(originalFile.toAbsolutePath().toString())));
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -141,7 +145,7 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
             final String prefix) {
         final var configuration = BackupJobConfiguration.builder()
                 .destinationDirectory(backupDirectory)
-                .sources(Set.of(BackupSource.builder().path(originalDirectory).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(originalDirectory)).build()))
                 .backupType(BackupType.FULL)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .fileNamePrefix(prefix)

@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core.config;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,12 +30,12 @@ class RestoreTargetsTest extends TempFileAwareTest {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var target = testDataRoot.resolve("target-dir" + UUID.randomUUID());
-        final var underTest = new RestoreTargets(Set.of(new RestoreTarget(source, target)));
+        final var underTest = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(source), target)));
         final var sourceFile = source.resolve(relative).normalize();
         final var targetFile = target.resolve(relative).normalize();
 
         //when
-        final var actual = underTest.mapToRestorePath(sourceFile);
+        final var actual = underTest.mapToRestorePath(BackupPath.of(sourceFile));
 
         //then
         if (expected) {
@@ -51,7 +52,7 @@ class RestoreTargetsTest extends TempFileAwareTest {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var target = testDataRoot.resolve("target-dir" + UUID.randomUUID());
-        final var underTest = new RestoreTargets(Set.of(new RestoreTarget(source, target)));
+        final var underTest = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(source), target)));
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.mapToRestorePath(null));

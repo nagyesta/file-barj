@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core.config.enums;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -102,7 +103,7 @@ class DuplicateHandlingStrategyTest extends TempFileAwareTest {
     private static FileMetadata getRegularFileMetadata(
             final String name, final long size, final String hash, final long lastModified) {
         return FileMetadata.builder()
-                .absolutePath(Path.of(name))
+                .absolutePath(BackupPath.of(Path.of(name)))
                 .fileType(FileType.REGULAR_FILE)
                 .id(UUID.randomUUID())
                 .originalHash(hash)

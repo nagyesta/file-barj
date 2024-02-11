@@ -5,12 +5,14 @@ import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.util.OsUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -100,12 +102,13 @@ class FileMetadataParserTest extends TempFileAwareTest {
         final var actual = underTest.parse(unknownFile, getConfiguration());
 
         //then
-        Assertions.assertEquals(unknownFile.toPath().toAbsolutePath(), actual.getAbsolutePath());
+        Assertions.assertEquals(BackupPath.of(unknownFile.toPath().toAbsolutePath()), actual.getAbsolutePath());
         Assertions.assertEquals(FileType.MISSING, actual.getFileType());
         Assertions.assertEquals(Change.DELETED, actual.getStatus());
     }
 
     @Test
+    @Tag("unix-only")
     void testParseShouldParseFileInformationWhenTheRegularFileExistAndAccessible() throws Exception {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
@@ -121,7 +124,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
         final var actual = underTest.parse(tempFile, getConfiguration());
 
         //then
-        Assertions.assertEquals(tempFilePath.toAbsolutePath(), actual.getAbsolutePath());
+        Assertions.assertEquals(BackupPath.of(tempFilePath.toAbsolutePath()), actual.getAbsolutePath());
         Assertions.assertEquals(FileType.REGULAR_FILE, actual.getFileType());
         Assertions.assertTrue(actual.getHidden());
         final var permissionString = PosixFilePermissions.toString(Files.getPosixFilePermissions(tempFilePath));
@@ -147,6 +150,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testParseShouldParseFileInformationWhenTheSymbolicLinkExistAndAccessible() throws Exception {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
@@ -165,7 +169,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
         final var actual = underTest.parse(linkPath.toFile(), getConfiguration());
 
         //then
-        Assertions.assertEquals(linkPath.toAbsolutePath(), actual.getAbsolutePath());
+        Assertions.assertEquals(BackupPath.of(linkPath.toAbsolutePath()), actual.getAbsolutePath());
         Assertions.assertEquals(FileType.SYMBOLIC_LINK, actual.getFileType());
         Assertions.assertFalse(actual.getHidden());
         final var permissionString = PosixFilePermissions.toString(Files.getPosixFilePermissions(linkPath, LinkOption.NOFOLLOW_LINKS));
@@ -180,6 +184,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
     }
 
     @Test
+    @Tag("unix-only")
     void testParseShouldParseFileInformationWhenTheDirectoryExistAndAccessible() throws Exception {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
@@ -197,7 +202,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
                 .build());
 
         //then
-        Assertions.assertEquals(tempDirPath.toAbsolutePath(), actual.getAbsolutePath());
+        Assertions.assertEquals(BackupPath.of(tempDirPath.toAbsolutePath()), actual.getAbsolutePath());
         Assertions.assertEquals(FileType.DIRECTORY, actual.getFileType());
         Assertions.assertFalse(actual.getHidden());
         final var permissionString = PosixFilePermissions.toString(Files.getPosixFilePermissions(tempDirPath));

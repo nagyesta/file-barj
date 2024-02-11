@@ -20,6 +20,7 @@ import com.github.nagyesta.filebarj.io.stream.model.SequentialBarjCargoArchiveEn
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.jetbrains.annotations.NotNull;
@@ -168,7 +169,8 @@ public class RestorePipeline {
      * @param deleteLeftOverFiles True if we should delete left-over files
      * @param threadPool          The thread pool we can use for parallel processing
      */
-    public void deleteLeftOverFiles(final Path includedPath, final boolean deleteLeftOverFiles, @NonNull final ForkJoinPool threadPool) {
+    public void deleteLeftOverFiles(
+            final BackupPath includedPath, final boolean deleteLeftOverFiles, @NonNull final ForkJoinPool threadPool) {
         if (!deleteLeftOverFiles) {
             log.info("Skipping left-over files deletion...");
             return;
@@ -183,7 +185,7 @@ public class RestorePipeline {
         final var files = manifest.getFilesOfLastManifest().values();
         final var modifiedSources = manifest.getConfiguration().getSources().stream()
                 .map(source -> BackupSource.builder()
-                        .path(restoreTargets.mapToRestorePath(source.getPath()))
+                        .path(BackupPath.of(restoreTargets.mapToRestorePath(source.getPath())))
                         .includePatterns(source.getIncludePatterns())
                         .excludePatterns(source.getExcludePatterns())
                         .build())
@@ -466,6 +468,10 @@ public class RestorePipeline {
                 if (remaining.isEmpty()) {
                     break;
                 }
+                if (com.github.nagyesta.filebarj.io.stream.enums.FileType.DIRECTORY == archiveEntry.getFileType()) {
+                    skipMetadata(archiveEntry);
+                    continue;
+                }
                 final var locator = ArchiveEntryLocator.fromEntryPath(archiveEntry.getPath());
                 if (locator == null) {
                     throw new ArchivalException("Failed to parse entry locator for " + archiveEntry.getPath());
@@ -498,12 +504,12 @@ public class RestorePipeline {
     }
 
     @NotNull
-    private Map<Path, Change> detectChanges(
+    private Map<BackupPath, Change> detectChanges(
             @NotNull final Collection<FileMetadata> files,
             @NotNull final ForkJoinPool threadPool,
             final boolean ignoreLinks) {
         final var parser = FileMetadataParserFactory.newInstance();
-        final Map<Path, Change> changeStatuses = new ConcurrentHashMap<>();
+        final Map<BackupPath, Change> changeStatuses = new ConcurrentHashMap<>();
         final var doneCount = new AtomicInteger();
         threadPool.submit(() -> files.parallelStream()
                 .filter(fileMetadata -> !ignoreLinks || fileMetadata.getFileType() != FileType.SYMBOLIC_LINK)
@@ -611,14 +617,16 @@ public class RestorePipeline {
             @NotNull final RestoreScope restoreScope) {
         final var to = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         try {
-            final var target = archiveEntry.getLinkTarget(key);
+            final var target = FilenameUtils.separatorsToUnix(archiveEntry.getLinkTarget(key));
             final var pointsToAFileCoveredByTheBackup = restoreScope.getAllKnownPathsInBackup().stream()
                     .anyMatch(path -> path.toString().equals(target));
             final var targetPath = Path.of(target);
+            final var backupPathOfTarget = BackupPath.ofPathAsIs(target);
             return restoreTargets.restoreTargets().stream()
-                    .filter(restoreTarget -> pointsToAFileCoveredByTheBackup && restoreTarget.matchesArchivedFile(targetPath))
+                    .filter(restoreTarget -> pointsToAFileCoveredByTheBackup
+                            && restoreTarget.matchesArchivedFile(backupPathOfTarget))
                     .findFirst()
-                    .map(filePath -> filePath.mapBackupPathToRestorePath(targetPath))
+                    .map(filePath -> filePath.mapBackupPathToRestorePath(backupPathOfTarget))
                     .orElse(targetPath);
         } catch (final IOException e) {
             throw new ArchivalException("Failed to resolve link path for: " + to, e);

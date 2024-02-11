@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
@@ -40,9 +41,9 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
             final var nowEpochSeconds = Instant.now().getEpochSecond() + "";
             final var atPointInTime = Long.parseLong(commandLine.getOptionValue(AT_EPOCH_SECONDS, nowEpochSeconds));
             final var includedPath = Optional.ofNullable(commandLine.getOptionValue(INCLUDED_PATH))
-                    .map(Path::of)
+                    .map(BackupPath::ofPathAsIs)
                     .orElse(null);
-            final var targets = new HashMap<Path, Path>();
+            final var targets = new HashMap<BackupPath, Path>();
             if (commandLine.hasOption(TARGET)) {
                 final var mappings = commandLine.getOptionValues(TARGET);
                 final var invalid = Arrays.stream(mappings).filter(m -> !m.matches("^[^=]+=[^=]+$"))
@@ -53,7 +54,7 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                 }
                 Arrays.stream(mappings)
                         .map(s -> s.split("="))
-                        .forEach(s -> targets.put(Path.of(s[0]).toAbsolutePath(), Path.of(s[1]).toAbsolutePath()));
+                        .forEach(s -> targets.put(BackupPath.ofPathAsIs(s[0]), Path.of(s[1]).toAbsolutePath()));
             }
             final var keyProperties = parseKeyProperties(console, commandLine);
             return RestoreProperties.builder()

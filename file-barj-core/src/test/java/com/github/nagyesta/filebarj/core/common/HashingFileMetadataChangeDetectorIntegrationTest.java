@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.common;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -29,6 +30,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
     @SuppressWarnings("checkstyle:ParameterNumber")
     @ParameterizedTest
     @MethodSource("fileContentProvider")
+    @Tag("unix-only")
     void testHashingChangeDetectorShouldDetectChangesWhenCalled(
             final String name,
             final String prevContent, final FileType prevType, final String prevPermission,
@@ -54,6 +56,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
     }
 
     @Test
+    @Tag("unix-only")
     void testHashingChangeDetectorShouldDetectChangesWhenContentWasRolledBack()
             throws IOException, InterruptedException {
         //given
@@ -79,6 +82,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
     }
 
     @Test
+    @Tag("unix-only")
     void testFindMostRelevantPreviousVersionByContentShouldFallbackToFilePathWhenContentWasNotMatching()
             throws IOException, InterruptedException {
         //given
@@ -100,6 +104,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testFindMostRelevantPreviousVersionByContentShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -114,6 +119,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testFindPreviousVersionByAbsolutePathShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -128,6 +134,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testIsFromLastIncrementShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -142,6 +149,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasMetadataChangedShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -156,6 +164,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasMetadataChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -170,6 +179,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasContentChangedShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -184,6 +194,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testHasContentChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -198,6 +209,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testClassifyChangeShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -212,6 +224,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
 
     @SuppressWarnings("DataFlowIssue")
     @Test
+    @Tag("unix-only")
     void testClassifyChangeShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given

@@ -21,7 +21,7 @@ public enum HashAlgorithm {
     NONE(null) {
         @Override
         public Function<FileMetadata, String> fileGroupingFunction() {
-            return fileMetadata -> fileMetadata.getAbsolutePath().getFileName().toString()
+            return fileMetadata -> fileMetadata.getAbsolutePath().getFileName()
                     + SEPARATOR + fileMetadata.getOriginalSizeBytes()
                     + SEPARATOR + fileMetadata.getLastModifiedUtcEpochSeconds();
         }

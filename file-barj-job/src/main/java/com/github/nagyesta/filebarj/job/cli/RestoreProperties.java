@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -16,10 +17,10 @@ import java.util.Map;
 @EqualsAndHashCode(callSuper = true)
 public class RestoreProperties extends BackupFileProperties {
     @NonNull
-    private final Map<Path, Path> targets;
+    private final Map<BackupPath, Path> targets;
     private final int threads;
     private final boolean dryRun;
     private final boolean deleteFilesNotInBackup;
     private final long pointInTimeEpochSeconds;
-    private final Path includedPath;
+    private final BackupPath includedPath;
 }

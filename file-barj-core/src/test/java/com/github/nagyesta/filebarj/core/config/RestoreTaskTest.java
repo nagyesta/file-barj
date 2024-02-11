@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core.config;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -27,7 +28,8 @@ class RestoreTaskTest extends TempFileAwareTest {
         final var dryRun = true;
         final var threads = 2;
         final var deleteFilesNotInBackup = true;
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(Path.of("source"), Path.of("target"))));
+        final var restoreTargets = new RestoreTargets(Set.of(
+                new RestoreTarget(BackupPath.of(Path.of("source")), Path.of("target"))));
 
         //when
         final var actual = RestoreTask.builder()

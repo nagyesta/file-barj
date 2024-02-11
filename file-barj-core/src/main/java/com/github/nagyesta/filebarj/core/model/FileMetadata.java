@@ -12,7 +12,6 @@ import lombok.extern.jackson.Jacksonized;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.UUID;
 
 /**
@@ -37,7 +36,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
      */
     @NonNull
     @JsonProperty("path")
-    private final Path absolutePath;
+    private final BackupPath absolutePath;
     /**
      * The hash of the file content using the configured hash algorithm.
      * <br/>
@@ -118,7 +117,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
     @JsonIgnore
     public InputStream streamContent() throws IOException {
         assertContentSource();
-        return fileType.streamContent(absolutePath);
+        return fileType.streamContent(absolutePath.toOsPath());
     }
 
     /**

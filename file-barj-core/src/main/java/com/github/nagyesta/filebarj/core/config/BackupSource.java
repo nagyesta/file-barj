@@ -3,10 +3,7 @@ package com.github.nagyesta.filebarj.core.config;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ext.NioPathDeserializer;
-import com.fasterxml.jackson.databind.ext.NioPathSerializer;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -38,9 +35,7 @@ public class BackupSource {
      */
     @NonNull
     @JsonProperty("path")
-    @JsonSerialize(using = NioPathSerializer.class)
-    @JsonDeserialize(using = NioPathDeserializer.class)
-    private final Path path;
+    private final BackupPath path;
     /**
      * Optional include patterns for filtering the contents. Uses {@link java.nio.file.PathMatcher}
      * with "glob" syntax relative to the value of the path field.
@@ -61,7 +56,7 @@ public class BackupSource {
      */
     @JsonIgnore
     public List<Path> listMatchingFilePaths() {
-        return listFilesRecursive(path.toAbsolutePath())
+        return listFilesRecursive(path.toOsPath())
                 .filter(this::includePatternsDoMatch)
                 .flatMap(this::includeIntermediateDirectories)
                 .filter(this::excludePatternsDoNotMatch)
@@ -83,7 +78,7 @@ public class BackupSource {
 
     private Stream<Path> includeIntermediateDirectories(final Path aPath) {
         final var pathAsStream = Stream.of(aPath);
-        if (aPath.toAbsolutePath().equals(path)) {
+        if (aPath.toAbsolutePath().equals(path.toOsPath())) {
             return pathAsStream;
         } else {
             return Stream.of(pathAsStream, includeIntermediateDirectories(aPath.getParent()))
@@ -150,7 +145,7 @@ public class BackupSource {
     }
 
     private String translatePattern(final String pattern) {
-        return ("glob:" + path.toAbsolutePath() + File.separator + pattern)
+        return ("glob:" + path + File.separator + pattern)
                 //replace backslashes to let the regex conversion work later
                 .replaceAll(Pattern.quote("\\"), "/");
     }

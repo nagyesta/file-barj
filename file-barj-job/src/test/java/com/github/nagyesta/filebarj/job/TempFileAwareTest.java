@@ -5,8 +5,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.UUID;
 
 public abstract class TempFileAwareTest {
@@ -36,6 +36,18 @@ public abstract class TempFileAwareTest {
      */
     @AfterEach
     protected void tearDown() throws IOException {
-        PathUtils.deleteDirectory(testDataRoot);
+        try {
+            PathUtils.deleteDirectory(testDataRoot);
+        } catch (final FileSystemException ignored) {
+            Files.walkFileTree(testDataRoot, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) {
+                    if (Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
+                        file.toFile().deleteOnExit();
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
     }
 }

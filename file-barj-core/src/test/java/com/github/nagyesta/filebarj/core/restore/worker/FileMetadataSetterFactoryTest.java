@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.restore.worker;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,7 @@ class FileMetadataSetterFactoryTest extends TempFileAwareTest {
     @Test
     void testNewInstanceShouldCreatePosixInstanceWhenOsIsNotWindows() {
         //given
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(Path.of("a"), Path.of("b"))));
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.ofPathAsIs("a"), Path.of("b"))));
 
         //when
         final var actual = FileMetadataSetterFactory.newInstance(restoreTargets, false);
@@ -37,7 +38,7 @@ class FileMetadataSetterFactoryTest extends TempFileAwareTest {
     @Test
     void testNewInstanceShouldCreateWindowsInstanceWhenOsIsWindows() {
         //given
-        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(Path.of("a"), Path.of("b"))));
+        final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.ofPathAsIs("a"), Path.of("b"))));
 
         //when
         final var actual = FileMetadataSetterFactory.newInstance(restoreTargets, true);

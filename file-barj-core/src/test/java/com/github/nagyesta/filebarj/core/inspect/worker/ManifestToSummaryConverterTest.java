@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.AppVersion;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
@@ -61,7 +62,7 @@ class ManifestToSummaryConverterTest extends TempFileAwareTest {
                         .lastModifiedUtcEpochSeconds(LAST_MODIFIED_UTC_EPOCH_SECONDS)
                         .originalSizeBytes(ORIGINAL_SIZE_BYTES)
                         .originalHash(ORIGINAL_HASH)
-                        .absolutePath(absolutePath)
+                        .absolutePath(BackupPath.of(absolutePath))
                         .fileType(FileType.REGULAR_FILE)
                         .status(Change.NEW)
                         .build()))

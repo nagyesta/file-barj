@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.config;
 
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,11 +21,11 @@ public record RestoreTargets(@NonNull Set<RestoreTarget> restoreTargets) {
      * @return the restore path
      */
     @NotNull
-    public Path mapToRestorePath(@NonNull final Path originalPath) {
+    public Path mapToRestorePath(@NonNull final BackupPath originalPath) {
         return restoreTargets.stream()
                 .filter(restoreTarget -> restoreTarget.matchesArchivedFile(originalPath))
                 .findFirst()
                 .map(filePath -> filePath.mapBackupPathToRestorePath(originalPath))
-                .orElse(originalPath);
+                .orElse(originalPath.toOsPath());
     }
 }

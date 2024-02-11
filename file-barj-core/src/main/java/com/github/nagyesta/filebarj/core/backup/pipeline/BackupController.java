@@ -10,6 +10,7 @@ import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -43,7 +44,7 @@ public class BackupController {
     @Getter
     private final BackupIncrementManifest manifest;
     private final SortedMap<Integer, BackupIncrementManifest> previousManifests;
-    private final Map<Path, FileMetadata> backupFileSet = new TreeMap<>();
+    private final Map<BackupPath, FileMetadata> backupFileSet = new TreeMap<>();
     private List<FileMetadata> filesFound;
     private boolean readyToUse = true;
     private final ReentrantLock executionLock = new ReentrantLock();

@@ -5,6 +5,7 @@ import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.junit.jupiter.api.Assertions;
@@ -29,7 +30,7 @@ class BackupJobConfigurationTest extends TempFileAwareTest {
                 .destinationDirectory(Path.of(testRoot, "file-barj"))
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .fileNamePrefix("backup-")
-                .sources(Set.of(BackupSource.builder().path(Path.of(testRoot, "visible-file1.txt")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(testDataRoot, "visible-file1.txt")).build()))
                 .build();
         final var json = objectMapper.writer().writeValueAsString(expected);
 
@@ -55,7 +56,7 @@ class BackupJobConfigurationTest extends TempFileAwareTest {
                 .destinationDirectory(Path.of(testRoot, "file-barj"))
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
                 .fileNamePrefix("backup-")
-                .sources(Set.of(BackupSource.builder().path(Path.of(testRoot, "visible-file1.txt")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(testDataRoot, "visible-file1.txt")).build()))
                 .build();
         final var json = objectMapper.writer().writeValueAsString(expected);
 
