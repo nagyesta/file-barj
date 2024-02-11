@@ -213,6 +213,10 @@ ossIndexAudit {
     excludeVulnerabilityIds = rootProject.extra.get("ossIndexExclusions") as MutableSet<String>
 }
 
+checkstyle {
+    toolVersion = rootProject.libs.versions.checkstyle.get()
+}
+
 repositories {
     mavenCentral()
 }
