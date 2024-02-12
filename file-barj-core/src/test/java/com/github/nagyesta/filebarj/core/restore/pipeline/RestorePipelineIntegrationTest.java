@@ -16,8 +16,8 @@ import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -110,7 +111,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testConstructorShouldThrowExceptionWhenCalledWithNullSourcePath() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -129,7 +130,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testConstructorShouldThrowExceptionWhenCalledWithNullTargetPath() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -146,7 +147,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -168,7 +169,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullMap() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -190,7 +191,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testRestoreFilesShouldThrowExceptionWhenCalledWithNullContentSources() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -212,7 +213,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testRestoreFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -237,7 +238,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -259,7 +260,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -280,7 +281,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testEvaluateRestoreSuccessShouldNotThrowExceptionWhenCalledWithoutRestoringBackup() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -306,7 +307,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testRestoreDirectoriesShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
         final var backupController = executeABackup();
@@ -328,7 +329,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2})
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testPartialRestoreShouldRestoreFilesToDestinationWhenExecutedWithValidInput(final int threads) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
@@ -388,7 +389,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testDeleteLeftOverFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
         final var backupController = executeABackup();

@@ -7,8 +7,8 @@ import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
 class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetadataChangeDetectorIntegrationTest {
 
@@ -35,7 +37,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     @SuppressWarnings("checkstyle:ParameterNumber")
     @ParameterizedTest
     @MethodSource("fileContentProvider")
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSimpleChangeDetectorShouldDetectChangesWhenCalled(
             final String name,
             final String prevContent, final FileType prevType, final String prevPermission,
@@ -61,7 +63,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSimpleChangeDetectorShouldDetectChangesWhenContentWasRolledBack()
             throws IOException, InterruptedException {
         //given
@@ -91,7 +93,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testFindMostRelevantPreviousVersionByContentShouldFallbackToFilePathWhenContentWasNotMatching()
             throws IOException, InterruptedException {
         //given
@@ -113,7 +115,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testFindMostRelevantPreviousVersionByContentShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -128,7 +130,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testFindPreviousVersionByAbsolutePathShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -143,7 +145,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testIsFromLastIncrementShouldThrowExceptionWhenCalledWithNull()
             throws IOException {
         //given
@@ -158,7 +160,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testHasMetadataChangedShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -173,7 +175,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testHasMetadataChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -188,7 +190,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testHasContentChangedShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -203,7 +205,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testHasContentChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -218,7 +220,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testClassifyChangeShouldThrowExceptionWhenCalledWithNullCurrentFile()
             throws IOException {
         //given
@@ -233,7 +235,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testClassifyChangeShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given

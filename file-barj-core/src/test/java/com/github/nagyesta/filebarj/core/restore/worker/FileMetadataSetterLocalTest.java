@@ -11,8 +11,8 @@ import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static com.github.nagyesta.filebarj.core.restore.worker.PosixFileMetadataSetter.FULL_ACCESS;
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
 class FileMetadataSetterLocalTest extends TempFileAwareTest {
 
@@ -40,7 +41,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
             .build();
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetMetadataShouldSetPermissionsOwnerGroupAndTimestampsWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -66,7 +67,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetMetadataShouldThrowExceptionWhenCalledWithMissingFile() {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -80,7 +81,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetInitialPermissionsShouldSetPermissionsToAllowAllWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -102,7 +103,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetPermissionsShouldSetPermissionsOnlyWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -127,7 +128,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetOwnerAndGroupShouldNotThrowExceptionWhenUserIsNotRoot() throws IOException {
         //given
         final var sourcePath = createFileForExpectedPath(BackupPath.of(Path.of("source.png")));
@@ -147,7 +148,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetHiddenStatusShouldNotThrowExceptionWhenCalledWithExistingFile() throws IOException {
         //given
         final var sourcePath = createFileForExpectedPath(BackupPath.of(Path.of(".source.png")));
@@ -168,7 +169,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetTimestampsShouldSetTimestampsWhenCalledWithExistingFile() throws IOException {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
@@ -242,7 +243,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testSetOwnerAndGroupShouldThrowExceptionWhenCalledWithNull() {
         //given
         final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
