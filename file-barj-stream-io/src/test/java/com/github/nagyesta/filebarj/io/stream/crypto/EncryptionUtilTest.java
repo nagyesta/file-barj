@@ -2,8 +2,8 @@ package com.github.nagyesta.filebarj.io.stream.crypto;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -312,8 +312,8 @@ class EncryptionUtilTest {
         Assertions.assertEquals(EncryptionUtil.GCM_IV_BYTES, ivBytes.length);
     }
 
-    @Tag("ci-only")
     @Test
+    @DisabledIfSystemProperty(named = "ci", matches = "true")
     void testNewCipherOutputStreamShouldNotThrowExceptionWhenALongFileIsEncrypted() throws IOException {
         //given
         final var key = EncryptionUtil.generateAesKey();

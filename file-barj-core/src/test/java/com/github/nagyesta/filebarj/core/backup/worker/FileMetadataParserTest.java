@@ -12,8 +12,8 @@ import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.util.OsUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -29,6 +29,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.condition.OS.WINDOWS;
 
 class FileMetadataParserTest extends TempFileAwareTest {
 
@@ -108,7 +110,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testParseShouldParseFileInformationWhenTheRegularFileExistAndAccessible() throws Exception {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
@@ -150,7 +152,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testParseShouldParseFileInformationWhenTheSymbolicLinkExistAndAccessible() throws Exception {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
@@ -184,7 +186,7 @@ class FileMetadataParserTest extends TempFileAwareTest {
     }
 
     @Test
-    @Tag("unix-only")
+    @DisabledOnOs(WINDOWS)
     void testParseShouldParseFileInformationWhenTheDirectoryExistAndAccessible() throws Exception {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
