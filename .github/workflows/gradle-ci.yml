@@ -53,32 +53,20 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Decode key (if Ubuntu)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          mkdir -p ${{ runner.temp }}/.gnupg/
-          echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | base64 --decode > ${{ runner.temp }}/.gnupg/secring.gpg
       - name: Build with Gradle (if Ubuntu)
         uses: gradle/gradle-build-action@29c0906b64b8fc82467890bfb7a0a7ef34bda89e # v3.1.0
-        if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         with:
           arguments: |
-            printVersion build sign
+            printVersion build
             -Pci
-            -Psigning.keyId=${{ secrets.SIGNING_KEY_ID }}
-            -Psigning.password=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-            -Psigning.secretKeyRingFile=${{ runner.temp }}/.gnupg/secring.gpg
       - name: Build with Gradle (if Windows)
         uses: gradle/gradle-build-action@29c0906b64b8fc82467890bfb7a0a7ef34bda89e # v3.1.0
-        if: ${{ matrix.os != 'ubuntu-latest' || github.repository_owner != 'nagyesta' }}
+        if: ${{ matrix.os != 'ubuntu-latest' }}
         with:
           arguments: |
             printVersion build -x :file-barj-core:jacocoTestCoverageVerification
             -Pci
-      - name: 'Clean-up GPG key (if Ubuntu)'
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          rm -rf ${{ runner.temp }}/.gnupg/
       - name: 'Upload Test reports - Core'
         if: always()
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
@@ -108,21 +96,21 @@ jobs:
           retention-days: 5
       - name: Upload coverage to Codecov - Core (if Ubuntu)
         uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-core/build/reports/jacoco/report.xml
           flags: core
       - name: Upload coverage to Codecov - Job (if Ubuntu)
         uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-job/build/reports/jacoco/report.xml
           flags: job
       - name: Upload coverage to Codecov - Stream IO (if Ubuntu)
         uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-stream-io/build/reports/jacoco/report.xml
