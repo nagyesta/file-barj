@@ -8,7 +8,7 @@ import com.github.nagyesta.filebarj.core.inspect.worker.ManifestToSummaryConvert
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.util.StatLogUtil;
+import com.github.nagyesta.filebarj.core.util.LogUtil;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -72,7 +72,7 @@ public class RestoreController {
         log.info("Merging {} manifests", manifests.size());
         manifest = manifestManager.mergeForRestore(manifests);
         final var filesOfLastManifest = manifest.getFilesOfLastManifest();
-        StatLogUtil.logStatistics(filesOfLastManifest.values(),
+        LogUtil.logStatistics(filesOfLastManifest.values(),
                 (type, count) -> log.info("Found {} {} items in merged backup", count, type));
     }
 

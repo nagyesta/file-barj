@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -30,6 +31,11 @@ import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
 @Slf4j
 public class Controller {
 
+    private static final String RESET = "\033[0;0m";
+    private static final String GREEN = "\033[0;32m";
+    private static final String BLUE = "\033[0;34m";
+    private static final String BLACK = "\033[0;30m";
+    private static final String WHITE = "\033[0;37";
     private final String[] args;
     private final Console console;
 
@@ -45,6 +51,7 @@ public class Controller {
     }
 
     public void run() throws Exception {
+        printBanner();
         final var result = new CliTaskParser(Arrays.stream(args).limit(1).toArray(String[]::new)).getResult();
         switch (result) {
             case BACKUP:
@@ -130,6 +137,7 @@ public class Controller {
                 .dryRun(properties.isDryRun())
                 .deleteFilesNotInBackup(properties.isDeleteFilesNotInBackup())
                 .includedPath(properties.getIncludedPath())
+                .permissionComparisonStrategy(properties.getPermissionComparisonStrategy())
                 .build();
         new RestoreController(properties.getBackupSource(), properties.getPrefix(), kek, properties.getPointInTimeEpochSeconds())
                 .execute(restoreTask);
@@ -149,8 +157,19 @@ public class Controller {
         log.info("Backup operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 
+    private void printBanner() throws IOException {
+        final var bannerBytes = Objects.requireNonNull(Controller.class.getResourceAsStream("/banner.txt")).readAllBytes();
+        new String(bannerBytes)
+                .replaceAll("3", WHITE)
+                .replaceAll("4", GREEN)
+                .replaceAll("5", BLUE)
+                .replaceAll("6", BLACK)
+                .replaceAll("7", RESET).lines()
+                .forEach(System.out::println);
+    }
+
     @Nullable
-    private static PrivateKey getPrivateKey(final KeyStoreProperties keyProperties) {
+    private PrivateKey getPrivateKey(final KeyStoreProperties keyProperties) {
         return Optional.ofNullable(keyProperties)
                 .map(keyStoreProperties -> KeyStoreUtil
                         .readPrivateKey(

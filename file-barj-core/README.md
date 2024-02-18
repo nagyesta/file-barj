@@ -75,6 +75,7 @@ final var restoreTask = RestoreTask.builder()
         .threads(1)
         .deleteFilesNotInBackup(false)
         .includedPath(BackupPath.of("/source/dir")) //optional path filter
+        .permissionComparisonStrategy(PermissionComparisonStrategy.STRICT) //optional
         .build();
 final var pointInTime = 123456L;
 final var restoreController = new RestoreController(Path.of("/tmp/backup"), "test", null, pointInTime);

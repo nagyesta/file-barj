@@ -11,7 +11,7 @@ import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetter;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
-import com.github.nagyesta.filebarj.core.util.StatLogUtil;
+import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoInputStreamConfiguration;
 import com.github.nagyesta.filebarj.io.stream.exception.ArchiveIntegrityException;
@@ -153,11 +153,11 @@ public class RestorePipeline {
                 .sorted(Comparator.comparing(FileMetadata::getAbsolutePath).reversed())
                 .forEachOrdered(fileMetadata -> {
                     setFileProperties(fileMetadata);
-                    StatLogUtil.logIfThresholdReached(doneCount.incrementAndGet(), filesWithMetadataChanges.size(),
+                    LogUtil.logIfThresholdReached(doneCount.incrementAndGet(), filesWithMetadataChanges.size(),
                             (done, total) -> log.info("Finalized metadata for {} of {} paths.", done, total));
                 });
-        final var totalCount = StatLogUtil.countsByType(files);
-        final var changedCount = StatLogUtil.countsByType(filesWithMetadataChanges);
+        final var totalCount = LogUtil.countsByType(files);
+        final var changedCount = LogUtil.countsByType(filesWithMetadataChanges);
         changedCount.keySet().forEach(type -> log.info("Finalized metadata for {} of {} {} entries.",
                 changedCount.get(type), totalCount.get(type), type));
     }
@@ -521,7 +521,7 @@ public class RestorePipeline {
                     final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
                     final var current = parser.parse(restorePath.toFile(), manifest.getConfiguration());
                     final var change = changeDetector.classifyChange(previous, current);
-                    StatLogUtil.logIfThresholdReached(doneCount.incrementAndGet(), files.size(),
+                    LogUtil.logIfThresholdReached(doneCount.incrementAndGet(), files.size(),
                             (done, total) -> log.info("Parsed {} of {} unique paths.", done, total));
                     changeStatuses.put(file.getAbsolutePath(), change);
                 })).join();

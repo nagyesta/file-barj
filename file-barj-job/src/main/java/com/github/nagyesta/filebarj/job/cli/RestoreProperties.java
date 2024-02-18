@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -23,4 +24,5 @@ public class RestoreProperties extends BackupFileProperties {
     private final boolean deleteFilesNotInBackup;
     private final long pointInTimeEpochSeconds;
     private final BackupPath includedPath;
+    private final PermissionComparisonStrategy permissionComparisonStrategy;
 }

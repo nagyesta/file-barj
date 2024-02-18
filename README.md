@@ -61,4 +61,4 @@ File BaRJ comes with the following features
 # Limitations
 
 - The file permissions are only captured from the point of view of the current user on Windows or other non-POSIX compliant systems.
-- Restoring a backup on a different OS is not working well (See #94).
+- Cross platform restore can run into file name case issues when restoring a backup using case-sensitive paths on a system where paths are case-insensitive. 

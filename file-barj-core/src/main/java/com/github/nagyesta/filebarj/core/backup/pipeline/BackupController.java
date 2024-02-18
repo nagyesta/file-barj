@@ -14,7 +14,7 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.util.StatLogUtil;
+import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import lombok.Getter;
 import lombok.NonNull;
@@ -107,18 +107,31 @@ public class BackupController {
                     return source.listMatchingFilePaths().stream();
                 })
                 .collect(Collectors.toCollection(TreeSet::new));
+        detectCaseInsensitivityIssues(uniquePaths);
         log.info("Found {} unique paths in backup sources. Parsing metadata...", uniquePaths.size());
         final var doneCount = new AtomicInteger(0);
         this.filesFound = threadPool.submit(() -> uniquePaths.parallelStream()
                 .map(path -> {
                     final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
-                    StatLogUtil.logIfThresholdReached(doneCount.incrementAndGet(), uniquePaths.size(),
+                    LogUtil.logIfThresholdReached(doneCount.incrementAndGet(), uniquePaths.size(),
                             (done, total) -> log.info("Parsed {} of {} unique paths.", done, total));
                     return fileMetadata;
                 })
                 .collect(Collectors.toList())).join();
-        StatLogUtil.logStatistics(filesFound,
+        LogUtil.logStatistics(filesFound,
                 (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
+    }
+
+    private void detectCaseInsensitivityIssues(final SortedSet<Path> uniquePaths) {
+        final var list = uniquePaths.stream()
+                .collect(Collectors.groupingBy(path -> path.toString().toLowerCase()))
+                .values().stream()
+                .filter(paths -> paths.size() > 1)
+                .toList();
+        if (!list.isEmpty()) {
+            log.warn(LogUtil.scary("Found some paths which differ only in case! The backup cannot be restored correctly on Windows! "
+                    + "The affected files are: {}"), list);
+        }
     }
 
     private void calculateBackupDelta() {
@@ -134,7 +147,7 @@ public class BackupController {
             this.filesFound.forEach(file -> backupFileSet.put(file.getAbsolutePath(), file));
         }
         if (!manifest.getFiles().isEmpty()) {
-            StatLogUtil.logStatistics(manifest.getFiles().values(),
+            LogUtil.logStatistics(manifest.getFiles().values(),
                     (type, count) -> log.info("Found {} matching {} items in previous backup increments.", count, type));
         }
         final var changeStats = filesFound.stream()
