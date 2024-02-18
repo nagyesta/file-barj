@@ -4,7 +4,9 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,6 +22,10 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     private final SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests;
     private final SortedMap<String, Map<T, List<FileMetadata>>> contentIndex;
     private final Map<String, FileMetadata> nameIndex;
+    @NonNull
+    @Getter
+    @Setter
+    private PermissionComparisonStrategy permissionComparisonStrategy = PermissionComparisonStrategy.STRICT;
 
     /**
      * Creates a new instance with the previous manifests.
@@ -40,9 +46,7 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     public boolean hasMetadataChanged(
             @NonNull final FileMetadata previousMetadata,
             @NonNull final FileMetadata currentMetadata) {
-        final var permissionsChanged = !Objects.equals(currentMetadata.getOwner(), previousMetadata.getOwner())
-                || !Objects.equals(currentMetadata.getGroup(), previousMetadata.getGroup())
-                || !Objects.equals(currentMetadata.getPosixPermissions(), previousMetadata.getPosixPermissions());
+        final var permissionsChanged = !permissionComparisonStrategy.matches(previousMetadata, currentMetadata);
         final var hiddenStatusChanged = currentMetadata.getHidden() != previousMetadata.getHidden();
         final var timesChanged = currentMetadata.getFileType() != FileType.SYMBOLIC_LINK
                 && (!Objects.equals(currentMetadata.getCreatedUtcEpochSeconds(), previousMetadata.getCreatedUtcEpochSeconds())

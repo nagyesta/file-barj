@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.Option;
@@ -24,6 +25,7 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
     private static final String DELETE_MISSING = "delete-missing";
     private static final String AT_EPOCH_SECONDS = "at-epoch-seconds";
     private static final String INCLUDED_PATH = "include-path";
+    private static final String PERMISSION_COMPARISON = "permission-comparison";
 
     /**
      * Creates a new {@link CliRestoreParser} instance and sets the input arguments.
@@ -43,6 +45,8 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
             final var includedPath = Optional.ofNullable(commandLine.getOptionValue(INCLUDED_PATH))
                     .map(BackupPath::ofPathAsIs)
                     .orElse(null);
+            final var permissionComparison = PermissionComparisonStrategy
+                    .valueOf(commandLine.getOptionValue(PERMISSION_COMPARISON, PermissionComparisonStrategy.STRICT.name()));
             final var targets = new HashMap<BackupPath, Path>();
             if (commandLine.hasOption(TARGET)) {
                 final var mappings = commandLine.getOptionValues(TARGET);
@@ -67,6 +71,7 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                     .targets(targets)
                     .pointInTimeEpochSeconds(atPointInTime)
                     .includedPath(includedPath)
+                    .permissionComparisonStrategy(permissionComparison)
                     .build();
         });
     }
@@ -118,6 +123,15 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                         .type(Path.class)
                         .desc("Path of the file or directory which should be restored from the backup. Optional. If not provided,"
                                 + " all files should be restored.")
+                        .build())
+                .addOption(Option.builder()
+                        .longOpt(PERMISSION_COMPARISON)
+                        .numberOfArgs(1)
+                        .argName("strategy")
+                        .required(false)
+                        .type(PermissionComparisonStrategy.class)
+                        .desc("The strategy we should use when comparing permissions. "
+                                + "Possible values are STRICT, PERMISSION_ONLY, RELAXED, IGNORE. Optional. Default: STRICT")
                         .build());
     }
 }

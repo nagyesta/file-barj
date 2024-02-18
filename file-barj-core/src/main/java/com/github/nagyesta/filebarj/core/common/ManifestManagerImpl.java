@@ -6,7 +6,7 @@ import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
-import com.github.nagyesta.filebarj.core.util.StatLogUtil;
+import com.github.nagyesta.filebarj.core.util.LogUtil;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -162,7 +162,7 @@ public class ManifestManagerImpl implements ManifestManager {
         final var filesToBeRestored = calculateRemainingFilesAndLinks(lastIncrementManifest);
         populateFilesAndArchiveEntries(manifests, filesToBeRestored, files, archivedEntries);
         files.forEach((key, value) -> {
-            StatLogUtil.logStatistics(value.values(),
+            LogUtil.logStatistics(value.values(),
                     (type, count) -> log.info("Increment {} contains {} {} items.", key, count, type));
         });
         return RestoreManifest.builder()

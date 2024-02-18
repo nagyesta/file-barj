@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,7 @@ class CliRestoreParserTest {
     void testConstructorShouldThrowExceptionWhenRequiredParameterIsMissing() {
         //given
         final var threads = 2;
-        final var args = new String[] {"--threads", String.valueOf(threads)};
+        final var args = new String[]{"--threads", String.valueOf(threads)};
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> new CliRestoreParser(args, mock(Console.class)));
@@ -54,7 +55,7 @@ class CliRestoreParserTest {
         final var target = Path.of("target-dir");
         final var dryRun = true;
         final var threads = 2;
-        final var args = new String[] {
+        final var args = new String[]{
                 "--threads", String.valueOf(threads),
                 "--backup-source", backup.toString(),
                 "--prefix", prefix,
@@ -79,7 +80,7 @@ class CliRestoreParserTest {
         final var target = Path.of("target-dir");
         final var dryRun = true;
         final var threads = 2;
-        final var args = new String[] {
+        final var args = new String[]{
                 "--threads", String.valueOf(threads),
                 "--backup-source", backup.toString(),
                 "--prefix", prefix,
@@ -113,8 +114,8 @@ class CliRestoreParserTest {
         final var dryRun = true;
         final var threads = 2;
         final var alias = "alias";
-        final var password = new char[] {'a', 'b', 'c'};
-        final var args = new String[] {
+        final var password = new char[]{'a', 'b', 'c'};
+        final var args = new String[]{
                 "--threads", String.valueOf(threads),
                 "--backup-source", backup.toString(),
                 "--prefix", prefix,
@@ -141,6 +142,7 @@ class CliRestoreParserTest {
         Assertions.assertEquals(store.toAbsolutePath(), actual.getKeyProperties().getKeyStore());
         Assertions.assertEquals(alias, actual.getKeyProperties().getAlias());
         Assertions.assertArrayEquals(password, actual.getKeyProperties().getPassword());
+        Assertions.assertEquals(PermissionComparisonStrategy.STRICT, actual.getPermissionComparisonStrategy());
     }
 
     @Test
@@ -152,8 +154,8 @@ class CliRestoreParserTest {
         final var dryRun = false;
         final var threads = 1;
         final var alias = "default";
-        final var password = new char[] {'a', 'b', 'c'};
-        final var args = new String[] {
+        final var password = new char[]{'a', 'b', 'c'};
+        final var args = new String[]{
                 "--backup-source", backup.toString(),
                 "--prefix", prefix,
                 "--key-store", store.toString()
@@ -178,15 +180,61 @@ class CliRestoreParserTest {
     }
 
     @Test
+    void testConstructorShouldCaptureAndSetPropertiesWhenPermissionComparisonParameterIsPassed() {
+        //given
+        final var prefix = "prefix";
+        final var backup = Path.of("backup-dir");
+        final var dryRun = false;
+        final var threads = 1;
+        final var args = new String[]{
+                "--backup-source", backup.toString(),
+                "--prefix", prefix,
+                "--permission-comparison", PermissionComparisonStrategy.RELAXED.name()
+        };
+        final var console = mock(Console.class);
+
+        //when
+        final var underTest = new CliRestoreParser(args, console);
+        final var actual = underTest.getResult();
+
+        //then
+        Assertions.assertEquals(threads, actual.getThreads());
+        Assertions.assertEquals(backup.toAbsolutePath(), actual.getBackupSource());
+        Assertions.assertEquals(prefix, actual.getPrefix());
+        Assertions.assertEquals(dryRun, actual.isDryRun());
+        Assertions.assertEquals(Map.of(), actual.getTargets());
+        Assertions.assertNull(actual.getKeyProperties());
+        Assertions.assertEquals(PermissionComparisonStrategy.RELAXED, actual.getPermissionComparisonStrategy());
+    }
+
+    @Test
     void testConstructorShouldThrowExceptionWhenTargetMappingIsMalformed() {
         //given
         final var prefix = "prefix";
         final var backup = Path.of("backup-dir");
-        final var args = new String[] {
+        final var args = new String[]{
                 "--backup-source", backup.toString(),
                 "--prefix", prefix,
                 "--target-mapping", "source",
                 "--target-mapping", "target=1=2",
+        };
+        final var console = mock(Console.class);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new CliRestoreParser(args, console));
+
+        //then + exception
+    }
+
+    @Test
+    void testConstructorShouldThrowExceptionWhenPermissionComparisonIsInvalid() {
+        //given
+        final var prefix = "prefix";
+        final var backup = Path.of("backup-dir");
+        final var args = new String[]{
+                "--backup-source", backup.toString(),
+                "--prefix", prefix,
+                "--permission-comparison", "default",
         };
         final var console = mock(Console.class);
 

@@ -11,12 +11,23 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**
- * Utility class for file type statistics logging operations.
+ * Utility class for logging operations.
  */
 @UtilityClass
-public class StatLogUtil {
-
+public class LogUtil {
+    private static final String RESET = "\033[0;0m";
+    private static final String RED = "\033[0;31m";
     private static final int FOUR = 4;
+
+    /**
+     * Makes the message more prominent by applying a red colour.
+     *
+     * @param message the message
+     * @return the message with red colour
+     */
+    public static String scary(final String message) {
+        return RED + message + RESET;
+    }
 
     /**
      * Groups the files by their file type and calls the consumer for each group.

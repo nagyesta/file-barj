@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.config;
 
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import lombok.Builder;
 import lombok.Data;
@@ -37,6 +38,13 @@ public class RestoreTask {
      * The root path of the backup entries (directory or file) to include during the restore.
      */
     private final BackupPath includedPath;
+    /**
+     * The strategy to use when comparing permissions.
+     * <br/>
+     * Defaults to {@link PermissionComparisonStrategy#STRICT}.
+     */
+    @Builder.Default
+    private final PermissionComparisonStrategy permissionComparisonStrategy = PermissionComparisonStrategy.STRICT;
 
     /**
      * Returns the path filter for this restore task based on the included path.
