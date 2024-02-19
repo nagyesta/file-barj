@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
 import com.github.nagyesta.filebarj.core.inspect.worker.ManifestToSummaryConverter;
@@ -98,7 +99,8 @@ public class RestoreController {
                     .forEach(target -> log.info("Restoring {} to {}", target.backupPath(), target.restorePath()));
             log.info("Starting restore of {} MiB backup content (delta not known yet)", totalBackupSize / MEBIBYTE);
             final var startTimeMillis = System.currentTimeMillis();
-            final var pipeline = createRestorePipeline(restoreTask.getRestoreTargets(), restoreTask.isDryRun());
+            final var pipeline = createRestorePipeline(
+                    restoreTask.getRestoreTargets(), restoreTask.isDryRun(), restoreTask.getPermissionComparisonStrategy());
             pipeline.restoreDirectories(allEntries.stream()
                     .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
                     .toList());
@@ -121,12 +123,13 @@ public class RestoreController {
     @NotNull
     private RestorePipeline createRestorePipeline(
             @NotNull final RestoreTargets restoreTargets,
-            final boolean dryRun) {
+            final boolean dryRun,
+            @Nullable final PermissionComparisonStrategy permissionStrategy) {
         final RestorePipeline pipeline;
         if (dryRun) {
             pipeline = new DryRunRestorePipeline(manifest, backupDirectory, restoreTargets, kek);
         } else {
-            pipeline = new RestorePipeline(manifest, backupDirectory, restoreTargets, kek);
+            pipeline = new RestorePipeline(manifest, backupDirectory, restoreTargets, kek, permissionStrategy);
         }
         return pipeline;
     }

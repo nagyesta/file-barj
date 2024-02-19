@@ -1,10 +1,12 @@
 package com.github.nagyesta.filebarj.core.restore.worker;
 
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
@@ -18,10 +20,13 @@ public class WindowsFileMetadataSetter extends PosixFileMetadataSetter {
     /**
      * Creates a new instance for the specified root path.
      *
-     * @param restoreTargets the mappings of the root paths where we would like to restore
+     * @param restoreTargets     the mappings of the root paths where we would like to restore
+     * @param permissionStrategy the permission comparison strategy
      */
-    public WindowsFileMetadataSetter(@NotNull final RestoreTargets restoreTargets) {
-        super(restoreTargets);
+    public WindowsFileMetadataSetter(
+            @NotNull final RestoreTargets restoreTargets,
+            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+        super(restoreTargets, permissionStrategy);
     }
 
     @Override

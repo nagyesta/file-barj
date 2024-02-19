@@ -35,7 +35,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
                                  @NotNull final Path backupDirectory,
                                  @NotNull final RestoreTargets restoreTargets,
                                  @Nullable final PrivateKey kek) {
-        super(manifest, backupDirectory, restoreTargets, kek);
+        super(manifest, backupDirectory, restoreTargets, kek, null);
     }
 
     @Override

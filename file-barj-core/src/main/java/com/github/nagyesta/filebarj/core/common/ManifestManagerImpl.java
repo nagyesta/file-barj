@@ -208,8 +208,7 @@ public class ManifestManagerImpl implements ManifestManager {
                     break;
                 }
             } catch (final Exception e) {
-                //ignore for now, the set of manifests will be verified later
-                log.debug("Failed to load manifest file: {}", path, e);
+                log.warn("Failed to load manifest file: {}", path, e);
             }
         }
         return manifests;
@@ -231,8 +230,7 @@ public class ManifestManagerImpl implements ManifestManager {
                 validate(manifest, ValidationRules.Persisted.class);
                 manifests.put(manifest.getStartTimeUtcEpochSeconds(), manifest);
             } catch (final Exception e) {
-                //ignore for now, the set of manifests will be verified later
-                log.debug("Failed to load manifest file: {}", path, e);
+                log.warn("Failed to load manifest file: {}", path, e);
             }
         }
         return manifests;
