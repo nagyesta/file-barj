@@ -74,7 +74,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
         //reset the lat modified timestamp to simulate a restore
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(testDataRoot), testDataRoot)));
-        FileMetadataSetterFactory.newInstance(restoreTargets).setTimestamps(orig);
+        FileMetadataSetterFactory.newInstance(restoreTargets, null).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
         final var underTest = new SimpleFileMetadataChangeDetector(manifests);

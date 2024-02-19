@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.restore.worker;
 
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -7,6 +8,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
@@ -14,6 +16,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.*;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -32,14 +35,20 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
     public static final String FULL_ACCESS = "rwxrwxrwx";
 
     private final RestoreTargets restoreTargets;
+    private final PermissionComparisonStrategy permissionComparisonStrategy;
 
     /**
      * Creates a new instance for the specified root path.
      *
-     * @param restoreTargets the mappings of the root paths where we would like to restore
+     * @param restoreTargets     the mappings of the root paths where we would like to restore
+     * @param permissionStrategy the permission comparison strategy
      */
-    public PosixFileMetadataSetter(@NonNull final RestoreTargets restoreTargets) {
+    public PosixFileMetadataSetter(
+            @NonNull final RestoreTargets restoreTargets,
+            @Nullable final PermissionComparisonStrategy permissionStrategy) {
         this.restoreTargets = restoreTargets;
+        this.permissionComparisonStrategy = Optional.ofNullable(permissionStrategy)
+                .orElse(PermissionComparisonStrategy.STRICT);
     }
 
     @Override
@@ -53,6 +62,9 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
 
     @Override
     public void setInitialPermissions(@NonNull final FileMetadata metadata) {
+        if (!permissionComparisonStrategy.isPermissionImportant()) {
+            return;
+        }
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
@@ -63,6 +75,9 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
 
     @Override
     public void setPermissions(@NonNull final FileMetadata metadata) {
+        if (!permissionComparisonStrategy.isPermissionImportant()) {
+            return;
+        }
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
@@ -89,6 +104,9 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
 
     @Override
     public void setOwnerAndGroup(@NonNull final FileMetadata metadata) {
+        if (!permissionComparisonStrategy.isOwnerImportant()) {
+            return;
+        }
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }

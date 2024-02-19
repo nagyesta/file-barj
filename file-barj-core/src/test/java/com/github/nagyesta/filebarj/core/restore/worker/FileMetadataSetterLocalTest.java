@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.restore.worker;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
@@ -48,8 +49,9 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         final var metadata = parser.parse(TEST_FILE_PATH.toFile(), BACKUP_JOB_CONFIGURATION);
         final var path = metadata.getAbsolutePath();
         final var expectedPath = createFileForExpectedPath(path);
+        Files.setPosixFilePermissions(expectedPath.toOsPath(), PosixFilePermissions.fromString(FULL_ACCESS));
         final var restoreTargets = getRestoreTargets(testDataRoot);
-        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets);
+        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets, null);
 
         //when
         underTest.setMetadata(metadata);
@@ -68,11 +70,36 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
 
     @Test
     @DisabledOnOs(WINDOWS)
+    void testSetMetadataShouldNotSetPermissionsOwnerGroupButSetTimestampsWhenCalledWithExistingFileAndIgnoreStrategy() throws IOException {
+        //given
+        final var parser = FileMetadataParserFactory.newInstance();
+        final var metadata = parser.parse(TEST_FILE_PATH.toFile(), BACKUP_JOB_CONFIGURATION);
+        final var path = metadata.getAbsolutePath();
+        final var expectedPath = createFileForExpectedPath(path);
+        Files.setPosixFilePermissions(expectedPath.toOsPath(), PosixFilePermissions.fromString(FULL_ACCESS));
+        final var restoreTargets = getRestoreTargets(testDataRoot);
+        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets, PermissionComparisonStrategy.IGNORE);
+
+        //when
+        underTest.setMetadata(metadata);
+
+        //then
+        final var actualMetadata = parser.parse(expectedPath.toFile(), BACKUP_JOB_CONFIGURATION);
+        Assertions.assertEquals(expectedPath, actualMetadata.getAbsolutePath());
+        Assertions.assertNotEquals(metadata.getPosixPermissions(), actualMetadata.getPosixPermissions());
+        Assertions.assertEquals(metadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
+        Assertions.assertEquals(metadata.getLastAccessedUtcEpochSeconds(), actualMetadata.getLastAccessedUtcEpochSeconds());
+        Assertions.assertEquals(metadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
+        Assertions.assertEquals(metadata.getHidden(), actualMetadata.getHidden());
+    }
+
+    @Test
+    @DisabledOnOs(WINDOWS)
     void testSetMetadataShouldThrowExceptionWhenCalledWithMissingFile() {
         //given
         final var parser = FileMetadataParserFactory.newInstance();
         final var metadata = parser.parse(TEST_FILE_PATH.toFile(), BACKUP_JOB_CONFIGURATION);
-        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
+        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot), null);
 
         //when
         Assertions.assertThrows(IllegalStateException.class, () -> underTest.setMetadata(metadata));
@@ -89,7 +116,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         final var path = metadata.getAbsolutePath();
         final var expectedPath = createFileForExpectedPath(path);
         final var restoreTargets = getRestoreTargets(testDataRoot);
-        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets);
+        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets, null);
 
         //when
         underTest.setInitialPermissions(metadata);
@@ -111,7 +138,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         final var path = metadata.getAbsolutePath();
         final var expectedPath = createFileForExpectedPath(path);
         final var restoreTargets = getRestoreTargets(testDataRoot);
-        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets);
+        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets, null);
         Files.setPosixFilePermissions(expectedPath.toOsPath(), PosixFilePermissions.fromString(FULL_ACCESS));
         final var original = parser.parse(expectedPath.toFile(), BACKUP_JOB_CONFIGURATION);
 
@@ -136,7 +163,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         final var parser = FileMetadataParserFactory.newInstance();
         final var metadata = parser.parse(sourcePath.toFile(), BACKUP_JOB_CONFIGURATION);
         final var restoreTargets = getRestoreTargets(testDataRoot);
-        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets);
+        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets, null);
         createFileForExpectedPath(sourcePath);
         //make sure we will be able to delete the file later
         underTest.setInitialPermissions(metadata);
@@ -157,7 +184,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         final var path = metadata.getAbsolutePath();
         final var expectedPath = createFileForExpectedPath(path);
         final var restoreTargets = getRestoreTargets(testDataRoot);
-        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets);
+        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets, null);
 
         //when
         Assertions.assertDoesNotThrow(() -> underTest.setHiddenStatus(metadata));
@@ -177,7 +204,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         final var path = metadata.getAbsolutePath();
         final var restoreTargets = getRestoreTargets(testDataRoot);
         final var expectedPath = createFileForExpectedPath(path);
-        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets);
+        final var underTest = FileMetadataSetterFactory.newInstance(restoreTargets, null);
         final var original = parser.parse(expectedPath.toFile(), BACKUP_JOB_CONFIGURATION);
 
         //when
@@ -197,7 +224,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     @Test
     void testSetMetadataShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
+        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot), null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.setMetadata(null));
@@ -209,7 +236,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     @Test
     void testSetPermissionsShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
+        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot), null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.setPermissions(null));
@@ -221,7 +248,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     @Test
     void testSetInitialPermissionsShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
+        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot), null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.setInitialPermissions(null));
@@ -233,7 +260,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     @Test
     void testSetTimestampsShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
+        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot), null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.setTimestamps(null));
@@ -246,7 +273,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testSetOwnerAndGroupShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
+        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot), null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.setOwnerAndGroup(null));
@@ -258,7 +285,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     @Test
     void testSetHiddenStatusShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot));
+        final var underTest = FileMetadataSetterFactory.newInstance(getRestoreTargets(testDataRoot), null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.setHiddenStatus(null));

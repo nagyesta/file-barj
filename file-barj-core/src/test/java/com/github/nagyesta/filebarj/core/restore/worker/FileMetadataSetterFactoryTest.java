@@ -18,7 +18,7 @@ class FileMetadataSetterFactoryTest extends TempFileAwareTest {
         //given
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> FileMetadataSetterFactory.newInstance(null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> FileMetadataSetterFactory.newInstance(null, null));
 
         //then + exception
     }
@@ -29,7 +29,7 @@ class FileMetadataSetterFactoryTest extends TempFileAwareTest {
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.ofPathAsIs("a"), Path.of("b"))));
 
         //when
-        final var actual = FileMetadataSetterFactory.newInstance(restoreTargets, false);
+        final var actual = FileMetadataSetterFactory.newInstance(restoreTargets, false, null);
 
         //then
         Assertions.assertEquals(PosixFileMetadataSetter.class, actual.getClass());
@@ -41,7 +41,7 @@ class FileMetadataSetterFactoryTest extends TempFileAwareTest {
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.ofPathAsIs("a"), Path.of("b"))));
 
         //when
-        final var actual = FileMetadataSetterFactory.newInstance(restoreTargets, true);
+        final var actual = FileMetadataSetterFactory.newInstance(restoreTargets, true, null);
 
         //then
         Assertions.assertEquals(WindowsFileMetadataSetter.class, actual.getClass());

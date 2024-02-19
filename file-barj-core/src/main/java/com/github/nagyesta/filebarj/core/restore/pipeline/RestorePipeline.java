@@ -4,6 +4,7 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetectorFactory;
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.*;
@@ -66,15 +67,17 @@ public class RestorePipeline {
     /**
      * Creates a new pipeline instance for the specified manifests.
      *
-     * @param manifest        the manifest
-     * @param backupDirectory the directory where the backup files are located
-     * @param restoreTargets  the mappings of the root paths where we would like to restore
-     * @param kek             the key encryption key we would like to use to decrypt files
+     * @param manifest           the manifest
+     * @param backupDirectory    the directory where the backup files are located
+     * @param restoreTargets     the mappings of the root paths where we would like to restore
+     * @param kek                the key encryption key we would like to use to decrypt files
+     * @param permissionStrategy the permission comparison strategy
      */
     public RestorePipeline(@NonNull final RestoreManifest manifest,
                            @NonNull final Path backupDirectory,
                            @NonNull final RestoreTargets restoreTargets,
-                           @Nullable final PrivateKey kek) {
+                           @Nullable final PrivateKey kek,
+                           @Nullable final PermissionComparisonStrategy permissionStrategy) {
         if (manifest.getMaximumAppVersion().compareTo(new AppVersion()) > 0) {
             throw new IllegalArgumentException("Manifests were saved with a newer version of the application");
         }
@@ -83,7 +86,7 @@ public class RestorePipeline {
         this.backupDirectory = backupDirectory;
         this.restoreTargets = restoreTargets;
         this.kek = kek;
-        this.fileMetadataSetter = FileMetadataSetterFactory.newInstance(restoreTargets);
+        this.fileMetadataSetter = FileMetadataSetterFactory.newInstance(restoreTargets, permissionStrategy);
     }
 
     /**
@@ -542,7 +545,7 @@ public class RestorePipeline {
                     createSymbolicLink(linkTarget, symbolicLink);
                 }
             } catch (final IOException e) {
-                throw new ArchivalException("Failed to create symbolic link: " + symbolicLink + " pointing to: " + linkTarget, e);
+                log.error("Failed to create symbolic link: " + symbolicLink + " pointing to: " + linkTarget, e);
             }
         })).join();
     }

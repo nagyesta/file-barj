@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
@@ -50,7 +51,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null));
+                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null, null));
 
         //then + exception
     }
@@ -69,7 +70,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null));
+                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null, null));
 
         //then + exception
     }
@@ -88,7 +89,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null));
+                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null, null));
 
         //then + exception
     }
@@ -104,7 +105,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(null, backupDirectory, restoreTargets, null));
+                () -> new RestorePipeline(null, backupDirectory, restoreTargets, null, null));
 
         //then + exception
     }
@@ -123,7 +124,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(restoreManifest, null, restoreTargets, null));
+                () -> new RestorePipeline(restoreManifest, null, restoreTargets, null, null));
 
         //then + exception
     }
@@ -140,7 +141,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(restoreManifest, backupDirectory, null, null));
+                () -> new RestorePipeline(restoreManifest, backupDirectory, null, null, null));
 
         //then + exception
     }
@@ -158,7 +159,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -180,7 +181,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -202,7 +203,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -224,7 +225,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
         final var contentSources = manifest.getFiles().values().stream()
                 .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
                 .toList();
@@ -249,7 +250,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -271,7 +272,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -292,7 +293,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         final var threadPool = new ForkJoinPool(1);
         try {
@@ -318,7 +319,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -360,7 +361,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDir, restoreTargets, null);
+        final var underTest = new RestorePipeline(
+                restoreManifest, backupDir, restoreTargets, null, PermissionComparisonStrategy.STRICT);
         final var scope = manifest.getFiles().values().stream()
                 .filter(f -> f.getAbsolutePath().toOsPath().equals(sourceLinkExternal)
                         || f.getAbsolutePath().toOsPath().endsWith("A.png")
@@ -400,7 +402,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null);
+        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
