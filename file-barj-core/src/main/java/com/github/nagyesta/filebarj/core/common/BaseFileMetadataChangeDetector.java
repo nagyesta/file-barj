@@ -4,9 +4,7 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,24 +20,24 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     private final SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests;
     private final SortedMap<String, Map<T, List<FileMetadata>>> contentIndex;
     private final Map<String, FileMetadata> nameIndex;
-    @NonNull
-    @Getter
-    @Setter
-    private PermissionComparisonStrategy permissionComparisonStrategy = PermissionComparisonStrategy.STRICT;
+    private final PermissionComparisonStrategy permissionComparisonStrategy;
 
     /**
      * Creates a new instance with the previous manifests.
      *
      * @param filesFromManifests The files found in the previous manifests
+     * @param permissionStrategy The permission comparison strategy
      */
     protected BaseFileMetadataChangeDetector(
-            @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests) {
+            @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            @Nullable final PermissionComparisonStrategy permissionStrategy) {
         this.filesFromManifests = new TreeMap<>(filesFromManifests);
         final SortedMap<String, Map<T, List<FileMetadata>>> contentIndex = new TreeMap<>();
         final Map<String, FileMetadata> nameIndex = new TreeMap<>();
         index(this.filesFromManifests, contentIndex, nameIndex);
         this.contentIndex = contentIndex;
         this.nameIndex = nameIndex;
+        this.permissionComparisonStrategy = Objects.requireNonNullElse(permissionStrategy, PermissionComparisonStrategy.STRICT);
     }
 
     @Override
@@ -49,8 +47,7 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
         final var permissionsChanged = !permissionComparisonStrategy.matches(previousMetadata, currentMetadata);
         final var hiddenStatusChanged = currentMetadata.getHidden() != previousMetadata.getHidden();
         final var timesChanged = currentMetadata.getFileType() != FileType.SYMBOLIC_LINK
-                && (!Objects.equals(currentMetadata.getCreatedUtcEpochSeconds(), previousMetadata.getCreatedUtcEpochSeconds())
-                || !Objects.equals(currentMetadata.getLastModifiedUtcEpochSeconds(), previousMetadata.getLastModifiedUtcEpochSeconds()));
+                && !Objects.equals(currentMetadata.getLastModifiedUtcEpochSeconds(), previousMetadata.getLastModifiedUtcEpochSeconds());
         return hiddenStatusChanged || permissionsChanged || timesChanged;
     }
 

@@ -4,10 +4,7 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.worker.DefaultBackupScopePartitioner;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
-import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
-import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetectorFactory;
-import com.github.nagyesta.filebarj.core.common.ManifestManager;
-import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
+import com.github.nagyesta.filebarj.core.common.*;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
@@ -139,7 +136,8 @@ public class BackupController {
         final var previousFiles = new TreeMap<String, Map<UUID, FileMetadata>>();
         previousManifests.forEach((key, value) -> previousFiles.put(value.getFileNamePrefix(), value.getFiles()));
         if (!previousManifests.isEmpty()) {
-            changeDetector = FileMetadataChangeDetectorFactory.create(manifest.getConfiguration(), previousFiles);
+            changeDetector = FileMetadataChangeDetectorFactory
+                    .create(manifest.getConfiguration(), previousFiles, PermissionComparisonStrategy.STRICT);
             log.info("Trying to find unchanged files in previous backup increments");
             threadPool.submit(() -> this.filesFound.parallelStream()
                     .forEach(this::findPreviousVersionToReuseOrAddToBackupFileSet)).join();

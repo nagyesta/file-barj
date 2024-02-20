@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core.restore.pipeline;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
@@ -36,6 +37,7 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
                 .restoreTargets(new RestoreTargets(Set.of(r, u)))
                 .dryRun(false)
                 .threads(1)
+                .permissionComparisonStrategy(PermissionComparisonStrategy.RELAXED)
                 .build();
 
         //when
@@ -66,6 +68,7 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
                 .restoreTargets(new RestoreTargets(Set.of(r, u)))
                 .dryRun(false)
                 .threads(1)
+                .permissionComparisonStrategy(PermissionComparisonStrategy.RELAXED)
                 .build();
 
         //when

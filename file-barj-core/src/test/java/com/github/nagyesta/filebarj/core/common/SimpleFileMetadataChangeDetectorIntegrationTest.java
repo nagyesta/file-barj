@@ -77,7 +77,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         FileMetadataSetterFactory.newInstance(restoreTargets, null).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(manifests);
+        final var underTest = new SimpleFileMetadataChangeDetector(manifests, null);
 
         //when
         final var relevant = underTest.findMostRelevantPreviousVersion(restored);
@@ -103,7 +103,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(manifests);
+        final var underTest = new SimpleFileMetadataChangeDetector(manifests, null);
 
         //when
         final var actual = underTest.findMostRelevantPreviousVersion(curr);

@@ -23,7 +23,8 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> FileMetadataChangeDetectorFactory.create(null, Map.of("key", Map.of())));
+                () -> FileMetadataChangeDetectorFactory
+                        .create(null, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT));
 
         //then + exception
     }
@@ -35,7 +36,8 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> FileMetadataChangeDetectorFactory.create(mock(BackupJobConfiguration.class), null));
+                () -> FileMetadataChangeDetectorFactory
+                        .create(mock(BackupJobConfiguration.class), null, PermissionComparisonStrategy.STRICT));
 
         //then + exception
     }
@@ -55,7 +57,8 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
                 .build();
 
         //when
-        final var actual = FileMetadataChangeDetectorFactory.create(config, Map.of("key", Map.of()));
+        final var actual = FileMetadataChangeDetectorFactory
+                .create(config, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT);
 
         //then
         Assertions.assertInstanceOf(SimpleFileMetadataChangeDetector.class, actual);
@@ -76,7 +79,8 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
                 .build();
 
         //when
-        final var actual = FileMetadataChangeDetectorFactory.create(config, Map.of("key", Map.of()));
+        final var actual = FileMetadataChangeDetectorFactory
+                .create(config, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT);
 
         //then
         Assertions.assertInstanceOf(HashingFileMetadataChangeDetector.class, actual);
