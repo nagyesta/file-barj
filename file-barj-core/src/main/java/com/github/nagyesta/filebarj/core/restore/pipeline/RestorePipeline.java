@@ -81,7 +81,8 @@ public class RestorePipeline {
         if (manifest.getMaximumAppVersion().compareTo(new AppVersion()) > 0) {
             throw new IllegalArgumentException("Manifests were saved with a newer version of the application");
         }
-        this.changeDetector = FileMetadataChangeDetectorFactory.create(manifest.getConfiguration(), manifest.getFiles());
+        this.changeDetector = FileMetadataChangeDetectorFactory
+                .create(manifest.getConfiguration(), manifest.getFiles(), permissionStrategy);
         this.manifest = manifest;
         this.backupDirectory = backupDirectory;
         this.restoreTargets = restoreTargets;

@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.common;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Objects;
@@ -17,10 +18,12 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
      * Creates a new instance with the previous manifests.
      *
      * @param filesFromManifests The files found in the previous manifests
+     * @param permissionStrategy The permission comparison strategy
      */
     protected SimpleFileMetadataChangeDetector(
-            @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests) {
-        super(filesFromManifests);
+            @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+        super(filesFromManifests, permissionStrategy);
     }
 
     @Override

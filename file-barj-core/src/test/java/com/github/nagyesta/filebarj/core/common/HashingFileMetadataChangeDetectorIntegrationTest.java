@@ -68,7 +68,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         waitASecond();
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new HashingFileMetadataChangeDetector(manifests);
+        final var underTest = new HashingFileMetadataChangeDetector(manifests, null);
 
         //when
         final var relevant = underTest.findMostRelevantPreviousVersion(curr);
@@ -94,7 +94,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
         final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new HashingFileMetadataChangeDetector(manifests);
+        final var underTest = new HashingFileMetadataChangeDetector(manifests, null);
 
         //when
         final var actual = underTest.findMostRelevantPreviousVersion(curr);

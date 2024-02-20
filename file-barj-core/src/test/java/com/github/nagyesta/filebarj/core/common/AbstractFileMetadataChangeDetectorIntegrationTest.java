@@ -134,11 +134,11 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
     }
 
     protected SimpleFileMetadataChangeDetector getDefaultSimpleFileMetadataChangeDetector(final FileMetadata prev) {
-        return new SimpleFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)));
+        return new SimpleFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)), null);
     }
 
     protected HashingFileMetadataChangeDetector getDefaultHashingFileMetadataChangeDetector(final FileMetadata prev) {
-        return new HashingFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)));
+        return new HashingFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)), null);
     }
 
     protected FileMetadata createMetadata(
