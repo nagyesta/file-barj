@@ -1,6 +1,8 @@
 package com.github.nagyesta.filebarj.core.util;
 
+import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
 import lombok.experimental.UtilityClass;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Utility class for OS specific operations.
@@ -15,6 +17,27 @@ public final class OsUtil {
      * @return true if the OS is Windows
      */
     public static boolean isWindows() {
-        return System.getProperty("os.name").toLowerCase().startsWith("win");
+        return getOs() == OperatingSystem.WINDOWS;
+    }
+
+    /**
+     * Parses the current OS name.
+     *
+     * @return the current OS
+     */
+    @NotNull
+    public static OperatingSystem getOs() {
+        return OperatingSystem.forOsName(getRawOsName());
+    }
+
+
+    /**
+     * Returns the raw OS name.
+     *
+     * @return the raw OS name
+     */
+    @NotNull
+    public static String getRawOsName() {
+        return System.getProperty("os.name");
     }
 }

@@ -49,6 +49,11 @@ public class BackupIncrementManifest extends EncryptionKeyStore {
     @JsonProperty("backup_type")
     private BackupType backupType;
     /**
+     * The OS of the backup.
+     */
+    @JsonProperty("operating_system")
+    private String operatingSystem;
+    /**
      * The snapshot of the backup configuration at the time of backup.
      */
     @NonNull

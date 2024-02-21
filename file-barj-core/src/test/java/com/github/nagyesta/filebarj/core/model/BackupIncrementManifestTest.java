@@ -10,6 +10,7 @@ import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.util.OsUtil;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -82,6 +83,7 @@ class BackupIncrementManifestTest {
                 .appVersion(new AppVersion(0, 0, 1))
                 .versions(new TreeSet<>(Set.of(0)))
                 .backupType(BackupType.FULL)
+                .operatingSystem(OsUtil.getRawOsName())
                 .encryptionKeys(Map.of(0, Map.of(0, dek)))
                 .startTimeUtcEpochSeconds(Instant.now().getEpochSecond())
                 .fileNamePrefix("backup-")

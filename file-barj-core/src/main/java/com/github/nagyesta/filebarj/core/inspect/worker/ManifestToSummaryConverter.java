@@ -27,6 +27,7 @@ public class ManifestToSummaryConverter {
                 + "\tStarted at : " + Instant.ofEpochSecond(epochSeconds) + " (Epoch seconds: " + epochSeconds + ")\n"
                 + "\tContains " + manifest.getFiles().size() + " files (" + totalSize + " MiB)\n"
                 + "\tVersions   : " + manifest.getVersions() + "\n"
+                + "\tOS name    : " + Optional.ofNullable(manifest.getOperatingSystem()).orElse("unknown") + "\n"
                 + "\tEncrypted  : " + Optional.ofNullable(manifest.getConfiguration().getEncryptionKey()).isPresent() + "\n"
                 + "\tHash alg.  : " + manifest.getConfiguration().getHashAlgorithm().name() + "\n"
                 + "\tCompression: " + manifest.getConfiguration().getCompression().name();
