@@ -82,6 +82,7 @@ class ManifestToSummaryConverterTest extends TempFileAwareTest {
                 .versions(new TreeSet<>(Set.of(0)))
                 .fileNamePrefix("prefix")
                 .startTimeUtcEpochSeconds(1L)
+                .operatingSystem(null)
                 .build();
         //when
         final var actual = underTest.convertToSummaryString(manifest);
@@ -92,6 +93,7 @@ class ManifestToSummaryConverterTest extends TempFileAwareTest {
                 \tStarted at : 1970-01-01T00:00:01Z (Epoch seconds: 1)
                 \tContains 1 files (2 MiB)
                 \tVersions   : [0]
+                \tOS name    : unknown
                 \tEncrypted  : true
                 \tHash alg.  : SHA256
                 \tCompression: GZIP""", actual);

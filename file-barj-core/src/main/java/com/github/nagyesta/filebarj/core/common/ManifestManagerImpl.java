@@ -6,7 +6,9 @@ import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
+import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
 import com.github.nagyesta.filebarj.core.util.LogUtil;
+import com.github.nagyesta.filebarj.core.util.OsUtil;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -49,6 +51,7 @@ public class ManifestManagerImpl implements ManifestManager {
                 .archivedEntries(new ConcurrentHashMap<>())
                 .startTimeUtcEpochSeconds(startTimeEpochSecond)
                 .fileNamePrefix(fileNamePrefix)
+                .operatingSystem(OsUtil.getRawOsName())
                 .build();
         Optional.ofNullable(jobConfiguration.getEncryptionKey())
                 .ifPresent(manifest::generateDataEncryptionKeys);
@@ -171,6 +174,7 @@ public class ManifestManagerImpl implements ManifestManager {
                 .versions(versions)
                 .configuration(lastIncrementManifest.getConfiguration())
                 .fileNamePrefixes(fileNamePrefixes)
+                .operatingSystem(OperatingSystem.forOsName(lastIncrementManifest.getOperatingSystem()))
                 .files(files)
                 .archivedEntries(archivedEntries)
                 .encryptionKeys(keys)

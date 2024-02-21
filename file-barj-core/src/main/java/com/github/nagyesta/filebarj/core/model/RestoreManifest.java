@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.model;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -41,6 +42,8 @@ public class RestoreManifest extends EncryptionKeyStore {
      */
     @NonNull
     private final BackupJobConfiguration configuration;
+    @NonNull
+    private final OperatingSystem operatingSystem;
     /**
      * The map of matching files identified during backup keyed by filename and Id.
      */
@@ -70,6 +73,7 @@ public class RestoreManifest extends EncryptionKeyStore {
         this.lastStartTimeUtcEpochSeconds = builder.lastStartTimeUtcEpochSeconds;
         this.fileNamePrefixes = Collections.unmodifiableSortedMap(builder.fileNamePrefixes);
         this.configuration = builder.configuration;
+        this.operatingSystem = builder.operatingSystem;
         this.files = builder.files.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, entry -> Collections.unmodifiableMap(entry.getValue())));
         this.archivedEntries = builder.archivedEntries.entrySet().stream()
