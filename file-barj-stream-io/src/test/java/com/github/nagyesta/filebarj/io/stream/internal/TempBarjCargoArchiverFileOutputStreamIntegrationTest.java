@@ -6,6 +6,7 @@ import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoInputStreamConfiguration;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoOutputStreamConfiguration;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
+import com.github.nagyesta.filebarj.io.stream.internal.model.BarjCargoEntryBoundaries;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+
+import static org.mockito.Mockito.mock;
 
 class TempBarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest {
 
@@ -54,8 +57,7 @@ class TempBarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAware
             try (var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
                 //when
                 underTest.mergeEntity(entity,
-                        stream.getStream(entity.getContentBoundary()),
-                        stream.getStream(entity.getMetadataBoundary()));
+                        stream.getStream(entity.getContentBoundary(), entity.getMetadataBoundary()));
 
                 //then
                 underTest.close();
@@ -95,7 +97,7 @@ class TempBarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAware
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testGetStreamOfTempArchiverShouldThrowExceptionWhenCalledWithNull()
+    void testGetStreamOfTempArchiverShouldThrowExceptionWhenCalledWithNullContentBoundary()
             throws IOException {
         //given
         final var sourceConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -115,7 +117,37 @@ class TempBarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAware
             underTest.close();
 
             //when
-            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.getStream(null));
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.getStream(null, mock(BarjCargoEntryBoundaries.class)));
+
+            //then + exception
+        }
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testGetStreamOfTempArchiverShouldThrowExceptionWhenCalledWithNullMetadataBoundary()
+            throws IOException {
+        //given
+        final var sourceConfig = BarjCargoOutputStreamConfiguration.builder()
+                .prefix("integration-test-source")
+                .compressionFunction(GZIPOutputStream::new)
+                .hashAlgorithm("sha-256")
+                .folder(super.getTestDataRoot())
+                .indexEncryptionKey(null)
+                .build();
+        final var key = "/key";
+        final var content = "test";
+        final var metadata = "metadata";
+        final var secretKey = EncryptionUtil.generateAesKey();
+        try (var underTest = new TempBarjCargoArchiverFileOutputStream(sourceConfig, key)) {
+            final var contentStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
+            underTest.addFileEntity(key, contentStream, secretKey, metadata);
+            underTest.close();
+
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.getStream(mock(BarjCargoEntryBoundaries.class), null));
 
             //then + exception
         }

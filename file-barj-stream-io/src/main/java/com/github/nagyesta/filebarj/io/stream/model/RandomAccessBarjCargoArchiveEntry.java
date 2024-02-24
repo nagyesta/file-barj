@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.io.stream.model;
 
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource;
 import com.github.nagyesta.filebarj.io.stream.enums.FileType;
+import com.github.nagyesta.filebarj.io.stream.internal.FixedRangeInputStream;
 import com.github.nagyesta.filebarj.io.stream.internal.model.BarjCargoEntityIndex;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -67,6 +68,14 @@ public class RandomAccessBarjCargoArchiveEntry implements BarjCargoArchiveEntry 
         try (var stream = source.getStreamFor(entityIndex.getMetadata(), key)) {
             return new String(stream.readAllBytes());
         }
+    }
+
+    @Override
+    @NotNull
+    public InputStream getRawContentAndMetadata() throws IOException {
+        final var start = entityIndex.getContentOrElseMetadata().getAbsoluteStartIndexInclusive();
+        final var length = entityIndex.getMetadata().getAbsoluteEndIndexExclusive() - start;
+        return new FixedRangeInputStream(source.openStreamForSequentialAccess(), start, length);
     }
 
     @Override

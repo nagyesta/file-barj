@@ -368,7 +368,6 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
             Assertions.assertThrows(IllegalStateException.class,
                     () -> underTest.mergeEntity(
                             mock(BarjCargoBoundarySource.class),
-                            InputStream.nullInputStream(),
                             InputStream.nullInputStream()));
 
             //then + exception
@@ -409,16 +408,12 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
             final var entity = stream.addFileEntity(key, contentStream, secretKey, metadata);
             stream.close();
             try (var contentFile = new FileInputStream(stream.getDataFilesWritten().get(0).toString());
-                 var contentArchived = new FixedRangeInputStream(contentFile,
+                 var contentAndMetadataArchived = new FixedRangeInputStream(contentFile,
                          entity.getContentBoundary().getAbsoluteStartIndexInclusive(),
-                         entity.getContentBoundary().getArchivedSizeBytes());
-                 var metadataFile = new FileInputStream(stream.getDataFilesWritten().get(0).toString());
-                 var metadataArchived = new FixedRangeInputStream(metadataFile,
-                         entity.getMetadataBoundary().getAbsoluteStartIndexInclusive(),
-                         entity.getMetadataBoundary().getArchivedSizeBytes());
+                         entity.getContentBoundary().getArchivedSizeBytes() + entity.getMetadataBoundary().getArchivedSizeBytes());
                  var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
                 //when
-                underTest.mergeEntity(entity, contentArchived, metadataArchived);
+                underTest.mergeEntity(entity, contentAndMetadataArchived);
 
                 //then
                 underTest.close();
@@ -469,7 +464,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
                          entity.getMetadataBoundary().getArchivedSizeBytes());
                  var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
                 //when
-                underTest.mergeEntity(entity, null, metadataArchived);
+                underTest.mergeEntity(entity, metadataArchived);
 
                 //then
                 underTest.close();
@@ -480,48 +475,9 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
         }
     }
 
-    @Test
-    void testMergeEntityShouldThrowExceptionWhenTheCalledWithLinkEntityAndNullContentStream()
-            throws IOException {
-        //given
-        final var sourceConfig = BarjCargoOutputStreamConfiguration.builder()
-                .prefix("integration-test-source")
-                .compressionFunction(GZIPOutputStream::new)
-                .hashAlgorithm("sha-256")
-                .folder(super.getTestDataRoot())
-                .indexEncryptionKey(null)
-                .build();
-        final var targetConfig = BarjCargoOutputStreamConfiguration.builder()
-                .prefix("integration-test-target")
-                .compressionFunction(GZIPOutputStream::new)
-                .hashAlgorithm("sha-256")
-                .folder(super.getTestDataRoot())
-                .indexEncryptionKey(null)
-                .build();
-        final var key = "/key";
-        final var target = "target";
-        final var metadata = "metadata";
-        final var secretKey = EncryptionUtil.generateAesKey();
-        try (var stream = new BarjCargoArchiverFileOutputStream(sourceConfig)) {
-            final var entity = stream.addSymbolicLinkEntity(key, target, secretKey, metadata);
-            stream.close();
-            try (var metadataFile = new FileInputStream(stream.getDataFilesWritten().get(0).toString());
-                 var metadataArchived = new FixedRangeInputStream(metadataFile,
-                         entity.getMetadataBoundary().getAbsoluteStartIndexInclusive(),
-                         entity.getMetadataBoundary().getArchivedSizeBytes());
-                 var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
-                //when
-                Assertions.assertThrows(IllegalArgumentException.class,
-                        () -> underTest.mergeEntity(entity, null, metadataArchived));
-
-                //then + exception
-            }
-        }
-    }
-
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testMergeEntityShouldThrowExceptionWhenTheCalledWithNullMetadataStream()
+    void testMergeEntityShouldThrowExceptionWhenTheCalledWithLinkEntityAndNullStream()
             throws IOException {
         //given
         final var sourceConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -545,14 +501,10 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
         try (var stream = new BarjCargoArchiverFileOutputStream(sourceConfig)) {
             final var entity = stream.addSymbolicLinkEntity(key, target, secretKey, metadata);
             stream.close();
-            try (var contentFile = new FileInputStream(stream.getDataFilesWritten().get(0).toString());
-                 var contentArchived = new FixedRangeInputStream(contentFile,
-                         entity.getContentBoundary().getAbsoluteStartIndexInclusive(),
-                         entity.getContentBoundary().getArchivedSizeBytes());
-                 var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
+            try (var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
                 //when
                 Assertions.assertThrows(IllegalArgumentException.class,
-                        () -> underTest.mergeEntity(entity, contentArchived, null));
+                        () -> underTest.mergeEntity(entity, null));
 
                 //then + exception
             }
@@ -574,8 +526,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
         try (var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
             //when
             Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> underTest.mergeEntity(null,
-                            InputStream.nullInputStream(), InputStream.nullInputStream()));
+                    () -> underTest.mergeEntity(null, InputStream.nullInputStream()));
 
             //then + exception
         }
@@ -756,7 +707,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
             stream.close();
 
             //then
-            final var actualIndexLines = Files.readAllLines(stream.getIndexFile());
+            final var actualIndexLines = Files.readAllLines(stream.getIndexFileWritten());
             final var expectedIndexLines = Files.readAllLines(
                     Path.of(getClass().getResource("/example/index.properties").toURI()));
             Assertions.assertIterableEquals(expectedIndexLines, actualIndexLines);

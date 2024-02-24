@@ -55,6 +55,15 @@ public interface BarjCargoArchiveEntry {
     @Nullable String getMetadata(@Nullable SecretKey key) throws IOException;
 
     /**
+     * Streams the archived content and metadata of an entry without decryption or decompression.
+     *
+     * @return the raw content and metadata
+     * @throws IOException When the content cannot be read
+     */
+    @NotNull
+    InputStream getRawContentAndMetadata() throws IOException;
+
+    /**
      * Skips the content of an entry. Does nothing if called on a directory entry.
      * @throws IOException When the content cannot be read through.
      */

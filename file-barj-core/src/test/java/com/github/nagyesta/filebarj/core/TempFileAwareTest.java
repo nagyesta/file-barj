@@ -5,9 +5,11 @@ import org.apache.commons.io.file.PathUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Set;
 import java.util.UUID;
 
 public abstract class TempFileAwareTest {
@@ -53,6 +55,24 @@ public abstract class TempFileAwareTest {
                     return FileVisitResult.CONTINUE;
                 }
             });
+        }
+    }
+
+    /**
+     * Copies the selected backup files to the test directory.
+     *
+     * @param prefixes   The prefixes of the backup files
+     * @param backupPath The path of the backup directory
+     * @throws IOException If the files cannot be copied
+     */
+    @SuppressWarnings("DataFlowIssue")
+    protected void prepareBackupFiles(final Set<String> prefixes, final Path backupPath) throws IOException {
+        for (final var prefix : prefixes) {
+            final var backupFiles = Set.of(prefix + ".00001.cargo", prefix + ".index.cargo", prefix + ".manifest.cargo");
+            for (final var filename : backupFiles) {
+                final var path = new File(getClass().getResource("/backups/" + filename).getFile()).toPath().toAbsolutePath();
+                Files.copy(path, backupPath.resolve(filename));
+            }
         }
     }
 }

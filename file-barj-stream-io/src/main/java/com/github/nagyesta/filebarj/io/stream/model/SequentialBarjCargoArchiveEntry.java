@@ -3,10 +3,13 @@ package com.github.nagyesta.filebarj.io.stream.model;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveEntryIterator;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource;
 import com.github.nagyesta.filebarj.io.stream.enums.FileType;
+import com.github.nagyesta.filebarj.io.stream.internal.FixedRangeInputStream;
 import com.github.nagyesta.filebarj.io.stream.internal.model.BarjCargoEntityIndex;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.ToString;
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +28,7 @@ public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
     @NonNull
     private final BarjCargoArchiveFileInputStreamSource source;
     private final BarjCargoArchiveEntryIterator iterator;
+    @Getter
     @NonNull
     private final BarjCargoEntityIndex entityIndex;
 
@@ -87,6 +91,14 @@ public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
             }
             return new String(allBytes);
         }
+    }
+
+    @Override
+    @NotNull
+    public InputStream getRawContentAndMetadata() throws IOException {
+        final var start = entityIndex.getContentOrElseMetadata().getAbsoluteStartIndexInclusive();
+        final var length = entityIndex.getMetadata().getAbsoluteEndIndexExclusive() - start;
+        return CloseShieldInputStream.wrap(new FixedRangeInputStream(iterator.getStream(), 0, length));
     }
 
     @Override

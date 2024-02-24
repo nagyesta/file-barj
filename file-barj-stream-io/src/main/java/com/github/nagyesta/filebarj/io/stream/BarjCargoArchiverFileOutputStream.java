@@ -2,7 +2,6 @@ package com.github.nagyesta.filebarj.io.stream;
 
 import com.github.nagyesta.filebarj.io.stream.internal.BaseBarjCargoArchiverFileOutputStream;
 import com.github.nagyesta.filebarj.io.stream.internal.model.BarjCargoEntityIndex;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +20,6 @@ import static com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil.newCi
 @Slf4j
 public class BarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiverFileOutputStream {
 
-    @Getter
     private final Path indexFile;
     private final FileOutputStream indexStream;
     private final BufferedOutputStream indexBufferedStream;

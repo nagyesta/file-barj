@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.io.stream.internal.model;
 
+import com.github.nagyesta.filebarj.io.stream.BarjCargoBoundarySource;
 import com.github.nagyesta.filebarj.io.stream.enums.FileType;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +20,7 @@ import static java.lang.Boolean.parseBoolean;
  */
 @Data
 @Builder
-public class BarjCargoEntityIndex {
+public class BarjCargoEntityIndex implements BarjCargoBoundarySource {
 
     private static final String PATH = ".path";
     private static final String TYPE = ".type";
@@ -85,5 +86,15 @@ public class BarjCargoEntityIndex {
         } else {
             return null;
         }
+    }
+
+    @Override
+    public BarjCargoEntryBoundaries getContentBoundary() {
+        return content;
+    }
+
+    @Override
+    public BarjCargoEntryBoundaries getMetadataBoundary() {
+        return metadata;
     }
 }

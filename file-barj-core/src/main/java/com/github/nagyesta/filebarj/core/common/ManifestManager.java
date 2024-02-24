@@ -31,13 +31,26 @@ public interface ManifestManager {
             int nextVersion);
 
     /**
-     * Persists the provided manifest.to the hard drive in two copies (one encrypted that can be
+     * Persists the provided manifest to the hard drive in two copies (one encrypted that can be
      * moved to a safe location and one unencrypted in the history folder to allow incremental
      * backup jobs to function automatically without knowing the private keys).
      *
      * @param manifest The manifest to persist
      */
     void persist(@NonNull BackupIncrementManifest manifest);
+
+    /**
+     * Persists the provided manifest to the hard drive in two copies (one encrypted that can be
+     * moved to a safe location and one unencrypted in the history folder to allow incremental
+     * backup jobs to function automatically without knowing the private keys).
+     * The aforementioned files will be stored relative to the provided backup destination.
+     *
+     * @param manifest          The manifest to persist
+     * @param backupDestination the backup destination
+     */
+    void persist(
+            @NonNull BackupIncrementManifest manifest,
+            @NonNull Path backupDestination);
 
     /**
      * Loads the manifests which belong to the provided backup. Only includes manifests starting
@@ -61,10 +74,10 @@ public interface ManifestManager {
      * Loads all manifests which belong to the provided backup. Contains manifests for all
      * increments even if many full backups have been created.
      *
-     * @param destinationDirectory    the directory where the backup files are stored
-     * @param fileNamePrefix          the prefix of the backup files
-     * @param privateKey              the RSA key we want to use to decrypt the manifests (optional).
-     *                                If null, the manifests will not be decrypted.
+     * @param destinationDirectory the directory where the backup files are stored
+     * @param fileNamePrefix       the prefix of the backup files
+     * @param privateKey           the RSA key we want to use to decrypt the manifests (optional).
+     *                             If null, the manifests will not be decrypted.
      * @return the map of loaded manifests keyed by their timestamps
      */
     SortedMap<Long, BackupIncrementManifest> loadAll(

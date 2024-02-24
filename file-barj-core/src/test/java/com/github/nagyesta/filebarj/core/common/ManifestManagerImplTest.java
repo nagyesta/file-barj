@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
@@ -19,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Set;
+
+import static org.mockito.Mockito.mock;
 
 class ManifestManagerImplTest extends TempFileAwareTest {
     public static final int A_SECOND = 1000;
@@ -249,6 +252,31 @@ class ManifestManagerImplTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testPersistShouldThrowExceptionWhenCalledWithNullManifest() {
+        //given
+        final var underTest = new ManifestManagerImpl();
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null, Path.of("destination")));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testPersistShouldThrowExceptionWhenCalledWithNullDestination() {
+        //given
+        final var underTest = new ManifestManagerImpl();
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.persist(mock(BackupIncrementManifest.class), null));
 
         //then + exception
     }

@@ -46,10 +46,11 @@ File BaRJ comes with the following features
 - Inspect content of a backup increment
 - Duplicate handling (storing duplicates of the same file only once)
 - Deletes left-over files from the restore directory (if they had been in scope for the backup)
+- Merge previous backup increments
 
 ### Planned features
 
-- Merge previous backup increments
+- Delete selected backup increments
 - UI for convenient configuration
 
 ## Modules

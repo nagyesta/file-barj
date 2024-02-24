@@ -9,7 +9,6 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,11 +23,7 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         Files.createDirectories(restorePath);
-        final var backupFiles = Set.of(
-                "windows-backup-1707544070.00001.cargo",
-                "windows-backup-1707544070.index.cargo",
-                "windows-backup-1707544070.manifest.cargo");
-        prepareBackupFiles(backupFiles, backupPath);
+        prepareBackupFiles(Set.of("windows-backup-1707544070"), backupPath);
         final var restoredR = restorePath.resolve("R");
         final var restoredU = restorePath.resolve("U");
         final var r = new RestoreTarget(BackupPath.ofPathAsIs("R:/barj-test"), restoredR);
@@ -55,11 +50,7 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         Files.createDirectories(restorePath);
-        final var backupFiles = Set.of(
-                "ubuntu-backup-1707595719.00001.cargo",
-                "ubuntu-backup-1707595719.index.cargo",
-                "ubuntu-backup-1707595719.manifest.cargo");
-        prepareBackupFiles(backupFiles, backupPath);
+        prepareBackupFiles(Set.of("ubuntu-backup-1707595719"), backupPath);
         final var restoredR = restorePath.resolve("R");
         final var restoredU = restorePath.resolve("U");
         final var r = new RestoreTarget(BackupPath.ofPathAsIs("/tmp/R/barj-test"), restoredR);
@@ -77,14 +68,6 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
 
         //then
         verifyContent(restoredR, restoredU);
-    }
-
-    @SuppressWarnings("DataFlowIssue")
-    private void prepareBackupFiles(final Set<String> backupFiles, final Path backupPath) throws IOException {
-        for (final var filename : backupFiles) {
-            final var path = new File(getClass().getResource("/backups/" + filename).getFile()).toPath().toAbsolutePath();
-            Files.copy(path, backupPath.resolve(filename));
-        }
     }
 
     private void verifyContent(final Path restoredR, final Path restoredU) throws IOException {
