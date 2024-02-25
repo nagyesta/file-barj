@@ -61,8 +61,21 @@ public class ManifestManagerImpl implements ManifestManager {
     @Override
     public void persist(
             @NonNull final BackupIncrementManifest manifest) {
+        final var backupDestination = manifest.getConfiguration().getDestinationDirectory();
+        persist(manifest, backupDestination);
+    }
+
+    @Override
+    public void persist(
+            @NonNull final BackupIncrementManifest manifest,
+            @NonNull final Path backupDestination) {
         validate(manifest, ValidationRules.Persisted.class);
-        final var backupDestination = manifest.getConfiguration().getDestinationDirectory().toFile();
+        doPersist(manifest, backupDestination.toFile());
+    }
+
+    private void doPersist(
+            @NotNull final BackupIncrementManifest manifest,
+            @NotNull final File backupDestination) {
         final var backupHistoryDir = new File(backupDestination, ".history");
         //noinspection ResultOfMethodCallIgnored
         backupHistoryDir.mkdirs();
@@ -236,6 +249,9 @@ public class ManifestManagerImpl implements ManifestManager {
             } catch (final Exception e) {
                 log.warn("Failed to load manifest file: {}", path, e);
             }
+        }
+        if (manifests.isEmpty()) {
+            throw new ArchivalException("No manifests found.");
         }
         return manifests;
     }

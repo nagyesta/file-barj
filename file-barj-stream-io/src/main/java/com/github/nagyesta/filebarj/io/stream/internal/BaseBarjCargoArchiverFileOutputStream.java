@@ -11,6 +11,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.CloseShieldInputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,10 +21,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import static org.apache.commons.io.FilenameUtils.normalizeNoEndSeparator;
 import static org.apache.commons.io.FilenameUtils.separatorsToUnix;
@@ -180,16 +183,15 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
     /**
      * Merges an entity from another stream into this stream.
      *
-     * @param boundaryMetadata The metadata of the entity
-     * @param contentStream    The content stream (null when the entity is a directory)
-     * @param metadataStream   The metadata stream
+     * @param boundaryMetadata         The metadata of the entity
+     * @param contentAndMetadataStream The stream containing the content stream (null when the
+     *                                 entity is a directory) and the metadata stream after it
      * @return An object with the entity boundaries
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource mergeEntity(
             @NonNull final BarjCargoBoundarySource boundaryMetadata,
-            @Nullable final InputStream contentStream,
-            @NonNull final InputStream metadataStream) throws IOException {
+            @NotNull final InputStream contentAndMetadataStream) throws IOException {
         if (this.hasOpenEntity()) {
             throw new IllegalStateException("Entity is already open.");
         }
@@ -205,19 +207,16 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
                     .fileType(fileType)
                     .encrypted(boundaryMetadata.isEncrypted());
             if (fileType != FileType.DIRECTORY) {
-                if (contentStream == null) {
-                    throw new IllegalArgumentException("Content stream must not be null.");
-                }
-                final var boundaries = mergePart(boundaryMetadata.getContentBoundary(), contentStream);
-                resultBuilder.contentBoundary(boundaries);
+                doMerge(boundaryMetadata.getContentBoundary(), contentAndMetadataStream, resultBuilder::contentBoundary);
             }
-            final var boundaries = mergePart(boundaryMetadata.getMetadataBoundary(), metadataStream);
-            resultBuilder.metadataBoundary(boundaries);
+            //merge the remaining part (notice, the content part was already read form the input stream)
+            doMerge(boundaryMetadata.getMetadataBoundary(), contentAndMetadataStream, resultBuilder::metadataBoundary);
             final var boundarySource = resultBuilder.build();
             this.entryCount.incrementAndGet();
             this.doOnEntityClosed(getEntityToIndex(boundarySource));
             return boundarySource;
         } finally {
+            IOUtils.closeQuietly(contentAndMetadataStream);
             entityLock.unlock();
         }
     }
@@ -382,6 +381,21 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
             }
         }
         existingEntities.put(archiveEntityPath, fileType);
+    }
+
+    private void doMerge(
+            @NotNull final BarjCargoEntryBoundaries boundary,
+            @NotNull final InputStream contentAndMetadataStream,
+            @NotNull final Consumer<BarjCargoEntryBoundaries> resultConsumer) throws IOException {
+        final var start = boundary.getAbsoluteStartIndexInclusive();
+        final var length = boundary.getAbsoluteEndIndexExclusive() - start;
+        final var hash = boundary.getArchivedHash();
+        try (var sourceStream = CloseShieldInputStream.wrap(new FixedRangeInputStream(contentAndMetadataStream, 0, length));
+             var archivedDataStream = new CompositeRestoreStream(sourceStream, hashAlgorithm, List.of(), hash)
+        ) {
+            final var boundaries = mergePart(boundary, archivedDataStream);
+            resultConsumer.accept(boundaries);
+        }
     }
 
     private BarjCargoEntryBoundaries mergePart(

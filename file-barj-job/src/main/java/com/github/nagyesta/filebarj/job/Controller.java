@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
 import com.github.nagyesta.filebarj.core.inspect.pipeline.IncrementInspectionController;
+import com.github.nagyesta.filebarj.core.merge.MergeController;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import com.github.nagyesta.filebarj.job.cli.*;
@@ -65,6 +66,12 @@ public class Controller {
                         .skip(1)
                         .toArray(String[]::new), console).getResult();
                 doRestore(restoreProperties);
+                break;
+            case MERGE:
+                final var mergeProperties = new CliMergeParser(Arrays.stream(args)
+                        .skip(1)
+                        .toArray(String[]::new), console).getResult();
+                doMerge(mergeProperties);
                 break;
             case GEN_KEYS:
                 final var keyStoreProperties = new CliKeyGenParser(Arrays.stream(args)
@@ -144,6 +151,18 @@ public class Controller {
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
         log.info("Restore operation completed. Total time: {}", toProcessSummary(durationMillis));
+    }
+
+    protected void doMerge(final MergeProperties properties) {
+        final var kek = getPrivateKey(properties.getKeyProperties());
+        final var startTimeMillis = System.currentTimeMillis();
+        log.info("Bootstrapping merge operation...");
+        new MergeController(properties.getBackupSource(), properties.getPrefix(), kek,
+                properties.getFromTimeEpochSeconds(), properties.getToTimeEpochSeconds())
+                .execute(properties.isDeleteObsoleteFiles());
+        final var endTimeMillis = System.currentTimeMillis();
+        final var durationMillis = (endTimeMillis - startTimeMillis);
+        log.info("Merge operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 
     protected void doBackup(final BackupProperties properties) throws IOException {

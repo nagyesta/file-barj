@@ -26,6 +26,7 @@ class ControllerIntegrationTest extends TempFileAwareTest {
 
     private static final long A_SECOND = 1000;
 
+    @SuppressWarnings("checkstyle:MethodLength")
     @Test
     void testEndToEndFlowShouldWorkWhenCalledWithValidParameters() throws Exception {
         //given
@@ -69,7 +70,11 @@ class ControllerIntegrationTest extends TempFileAwareTest {
         };
 
         //when backup is executed
+        var start = Instant.now().getEpochSecond();
         new Controller(backupArgs, console).run();
+        if (!Files.exists(backupDirectory.resolve(prefix + "-" + start + ".manifest.cargo"))) {
+            start++;
+        }
 
         final var atEpochSeconds = Instant.now().getEpochSecond();
         Thread.sleep(A_SECOND);
@@ -77,7 +82,11 @@ class ControllerIntegrationTest extends TempFileAwareTest {
         Files.writeString(txt, modifiedTxtContent);
 
         //when another backup increment is executed
+        var end = Instant.now().getEpochSecond();
         new Controller(backupArgs, console).run();
+        if (!Files.exists(backupDirectory.resolve(prefix + "-" + end + ".manifest.cargo"))) {
+            end++;
+        }
 
         //given we prepare for restore
         final var restoreDirectory = testDataRoot.resolve("restore");
@@ -150,5 +159,34 @@ class ControllerIntegrationTest extends TempFileAwareTest {
                 .endsWith(FilenameUtils.separatorsToUnix(originalDirectory.toAbsolutePath().toString())));
         Assertions.assertTrue(actualContent.get(2)
                 .endsWith(FilenameUtils.separatorsToUnix(txt.toAbsolutePath().toString())));
+
+        //given we merge the versions
+        Assertions.assertTrue(Files.exists(backupDirectory.resolve(prefix + "-" + start + ".manifest.cargo")),
+                "Full backup manifest should exist");
+        Assertions.assertTrue(Files.exists(backupDirectory.resolve(prefix + "-" + end + ".manifest.cargo")),
+                "Incremental backup manifest should exist");
+        Assertions.assertFalse(Files.exists(backupDirectory.resolve(prefix + "-" + start + "-" + end + ".manifest.cargo")),
+                "Merged backup manifest should not exist");
+        final var mergeArgs = new String[]{
+                "--merge",
+                "--backup-source", backupDirectory.toString(),
+                "--prefix", prefix,
+                "--key-store", keyStore.toString(),
+                "--key-alias", alias,
+                "--delete-obsolete", "true",
+                "--from-epoch-seconds", start + "",
+                "--to-epoch-seconds", end + ""
+        };
+
+        //when inspect increments is executed
+        new Controller(mergeArgs, console).run();
+
+        //then the merged manifest exists
+        Assertions.assertFalse(Files.exists(backupDirectory.resolve(prefix + "-" + start + ".manifest.cargo")),
+                "Full backup manifest should not exist");
+        Assertions.assertFalse(Files.exists(backupDirectory.resolve(prefix + "-" + end + ".manifest.cargo")),
+                "Incremental backup manifest should not exist");
+        Assertions.assertTrue(Files.exists(backupDirectory.resolve(prefix + "-" + start + "-" + end + ".manifest.cargo")),
+                "Merged backup manifest should exist");
     }
 }

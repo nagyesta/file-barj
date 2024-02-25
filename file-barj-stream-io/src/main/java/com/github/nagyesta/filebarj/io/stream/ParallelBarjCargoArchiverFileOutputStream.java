@@ -6,6 +6,7 @@ import com.github.nagyesta.filebarj.io.stream.internal.TempBarjCargoArchiverFile
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -178,18 +179,17 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
     /**
      * Merges the content and metadata streams of the given entity into this stream.
      *
-     * @param boundaryMetadata The metadata of the entity
-     * @param contentStream    The content stream (can be null in case of directories)
-     * @param metadataStream   The metadata stream
+     * @param boundaryMetadata         The metadata of the entity
+     * @param contentAndMetadataStream The stream containing the content stream and metadata stream
+     *                                 one after the other
      * @return The boundary of the entity
      */
     public CompletableFuture<BarjCargoBoundarySource> mergeEntityAsync(
             @NonNull final BarjCargoBoundarySource boundaryMetadata,
-            @Nullable final InputStream contentStream,
-            @NonNull final InputStream metadataStream) {
+            @NonNull final InputStream contentAndMetadataStream) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return super.mergeEntity(boundaryMetadata, contentStream, metadataStream);
+                return super.mergeEntity(boundaryMetadata, contentAndMetadataStream);
             } catch (final IOException e) {
                 throw new CompletionException(e);
             }
@@ -276,10 +276,9 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
     @Override
     public BarjCargoBoundarySource mergeEntity(
             @NotNull final BarjCargoBoundarySource boundaryMetadata,
-            @Nullable final InputStream contentStream,
-            @NotNull final InputStream metadataStream) throws IOException {
+            @NotNull final InputStream contentAndMetadataStream) throws IOException {
         try {
-            return this.mergeEntityAsync(boundaryMetadata, contentStream, metadataStream).join();
+            return this.mergeEntityAsync(boundaryMetadata, contentAndMetadataStream).join();
         } catch (final CompletionException ex) {
             unwrapIoException(ex);
             return null;
@@ -320,15 +319,14 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
                     throw new IllegalStateException("Temporary stream is null for " + entity.getPath());
                 }
                 log.debug("Merging temp file {} into {}", stream.getCurrentFilePath(), entity.getPath());
-                super.mergeEntity(entity,
-                        stream.getStream(entity.getContentBoundary()),
-                        stream.getStream(entity.getMetadataBoundary()));
+                super.mergeEntity(entity, stream.getStream(entity.getContentBoundary(), entity.getMetadataBoundary()));
                 log.debug("Merged temp file {} into {}", stream.getCurrentFilePath(), entity.getPath());
                 return entity;
             } catch (final Exception e) {
                 throw new CompletionException(e);
             } finally {
                 Optional.ofNullable(tempStream.get()).ifPresent(stream -> {
+                    IOUtils.closeQuietly(stream);
                     try {
                         stream.delete();
                     } catch (final IOException ignore) {

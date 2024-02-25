@@ -1,0 +1,316 @@
+{
+  "backup_versions" : [ 2 ],
+  "encryption_keys" : null,
+  "app_version" : "0.12.1",
+  "start_time_utc_epoch_seconds" : 1708783920,
+  "file_name_prefix" : "ubuntu-backup-1708783920",
+  "backup_type" : "INCREMENTAL",
+  "operating_system" : "Linux",
+  "job_configuration" : {
+    "backup_type" : "INCREMENTAL",
+    "hash_algorithm" : "SHA256",
+    "compression_algorithm" : "NONE",
+    "encryption_key" : null,
+    "duplicate_strategy" : "KEEP_EACH",
+    "chunk_size_mebibyte" : 512,
+    "file_name_prefix" : "ubuntu-backup",
+    "destination_directory" : "file:///home/esta/Backup/",
+    "sources" : [ {
+      "path" : "file:///tmp/R",
+      "include_patterns" : [ "**" ],
+      "exclude_patterns" : [ ]
+    }, {
+      "path" : "file:///tmp/U",
+      "include_patterns" : [ "**" ],
+      "exclude_patterns" : [ ]
+    } ]
+  },
+  "files" : {
+    "31cde011-6a1f-4765-ba9e-7c8b54c09ff1" : {
+      "id" : "31cde011-6a1f-4765-ba9e-7c8b54c09ff1",
+      "file_system_key" : "(dev=fd01,ino=13806024)",
+      "path" : "file:///tmp/U/barj-test/B",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1707542974,
+      "last_accessed_utc_epoch_seconds" : 1708783849,
+      "created_utc_epoch_seconds" : 1707542974,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "NO_CHANGE"
+    },
+    "d7f57bb2-f8a4-450e-9e53-0b0cad868c52" : {
+      "id" : "d7f57bb2-f8a4-450e-9e53-0b0cad868c52",
+      "file_system_key" : "(dev=fd01,ino=13806023)",
+      "path" : "file:///tmp/U",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1707595650,
+      "last_accessed_utc_epoch_seconds" : 1708783722,
+      "created_utc_epoch_seconds" : 1707595650,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "NO_CHANGE"
+    },
+    "89eaecde-c090-48a8-a5a1-10003f627d68" : {
+      "id" : "89eaecde-c090-48a8-a5a1-10003f627d68",
+      "file_system_key" : "(dev=fd01,ino=13806027)",
+      "path" : "file:///tmp/R/barj-test/B/2.txt",
+      "original_hash" : "37d6cb2fb5a76e3bfcd3a0f4d738bd235b2b50c8c9ba09f9b9a357543243b601",
+      "original_size" : 17,
+      "last_modified_utc_epoch_seconds" : 1707543066,
+      "last_accessed_utc_epoch_seconds" : 1708783850,
+      "created_utc_epoch_seconds" : 1707543066,
+      "permissions" : "rwxrwxrwx",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "REGULAR_FILE",
+      "hidden" : false,
+      "status" : "NO_CHANGE",
+      "archive_metadata_id" : "22df803b-dbbd-44d6-bd84-965153c10b5a"
+    },
+    "deb675c0-d4a9-4ff4-b5d7-874a8ce94533" : {
+      "id" : "deb675c0-d4a9-4ff4-b5d7-874a8ce94533",
+      "file_system_key" : "(dev=fd01,ino=13806021)",
+      "path" : "file:///tmp/R/barj-test/B",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1707543034,
+      "last_accessed_utc_epoch_seconds" : 1708783849,
+      "created_utc_epoch_seconds" : 1707543034,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "NO_CHANGE"
+    },
+    "b6dd4eb5-3496-4a98-b386-b9b5817af9a3" : {
+      "id" : "b6dd4eb5-3496-4a98-b386-b9b5817af9a3",
+      "file_system_key" : "(dev=fd01,ino=13806028)",
+      "path" : "file:///tmp/R/barj-test/A/1.txt",
+      "original_hash" : "ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1",
+      "original_size" : 8,
+      "last_modified_utc_epoch_seconds" : 1707543051,
+      "last_accessed_utc_epoch_seconds" : 1708783781,
+      "created_utc_epoch_seconds" : 1707543051,
+      "permissions" : "rwxrwxrwx",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "REGULAR_FILE",
+      "hidden" : false,
+      "status" : "NO_CHANGE",
+      "archive_metadata_id" : "b2dc184f-73db-4783-8c2a-d63f037429b3"
+    },
+    "bd518d61-ca29-4e78-965d-f4b96691f9ba" : {
+      "id" : "bd518d61-ca29-4e78-965d-f4b96691f9ba",
+      "file_system_key" : "(dev=fd01,ino=13806022)",
+      "path" : "file:///tmp/R/barj-test/A",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1707543045,
+      "last_accessed_utc_epoch_seconds" : 1708783774,
+      "created_utc_epoch_seconds" : 1707543045,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "NO_CHANGE"
+    },
+    "b972dcc4-f122-4998-85d3-4eede0569f76" : {
+      "id" : "b972dcc4-f122-4998-85d3-4eede0569f76",
+      "file_system_key" : "(dev=fd01,ino=13806004)",
+      "path" : "file:///tmp/U/barj-test",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1707595650,
+      "last_accessed_utc_epoch_seconds" : 1708783722,
+      "created_utc_epoch_seconds" : 1707595650,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "NO_CHANGE"
+    },
+    "101fe098-dfe0-49ee-9da1-5d1f190fb54e" : {
+      "id" : "101fe098-dfe0-49ee-9da1-5d1f190fb54e",
+      "file_system_key" : "(dev=fd01,ino=13762900)",
+      "path" : "file:///tmp/U/barj-test/A/1.txt",
+      "original_hash" : "ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1",
+      "original_size" : 8,
+      "last_modified_utc_epoch_seconds" : 1708783781,
+      "last_accessed_utc_epoch_seconds" : 1708783850,
+      "created_utc_epoch_seconds" : 1708783781,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "REGULAR_FILE",
+      "hidden" : false,
+      "status" : "NO_CHANGE",
+      "archive_metadata_id" : "d29eda3b-3cdc-43c0-8300-05ca5cf29a7a"
+    },
+    "c5ce673e-6da2-428e-8551-10fea6cf160b" : {
+      "id" : "c5ce673e-6da2-428e-8551-10fea6cf160b",
+      "file_system_key" : "(dev=fd01,ino=13806029)",
+      "path" : "file:///tmp/U/barj-test/B/2.txt",
+      "original_hash" : "33a7d3da476a32ac237b3f603a1be62fad00299e0d4b5a8db8d913104edec629",
+      "original_size" : 8,
+      "last_modified_utc_epoch_seconds" : 1707542996,
+      "last_accessed_utc_epoch_seconds" : 1708783850,
+      "created_utc_epoch_seconds" : 1707542996,
+      "permissions" : "rwxrwxrwx",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "REGULAR_FILE",
+      "hidden" : false,
+      "status" : "NO_CHANGE",
+      "archive_metadata_id" : "0bfe1db9-ef29-4b59-b7b4-e01f2d695bab"
+    },
+    "097aa5d9-d6fc-4f7b-a5a2-c6a33f2183b3" : {
+      "id" : "097aa5d9-d6fc-4f7b-a5a2-c6a33f2183b3",
+      "file_system_key" : "(dev=fd01,ino=13806005)",
+      "path" : "file:///tmp/R/barj-test",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1707595671,
+      "last_accessed_utc_epoch_seconds" : 1708783771,
+      "created_utc_epoch_seconds" : 1707595671,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "NO_CHANGE"
+    },
+    "163c5f0f-9dce-4253-b77c-9c2ba8cbd02a" : {
+      "id" : "163c5f0f-9dce-4253-b77c-9c2ba8cbd02a",
+      "file_system_key" : "(dev=fd01,ino=13763348)",
+      "path" : "file:///tmp/U/barj-test/A/2.txt",
+      "original_hash" : "f4dd4112a2540430e5a8a7158bcf120f8f2489bffa4d8f6aefa8dcd584047011",
+      "original_size" : 5,
+      "last_modified_utc_epoch_seconds" : 1708783893,
+      "last_accessed_utc_epoch_seconds" : 1708783893,
+      "created_utc_epoch_seconds" : 1708783893,
+      "permissions" : "rw-rw-r--",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "REGULAR_FILE",
+      "hidden" : false,
+      "status" : "NEW",
+      "archive_metadata_id" : "b68dd145-f79e-41d4-846a-9d55bc11b0da"
+    },
+    "bbf1cc86-0f8c-4a8c-8242-776256b8c856" : {
+      "id" : "bbf1cc86-0f8c-4a8c-8242-776256b8c856",
+      "file_system_key" : "(dev=fd01,ino=13806025)",
+      "path" : "file:///tmp/U/barj-test/A",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1708783904,
+      "last_accessed_utc_epoch_seconds" : 1708783920,
+      "created_utc_epoch_seconds" : 1708783904,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "METADATA_CHANGED"
+    },
+    "77fbaa89-10d1-4ccc-99fa-2dc5d90fb123" : {
+      "id" : "77fbaa89-10d1-4ccc-99fa-2dc5d90fb123",
+      "file_system_key" : "(dev=fd01,ino=13806020)",
+      "path" : "file:///tmp/R",
+      "original_size" : 4096,
+      "last_modified_utc_epoch_seconds" : 1707595671,
+      "last_accessed_utc_epoch_seconds" : 1708783768,
+      "created_utc_epoch_seconds" : 1707595671,
+      "permissions" : "rwxrwxr-x",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "DIRECTORY",
+      "hidden" : false,
+      "status" : "NO_CHANGE"
+    },
+    "af922b0c-057c-4f3f-9d87-d63028dc1308" : {
+      "id" : "af922b0c-057c-4f3f-9d87-d63028dc1308",
+      "file_system_key" : "(dev=fd01,ino=13763393)",
+      "path" : "file:///tmp/U/barj-test/A/3.txt",
+      "original_hash" : "00952f78a92441fbf212a3f3095c816c861bfa185dc6c387f12e1e1b7def37ae",
+      "original_size" : 10,
+      "last_modified_utc_epoch_seconds" : 1708783904,
+      "last_accessed_utc_epoch_seconds" : 1708783904,
+      "created_utc_epoch_seconds" : 1708783904,
+      "permissions" : "rw-rw-r--",
+      "owner" : "esta",
+      "group" : "esta",
+      "file_type" : "REGULAR_FILE",
+      "hidden" : false,
+      "status" : "NEW",
+      "archive_metadata_id" : "d47227c4-a0c3-4136-975b-8d06e1908b86"
+    }
+  },
+  "archive_entries" : {
+    "22df803b-dbbd-44d6-bd84-965153c10b5a" : {
+      "id" : "22df803b-dbbd-44d6-bd84-965153c10b5a",
+      "archive_location" : {
+        "backup_increment" : 0,
+        "entry_name" : "b3f8cff6-a26d-45ee-8be4-ef97c8b43810"
+      },
+      "archived_hash" : "37d6cb2fb5a76e3bfcd3a0f4d738bd235b2b50c8c9ba09f9b9a357543243b601",
+      "original_hash" : "37d6cb2fb5a76e3bfcd3a0f4d738bd235b2b50c8c9ba09f9b9a357543243b601",
+      "files" : [ "89eaecde-c090-48a8-a5a1-10003f627d68" ]
+    },
+    "b68dd145-f79e-41d4-846a-9d55bc11b0da" : {
+      "id" : "b68dd145-f79e-41d4-846a-9d55bc11b0da",
+      "archive_location" : {
+        "backup_increment" : 2,
+        "entry_name" : "b68dd145-f79e-41d4-846a-9d55bc11b0da"
+      },
+      "archived_hash" : "f4dd4112a2540430e5a8a7158bcf120f8f2489bffa4d8f6aefa8dcd584047011",
+      "original_hash" : "f4dd4112a2540430e5a8a7158bcf120f8f2489bffa4d8f6aefa8dcd584047011",
+      "files" : [ "163c5f0f-9dce-4253-b77c-9c2ba8cbd02a" ]
+    },
+    "d47227c4-a0c3-4136-975b-8d06e1908b86" : {
+      "id" : "d47227c4-a0c3-4136-975b-8d06e1908b86",
+      "archive_location" : {
+        "backup_increment" : 2,
+        "entry_name" : "d47227c4-a0c3-4136-975b-8d06e1908b86"
+      },
+      "archived_hash" : "00952f78a92441fbf212a3f3095c816c861bfa185dc6c387f12e1e1b7def37ae",
+      "original_hash" : "00952f78a92441fbf212a3f3095c816c861bfa185dc6c387f12e1e1b7def37ae",
+      "files" : [ "af922b0c-057c-4f3f-9d87-d63028dc1308" ]
+    },
+    "b2dc184f-73db-4783-8c2a-d63f037429b3" : {
+      "id" : "b2dc184f-73db-4783-8c2a-d63f037429b3",
+      "archive_location" : {
+        "backup_increment" : 0,
+        "entry_name" : "c29205b4-d30a-4bb7-a1fe-7a8a358344e7"
+      },
+      "archived_hash" : "ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1",
+      "original_hash" : "ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1",
+      "files" : [ "b6dd4eb5-3496-4a98-b386-b9b5817af9a3" ]
+    },
+    "d29eda3b-3cdc-43c0-8300-05ca5cf29a7a" : {
+      "id" : "d29eda3b-3cdc-43c0-8300-05ca5cf29a7a",
+      "archive_location" : {
+        "backup_increment" : 0,
+        "entry_name" : "c29205b4-d30a-4bb7-a1fe-7a8a358344e7"
+      },
+      "archived_hash" : "ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1",
+      "original_hash" : "ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1",
+      "files" : [ "101fe098-dfe0-49ee-9da1-5d1f190fb54e" ]
+    },
+    "0bfe1db9-ef29-4b59-b7b4-e01f2d695bab" : {
+      "id" : "0bfe1db9-ef29-4b59-b7b4-e01f2d695bab",
+      "archive_location" : {
+        "backup_increment" : 0,
+        "entry_name" : "874064d4-7bd0-432e-ac4c-da7ef50050c2"
+      },
+      "archived_hash" : "33a7d3da476a32ac237b3f603a1be62fad00299e0d4b5a8db8d913104edec629",
+      "original_hash" : "33a7d3da476a32ac237b3f603a1be62fad00299e0d4b5a8db8d913104edec629",
+      "files" : [ "c5ce673e-6da2-428e-8551-10fea6cf160b" ]
+    }
+  },
+  "index_file_name" : "ubuntu-backup-1708783920.index.cargo",
+  "data_file_names" : [ "ubuntu-backup-1708783920.00001.cargo" ]
+}

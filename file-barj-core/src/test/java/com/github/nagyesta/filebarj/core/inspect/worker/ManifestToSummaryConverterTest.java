@@ -89,7 +89,7 @@ class ManifestToSummaryConverterTest extends TempFileAwareTest {
 
         //then
         Assertions.assertEquals("""
-                FULL backup: prefix
+                \033[0;31mFULL\033[0;0m backup: prefix
                 \tStarted at : 1970-01-01T00:00:01Z (Epoch seconds: 1)
                 \tContains 1 files (2 MiB)
                 \tVersions   : [0]

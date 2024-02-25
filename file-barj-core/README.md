@@ -63,6 +63,20 @@ final var backupController = new BackupController(configuration, false);
 backupController.execute(1);
 ```
 
+### Merging increments
+
+```java
+final var mergeController = new MergeController(
+        Path.of("/tmp/backup"), 
+        "prefix", 
+        null, //optional key encryption key
+        123L, //Backup start epoch seconds for the first file of the range (inclusive)
+        234L  //Backup start epoch seconds for the last file of the range (inclusive)
+);
+
+mergeController.execute(false);
+```
+
 ### Reading an archive
 
 ```java

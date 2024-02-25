@@ -17,6 +17,10 @@ public enum Task {
      */
     RESTORE("restore"),
     /**
+     * Merging the contents of some backup increments.
+     */
+    MERGE("merge"),
+    /**
      * Generating a key pair for the encryption.
      */
     GEN_KEYS("gen-keys"),

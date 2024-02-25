@@ -134,7 +134,7 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
         //then
         final var actualContents = byteArrayOutputStream.toString(StandardCharsets.UTF_8);
         final var actualCount = actualContents.lines()
-                .filter(line -> line.startsWith("FULL"))
+                .filter(line -> line.startsWith("\033[0;31mFULL\033[0;0m"))
                 .count();
         Assertions.assertEquals(BACKUP_COUNT, actualCount);
     }

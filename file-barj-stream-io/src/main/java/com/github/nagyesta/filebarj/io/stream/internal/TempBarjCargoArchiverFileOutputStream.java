@@ -34,18 +34,18 @@ public class TempBarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiver
     }
 
     /**
-     * Returns an input stream for the given part of the archived entity.
+     * Returns an input stream for the content and the metadata part of the archived entity.
      *
-     * @param boundaries defines the boundaries of the part
+     * @param content  defines the boundaries of the content part
+     * @param metadata defines the boundaries of the metadata part
      * @return an input stream
      * @throws IOException If the input stream cannot be created
      */
     public InputStream getStream(
-            @NonNull final BarjCargoEntryBoundaries boundaries) throws IOException {
-        final var start = boundaries.getAbsoluteStartIndexInclusive();
-        final var length = boundaries.getAbsoluteEndIndexExclusive() - start;
-        return new FixedRangeInputStream(new MergingFileInputStream(getDataFilesWritten()),
-                start, length);
+            @NonNull final BarjCargoEntryBoundaries content, @NonNull final BarjCargoEntryBoundaries metadata) throws IOException {
+        final var start = content.getAbsoluteStartIndexInclusive();
+        final var length = metadata.getAbsoluteEndIndexExclusive() - start;
+        return new FixedRangeInputStream(new MergingFileInputStream(getDataFilesWritten()), start, length);
     }
 
     /**

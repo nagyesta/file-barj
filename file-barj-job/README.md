@@ -48,6 +48,29 @@ java -jar build/libs/file-barj-job.jar \
      --threads 2
 ```
 
+### Merging backup increments
+
+Execute the following command (assuming that your executable is named accordingly).
+
+```commandline
+java -jar build/libs/file-barj-job.jar \
+     --merge \
+     --backup-source /backup/directory/path \
+     --prefix backup-job-file-prefix \
+     --delete-obsolete false \
+     --key-store keys.p12 \
+     --key-alias alias \
+     --from-epoch-seconds 123456 \
+     --to-epoch-seconds 234567
+```
+
+The above command will merge all backup files starting with the one created at 123456 (epoch seconds),
+including the last file created at 234567 (epoch seconds) and also including every other increment
+between them.
+
+> [!WARNING]
+> If there is a full backup between the two, every incremental backup in the range which was created before the last full backup of the range will be ignored during the merge and deleted if the configuration allows deletion of obsolete files.
+
 ### Restoring a backup to a directory
 
 Execute the following command (assuming that your executable is named accordingly).
