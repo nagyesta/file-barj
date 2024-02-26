@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.jackson.Jacksonized;
+import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.nio.file.FileSystems;
@@ -145,8 +146,10 @@ public class BackupSource {
     }
 
     private String translatePattern(final String pattern) {
-        return ("glob:" + path + File.separator + pattern)
+        //must use OS path to avoid issues with Windows paths
+        return ("glob:" + FilenameUtils.normalizeNoEndSeparator(path.toOsPath().toString()) + File.separator + pattern)
                 //replace backslashes to let the regex conversion work later
                 .replaceAll(Pattern.quote("\\"), "/");
     }
+
 }
