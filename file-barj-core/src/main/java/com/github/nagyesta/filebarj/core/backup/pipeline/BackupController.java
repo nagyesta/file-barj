@@ -104,6 +104,9 @@ public class BackupController {
                     return source.listMatchingFilePaths().stream();
                 })
                 .collect(Collectors.toCollection(TreeSet::new));
+        if (uniquePaths.isEmpty()) {
+            throw new IllegalStateException("No files found in backup sources!");
+        }
         detectCaseInsensitivityIssues(uniquePaths);
         log.info("Found {} unique paths in backup sources. Parsing metadata...", uniquePaths.size());
         final var doneCount = new AtomicInteger(0);
