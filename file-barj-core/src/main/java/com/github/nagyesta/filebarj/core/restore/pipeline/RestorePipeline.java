@@ -292,7 +292,8 @@ public class RestorePipeline {
             final var copy = restoreTargets.mapToRestorePath(file.getAbsolutePath());
             try {
                 deleteIfExists(copy);
-                if (original.getFileSystemKey().equals(file.getFileSystemKey())) {
+                final var originalFileSystemKey = original.getFileSystemKey();
+                if (originalFileSystemKey != null && originalFileSystemKey.equals(file.getFileSystemKey())) {
                     Files.createLink(copy, unpackedFile);
                 } else {
                     Files.copy(unpackedFile, copy);
