@@ -45,6 +45,7 @@ Execute the following command (assuming that your executable is named accordingl
 java -jar build/libs/file-barj-job.jar \
      --backup \
      --config config.json \
+     --force-full-backup false \
      --threads 2
 ```
 
