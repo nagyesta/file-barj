@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.extern.jackson.Jacksonized;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +30,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
     @NonNull
     @JsonProperty("id")
     private final UUID id;
+    @Nullable
     @JsonProperty("file_system_key")
     private final String fileSystemKey;
     /**
@@ -42,6 +44,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
      * <br/>
      * {@link com.github.nagyesta.filebarj.core.config.BackupJobConfiguration#getHashAlgorithm()}
      */
+    @Nullable
     @JsonProperty("original_hash")
     private final String originalHash;
     /**
@@ -99,11 +102,13 @@ public class FileMetadata implements Comparable<FileMetadata> {
     /**
      * The Id of the archive metadata for the entity storing this file.
      */
+    @Nullable
     @JsonProperty("archive_metadata_id")
     private UUID archiveMetadataId;
     /**
      * An optional error message in case of blocker issues during backup.
      */
+    @Nullable
     @JsonProperty("error")
     private String error;
 
