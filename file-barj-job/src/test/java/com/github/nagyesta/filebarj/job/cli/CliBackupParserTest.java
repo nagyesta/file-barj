@@ -44,7 +44,12 @@ class CliBackupParserTest {
         //given
         final var configPath = Path.of("config.json");
         final var threads = 2;
-        final var args = new String[] {"--config", configPath.toString(), "--threads", String.valueOf(threads)};
+        final var forceFull = true;
+        final var args = new String[] {
+                "--config", configPath.toString(),
+                "--threads", String.valueOf(threads),
+                "--force-full-backup", String.valueOf(forceFull)
+        };
 
         //when
         final var underTest = new CliBackupParser(args);
@@ -53,6 +58,7 @@ class CliBackupParserTest {
         //then
         Assertions.assertEquals(configPath.toAbsolutePath(), actual.getConfig());
         Assertions.assertEquals(threads, actual.getThreads());
+        Assertions.assertEquals(forceFull, actual.isForceFullBackup());
     }
 
     @Test
@@ -60,6 +66,7 @@ class CliBackupParserTest {
         //given
         final var configPath = Path.of("config.json");
         final var threads = 1;
+        final var forceFull = false;
         final var args = new String[] {"--config", configPath.toString()};
 
         //when
@@ -69,5 +76,6 @@ class CliBackupParserTest {
         //then
         Assertions.assertEquals(configPath.toAbsolutePath(), actual.getConfig());
         Assertions.assertEquals(threads, actual.getThreads());
+        Assertions.assertEquals(forceFull, actual.isForceFullBackup());
     }
 }

@@ -169,7 +169,7 @@ public class Controller {
         final var config = new ObjectMapper().reader().readValue(properties.getConfig().toFile(), BackupJobConfiguration.class);
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping backup operation...");
-        new BackupController(config, false)
+        new BackupController(config, properties.isForceFullBackup())
                 .execute(properties.getThreads());
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);

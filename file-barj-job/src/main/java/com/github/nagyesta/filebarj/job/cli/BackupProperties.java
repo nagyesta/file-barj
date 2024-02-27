@@ -15,4 +15,5 @@ public class BackupProperties {
     @NonNull
     private final Path config;
     private final int threads;
+    private final boolean forceFullBackup;
 }
