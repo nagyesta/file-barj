@@ -22,7 +22,7 @@ indexScanPlugin = "2.7.0"
 lombokPlugin = "8.6"
 shadowPlugin = "8.1.1"
 gitVersionerPlugin = "1.6.7"
-owaspPlugin = "9.0.10"
+owaspPlugin = "9.1.0"
 
 [libraries]
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
