@@ -4,7 +4,7 @@ import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import com.github.nagyesta.filebarj.io.stream.internal.DoOnCloseInputStream;
 import lombok.NonNull;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.CountingInputStream;
+import org.apache.commons.io.input.BoundedInputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,7 +40,7 @@ public class ManifestCipherInputStream extends DoOnCloseInputStream {
             final var secretKey = EncryptionUtil.byteArrayToAesKey(secretKeyBytes);
             crypto = EncryptionUtil.newCipherInputStream(secretKey).decorate(source);
         } else {
-            crypto = new CountingInputStream(source);
+            crypto = BoundedInputStream.builder().setInputStream(source).get();
         }
     }
 

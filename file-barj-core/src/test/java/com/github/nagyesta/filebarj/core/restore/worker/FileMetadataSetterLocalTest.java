@@ -64,7 +64,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         Assertions.assertEquals(metadata.getGroup(), actualMetadata.getGroup());
         Assertions.assertEquals(metadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
         Assertions.assertEquals(metadata.getLastAccessedUtcEpochSeconds(), actualMetadata.getLastAccessedUtcEpochSeconds());
-        Assertions.assertEquals(metadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
+        //created time is not always set even on Unix
         Assertions.assertEquals(metadata.getHidden(), actualMetadata.getHidden());
     }
 
@@ -89,7 +89,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         Assertions.assertNotEquals(metadata.getPosixPermissions(), actualMetadata.getPosixPermissions());
         Assertions.assertEquals(metadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
         Assertions.assertEquals(metadata.getLastAccessedUtcEpochSeconds(), actualMetadata.getLastAccessedUtcEpochSeconds());
-        Assertions.assertEquals(metadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
+        //created time is not always set even on Unix
         Assertions.assertEquals(metadata.getHidden(), actualMetadata.getHidden());
     }
 
@@ -126,7 +126,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         Assertions.assertEquals(expectedPath, actualMetadata.getAbsolutePath());
         Assertions.assertEquals(FULL_ACCESS, actualMetadata.getPosixPermissions());
         Assertions.assertNotEquals(metadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
-        Assertions.assertNotEquals(metadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
+        //created time is not always set even on Unix
     }
 
     @Test
@@ -151,7 +151,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         Assertions.assertEquals(expectedPath, actualMetadata.getAbsolutePath());
         Assertions.assertEquals(metadata.getPosixPermissions(), actualMetadata.getPosixPermissions());
         Assertions.assertNotEquals(metadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
-        Assertions.assertNotEquals(metadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
+        //created time is not always set even on Unix
     }
 
     @Test
@@ -217,7 +217,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
         Assertions.assertNotEquals(metadata.getCreatedUtcEpochSeconds(), original.getCreatedUtcEpochSeconds());
         Assertions.assertEquals(metadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds());
         Assertions.assertEquals(metadata.getLastAccessedUtcEpochSeconds(), actualMetadata.getLastAccessedUtcEpochSeconds());
-        Assertions.assertEquals(metadata.getCreatedUtcEpochSeconds(), actualMetadata.getCreatedUtcEpochSeconds());
+        //created time is not always set even on Unix
     }
 
     @SuppressWarnings("DataFlowIssue")

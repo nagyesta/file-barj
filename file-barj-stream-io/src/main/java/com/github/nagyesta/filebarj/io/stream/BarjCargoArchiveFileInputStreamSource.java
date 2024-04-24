@@ -14,8 +14,8 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.io.input.CloseShieldInputStream;
-import org.apache.commons.io.input.CountingInputStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -242,7 +242,7 @@ public class BarjCargoArchiveFileInputStreamSource {
      */
     public InputStream openStreamForSequentialAccess() throws IOException {
         final var fileInputStream = new MergingFileInputStream(this.getAllFiles());
-        return new CountingInputStream(fileInputStream);
+        return BoundedInputStream.builder().setInputStream(fileInputStream).get();
     }
 
     /**
@@ -424,7 +424,7 @@ public class BarjCargoArchiveFileInputStreamSource {
             digestCalculatorStream.close();
             final var actualDigestValue = digestCalculatorStream.getDigestValue();
             if (!Objects.equals(actualDigestValue, entry.getArchivedHash())) {
-                log.error("Hash mismatch for " + path);
+                log.error("Hash mismatch for {}", path);
                 return false;
             } else {
                 return true;

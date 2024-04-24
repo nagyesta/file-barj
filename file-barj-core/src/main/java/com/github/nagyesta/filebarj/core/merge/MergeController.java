@@ -108,7 +108,14 @@ public class MergeController {
                     .forEach(toDelete::add);
             for (final var path : toDelete) {
                 log.info("Deleting obsolete file: {}", path);
-                Files.delete(path);
+                try {
+                    Files.delete(path);
+                } catch (final IOException e) {
+                    log.warn("Unable to delete file! Will attempt to delete it on exit.", e);
+                    if (Files.exists(path)) {
+                        path.toFile().deleteOnExit();
+                    }
+                }
             }
         } catch (final IOException e) {
             throw new RuntimeException(e);
