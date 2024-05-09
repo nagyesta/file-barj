@@ -23,6 +23,9 @@ lombokPlugin = "8.6"
 shadowPlugin = "8.1.1"
 gitVersionerPlugin = "1.6.7"
 owaspPlugin = "9.1.0"
+cycloneDxBomPlugin = "1.8.2"
+licenseePlugin = "1.11.0"
+nexusPublishPlugin = "2.0.0"
 
 [libraries]
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
@@ -65,3 +68,6 @@ abort-mission = { id = "com.github.nagyesta.abort-mission-gradle-plugin", versio
 versioner = { id = "io.toolebox.git-versioner", version.ref = "gitVersionerPlugin" }
 index-scan = { id = "org.sonatype.gradle.plugins.scan", version.ref = "indexScanPlugin" }
 owasp-dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "owaspPlugin" }
+cyclonedx-bom = { id = "org.cyclonedx.bom", version.ref = "cycloneDxBomPlugin" }
+licensee-plugin = { id = "app.cash.licensee", version.ref = "licenseePlugin" }
+nexus-publish-plugin = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexusPublishPlugin" }

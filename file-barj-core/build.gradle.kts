@@ -5,12 +5,13 @@ plugins {
     signing
     `maven-publish`
     alias(libs.plugins.abort.mission)
+    alias(libs.plugins.licensee.plugin)
 }
 
 extra.apply {
     set("artifactDisplayName", "File BaRJ - Core")
     set("artifactDescription", "Defines the inner working mechanism of backup and restore tasks.")
-                              }
+}
 
 dependencies {
     compileOnly(libs.jetbrains.annotations)
@@ -38,6 +39,27 @@ abortMission {
     toolVersion = libs.versions.abortMission.get()
 }
 
+licensee {
+    allow("MIT")
+    allow("Apache-2.0")
+    allow("BSD-2-Clause")
+    allowUrl("https://www.bouncycastle.org/licence.html")
+}
+
+val copyLegalDocs = tasks.register<Copy>("copyLegalDocs") {
+    from(file("${project.rootProject.projectDir}/LICENSE"))
+    from(layout.buildDirectory.file("reports/licensee/artifacts.json").get().asFile)
+    from(layout.buildDirectory.file("reports/bom.json").get().asFile)
+    into(layout.buildDirectory.dir("resources/main/META-INF").get().asFile)
+    rename("artifacts.json", "dependency-licenses.json")
+    rename("bom.json", "SBOM.json")
+}.get()
+copyLegalDocs.dependsOn(tasks.licensee)
+copyLegalDocs.dependsOn(tasks.cyclonedxBom)
+tasks.javadoc.get().dependsOn(copyLegalDocs)
+tasks.compileJava.get().dependsOn(copyLegalDocs)
+tasks.processResources.get().finalizedBy(copyLegalDocs)
+
 publishing {
     repositories {
         maven {
@@ -46,14 +68,6 @@ publishing {
             credentials {
                 username = rootProject.extra.get("gitUser").toString()
                 password = rootProject.extra.get("gitToken").toString()
-            }
-        }
-        maven {
-            name = "ossrh"
-            url = uri(rootProject.extra.get("ossrhMavenRepoUrl").toString())
-            credentials {
-                username = rootProject.extra.get("ossrhUser").toString()
-                password = rootProject.extra.get("ossrhPass").toString()
             }
         }
     }

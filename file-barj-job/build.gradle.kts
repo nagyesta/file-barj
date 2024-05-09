@@ -3,6 +3,8 @@ plugins {
     signing
     `maven-publish`
     alias(libs.plugins.abort.mission)
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.licensee.plugin)
 }
 
 extra.apply {
@@ -30,15 +32,37 @@ abortMission {
     toolVersion = libs.versions.abortMission.get()
 }
 
-tasks.jar {
+tasks.shadowJar {
     manifest.attributes["Main-Class"] = "com.github.nagyesta.filebarj.job.Main"
-    val dependencies = configurations
-            .runtimeClasspath
-            .get()
-            .map(::zipTree)
-    from(dependencies)
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    append("META-INF/LICENSE")
+    append("META-INF/LICENSE.txt")
+    append("META-INF/NOTICE")
+    append("META-INF/NOTICE.txt")
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+    archiveClassifier.set("")
+}
+tasks.build.get().finalizedBy(tasks.shadowJar)
+
+val copyLegalDocs = tasks.register<Copy>("copyLegalDocs") {
+    from(file("${project.rootProject.projectDir}/LICENSE"))
+    from(layout.buildDirectory.file("reports/licensee/artifacts.json").get().asFile)
+    from(layout.buildDirectory.file("reports/bom.json").get().asFile)
+    into(layout.buildDirectory.dir("resources/main/META-INF").get().asFile)
+    rename("artifacts.json", "dependency-licenses.json")
+    rename("bom.json", "SBOM.json")
+}.get()
+copyLegalDocs.dependsOn(tasks.licensee)
+copyLegalDocs.dependsOn(tasks.cyclonedxBom)
+tasks.javadoc.get().dependsOn(copyLegalDocs)
+tasks.compileJava.get().dependsOn(copyLegalDocs)
+tasks.processResources.get().finalizedBy(copyLegalDocs)
+
+licensee {
+    allow("MIT")
+    allow("Apache-2.0")
+    allow("LGPL-2.1-only")
+    allow("BSD-2-Clause")
+    allowUrl("https://www.bouncycastle.org/licence.html")
 }
 
 publishing {
@@ -51,18 +75,12 @@ publishing {
                 password = rootProject.extra.get("gitToken").toString()
             }
         }
-        maven {
-            name = "ossrh"
-            url = uri(rootProject.extra.get("ossrhMavenRepoUrl").toString())
-            credentials {
-                username = rootProject.extra.get("ossrhUser").toString()
-                password = rootProject.extra.get("ossrhPass").toString()
-            }
-        }
     }
     publications {
         create<MavenPublication>("mavenJava") {
-            from(components["java"])
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
+            artifact(tasks["shadowJar"])
             artifactId = project.name
             pom {
                 name.set(project.extra.get("artifactDisplayName").toString())
@@ -86,12 +104,6 @@ publishing {
                     connection.set(rootProject.extra.get("scmConnection").toString())
                     developerConnection.set(rootProject.extra.get("scmConnection").toString())
                     url.set(rootProject.extra.get("scmProjectUrl").toString())
-                }
-                withXml {
-                    asElement().apply {
-                        val deps = this.getElementsByTagName("dependencies").item(0)
-                        this.removeChild(deps)
-                    }
                 }
             }
         }

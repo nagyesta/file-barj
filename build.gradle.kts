@@ -1,4 +1,5 @@
 import org.sonatype.gradle.plugins.scan.ossindex.OutputFormat
+import java.util.*
 
 plugins {
     id("java")
@@ -8,6 +9,8 @@ plugins {
     alias(libs.plugins.lombok) apply false
     alias(libs.plugins.index.scan)
     alias(libs.plugins.owasp.dependencycheck)
+    alias(libs.plugins.nexus.publish.plugin)
+    alias(libs.plugins.cyclonedx.bom)
 }
 
 group = "com.github.nagyesta.file-barj"
@@ -81,6 +84,7 @@ subprojects {
     apply(plugin = "io.freefair.lombok")
     apply(plugin = "org.sonatype.gradle.plugins.scan")
     apply(plugin = "org.owasp.dependencycheck")
+    apply(plugin = "org.cyclonedx.bom")
 
     group = rootProject.group
     version = rootProject.version
@@ -200,6 +204,38 @@ subprojects {
         @Suppress("UNCHECKED_CAST")
         excludeVulnerabilityIds = rootProject.extra.get("ossIndexExclusions") as MutableSet<String>
     }
+
+    tasks.cyclonedxBom {
+        if (project.name.endsWith("job")) {
+            setProjectType("application")
+        } else {
+            setProjectType("library")
+        }
+        setIncludeConfigs(listOf("runtimeClasspath"))
+        setSkipConfigs(listOf("compileClasspath", "testCompileClasspath"))
+        setSkipProjects(listOf())
+        setSchemaVersion("1.5")
+        setDestination(file("build/reports"))
+        setOutputName("bom")
+        setOutputFormat("json")
+        //noinspection UnnecessaryQualifiedReference
+        val attachmentText = org.cyclonedx.model.AttachmentText()
+        attachmentText.setText(
+                Base64.getEncoder().encodeToString(
+                        file("${project.rootProject.projectDir}/LICENSE").readBytes()
+                )
+        )
+        attachmentText.encoding = "base64"
+        attachmentText.contentType = "text/plain"
+        //noinspection UnnecessaryQualifiedReference
+        val license = org.cyclonedx.model.License()
+        license.name = "MIT License"
+        license.setLicenseText(attachmentText)
+        license.url = "https://raw.githubusercontent.com/nagyesta/file-barj/main/LICENSE"
+        setLicenseChoice {
+            it.addLicense(license)
+        }
+    }
 }
 
 ossIndexAudit {
@@ -226,5 +262,14 @@ tasks.jacocoTestReport {
         xml.required.set(false)
         html.required.set(false)
         csv.required.set(false)
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            username = rootProject.extra.get("ossrhUser").toString()
+            password = rootProject.extra.get("ossrhPass").toString()
+        }
     }
 }
