@@ -31,7 +31,6 @@ on:
       - '.github/pr-labeler.yml'
       - 'renovate.json'
       - '.whitesource'
-      - 'gradle/libs.versions.toml'
       - 'config/ossindex/exclusions.txt'
 
 permissions: read-all
@@ -45,7 +44,8 @@ jobs:
 
     steps:
       # Set up build environment
-      - uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
+      - name: Checkout
+        uses: actions/checkout@44c2b7a8a4ea60a981eaca3cf939b5f4305c123b # v4.1.5
         with:
           fetch-depth: 0
       - name: Set up JDK 17
@@ -53,21 +53,17 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@db19848a5fa7950289d3668fb053140cf3028d43 # v3.3.2
+        with:
+          cache-disabled: true
       - name: Build with Gradle (if Ubuntu)
-        uses: gradle/gradle-build-action@4c39dd82cd5e1ec7c6fa0173bb41b4b6bb3b86ff # v3.3.2
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        with:
-          arguments: |
-            printVersion build
-            -Pci
+        run: ./gradlew printVersion build -Pci
       - name: Build with Gradle (if Windows)
-        uses: gradle/gradle-build-action@4c39dd82cd5e1ec7c6fa0173bb41b4b6bb3b86ff # v3.3.2
         if: ${{ matrix.os != 'ubuntu-latest' }}
-        with:
-          arguments: |
-            printVersion build -x :file-barj-core:jacocoTestCoverageVerification
-            -Pci
-      - name: 'Upload Test reports - Core'
+        run: ./gradlew printVersion build -x :file-barj-core:jacocoTestCoverageVerification -Pci
+      - name: Upload Test reports - Core
         if: always()
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
@@ -76,7 +72,7 @@ jobs:
             file-barj-core/build/reports/tests/test
             file-barj-core/build/reports/abort-mission/abort-mission-report.html
           retention-days: 5
-      - name: 'Upload Test reports - Job'
+      - name: Upload Test reports - Job
         if: always()
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
@@ -85,7 +81,7 @@ jobs:
             file-barj-job/build/reports/tests/test
             file-barj-job/build/reports/abort-mission/abort-mission-report.html
           retention-days: 5
-      - name: 'Upload Test reports - Stream IO'
+      - name: Upload Test reports - Stream IO
         if: always()
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
