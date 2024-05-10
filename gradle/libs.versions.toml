@@ -17,7 +17,7 @@ jacksonBom = { strictly = "2.17.1" }
 jackson = { strictly = "2.17.1" }
 jetbrainsAnnotations = "24.1.0"
 
-abortMissionPlugin = "5.0.34"
+abortMissionPlugin = "5.0.37"
 indexScanPlugin = "2.8.2"
 lombokPlugin = "8.6"
 shadowPlugin = "8.1.1"
