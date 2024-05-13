@@ -128,4 +128,30 @@ class ControllerTest {
         //then
         verify(underTest).doInspectIncrements(any());
     }
+
+    @Test
+    void testDeleteIncrementsShouldBeCalledWhenRequiredRestoreParametersArePassed() throws Exception {
+        //given
+        final var prefix = "prefix";
+        final var backup = Path.of("backup-dir");
+        final var store = Path.of("key-store.p12");
+        final var password = new char[]{'a', 'b', 'c'};
+        final var args = new String[]{
+                "--delete",
+                "--backup-source", backup.toString(),
+                "--prefix", prefix,
+                "--key-store", store.toString(),
+                "--from-epoch-seconds", Long.MAX_VALUE + ""
+        };
+        final var console = mock(Console.class);
+        when(console.readPassword(anyString())).thenReturn(password);
+        final var underTest = spy(new Controller(args, console));
+        doNothing().when(underTest).doDeleteIncrements(any());
+
+        //when
+        underTest.run();
+
+        //then
+        verify(underTest).doDeleteIncrements(any());
+    }
 }

@@ -188,5 +188,23 @@ class ControllerIntegrationTest extends TempFileAwareTest {
                 "Incremental backup manifest should not exist");
         Assertions.assertTrue(Files.exists(backupDirectory.resolve(prefix + "-" + start + "-" + end + ".manifest.cargo")),
                 "Merged backup manifest should exist");
+
+        //given we inspect the versions
+        final var deleteIncrementsArgs = new String[]{
+                "--delete",
+                "--backup-source", backupDirectory.toString(),
+                "--prefix", prefix,
+                "--key-store", keyStore.toString(),
+                "--key-alias", alias,
+                "--from-epoch-seconds", end + ""
+        };
+
+        //when inspect increments is executed
+        new Controller(deleteIncrementsArgs, console).run();
+        Thread.sleep(A_SECOND);
+
+        //then the merged manifest no longer exists
+        Assertions.assertFalse(Files.exists(backupDirectory.resolve(prefix + "-" + start + "-" + end + ".manifest.cargo")),
+                "Merged backup manifest should no longer exist");
     }
 }

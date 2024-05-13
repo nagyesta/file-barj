@@ -47,11 +47,14 @@ File BaRJ comes with the following features
 - Duplicate handling (storing duplicates of the same file only once)
 - Deletes left-over files from the restore directory (if they had been in scope for the backup)
 - Merge previous backup increments
+- Delete selected backup increments
 
 ### Planned features
 
-- Delete selected backup increments
 - UI for convenient configuration
+- Rotate encryption keys
+  - Shallow (only rotate KEK)
+  - Deep (rotate DEKs as well)
 
 ## Modules
 

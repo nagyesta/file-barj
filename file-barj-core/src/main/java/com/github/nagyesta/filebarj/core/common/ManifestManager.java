@@ -110,5 +110,17 @@ public interface ManifestManager {
      * @param job the job configuration
      * @return the manifests which can act as previous increments of the provided job
      */
-    SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(BackupJobConfiguration job);
+    SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(
+            @NonNull BackupJobConfiguration job);
+
+    /**
+     * Deletes all files of the backup increment represented by the provided manifest from the
+     * backup directory.
+     *
+     * @param backupDirectory the backup directory
+     * @param manifest        the manifest
+     */
+    void deleteIncrement(
+            @NonNull Path backupDirectory,
+            @NonNull BackupIncrementManifest manifest);
 }

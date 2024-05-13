@@ -113,6 +113,20 @@ controller.inspectIncrements(System.out);
 controller.inspectContent(Long.MAX_VALUE, outputFile);
 ```
 
+### Deleting the increments of an archive
+
+```java
+//configuring the deletion job
+final var backupDir = Path.of("/backup/directory");
+final var outputFile = Path.of("/backup/directory");
+final var controller = new IncrementDeletionController(backupDir, "file-prefix", null);
+
+//Delete all backup increments:
+// - starting with the one created at 123456
+// - until (exclusive) the next full backup
+controller.deleteIncrementsUntilNextFullBackupAfter(123456L);
+```
+
 ## Further reading
 
 Please read more about the BaRJ backup jobs [here](https://github.com/nagyesta/file-barj/wiki/Backup-job-configuration-tips).

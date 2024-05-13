@@ -383,4 +383,42 @@ class ManifestManagerImplTest extends TempFileAwareTest {
 
         //then + exception
     }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullManifest() {
+        //given
+        final var underTest = new ManifestManagerImpl();
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.deleteIncrement(Path.of("destination"), null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullDestination() {
+        //given
+        final var underTest = new ManifestManagerImpl();
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.deleteIncrement(null, mock(BackupIncrementManifest.class)));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testLoadPreviousManifestsForBackupShouldThrowExceptionWhenCalledWithNull() {
+        //given
+        final var underTest = new ManifestManagerImpl();
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> underTest.loadPreviousManifestsForBackup(null));
+
+        //then + exception
+    }
 }
