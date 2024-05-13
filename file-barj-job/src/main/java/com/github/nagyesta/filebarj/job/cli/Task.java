@@ -31,7 +31,11 @@ public enum Task {
     /**
      * Listing the contents of a backup increment.
      */
-    INSPECT_CONTENT("inspect-content");
+    INSPECT_CONTENT("inspect-content"),
+    /**
+     * Deleting the increments of a backup.
+     */
+    DELETE_INCREMENTS("delete");
 
     private final String command;
 

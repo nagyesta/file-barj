@@ -44,7 +44,10 @@ public class CliTaskParser extends GenericCliParser<Task> {
                         .desc("Inspects the available backup increments of a backup.").build())
                 .addOption(Option.builder()
                         .longOpt(Task.INSPECT_INCREMENTS.getCommand())
-                        .desc("Inspects the contents of a backup increment.").build());
+                        .desc("Inspects the contents of a backup increment.").build())
+                .addOption(Option.builder()
+                        .longOpt(Task.DELETE_INCREMENTS.getCommand())
+                        .desc("Deletes the backup increments starting from a given time until the next full backup.").build());
         group.setRequired(true);
         return new Options().addOptionGroup(group);
     }

@@ -16,7 +16,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.*;
@@ -85,53 +84,12 @@ public class MergeController {
             if (deleteObsoleteFiles) {
                 log.info("Deleting obsolete files from backup directory: {}", backupDirectory);
                 selectedManifests.values().forEach(manifest -> {
-                    final var fileNamePrefix = manifest.getFileNamePrefix();
-                    deleteManifestFromHistoryIfExists(fileNamePrefix);
-                    deleteManifestAndArchiveFilesFromBackupDirectory(fileNamePrefix);
+                    manifestManager.deleteIncrement(backupDirectory, manifest);
                 });
             }
             return result;
         } finally {
             executionLock.unlock();
-        }
-    }
-
-    private void deleteManifestAndArchiveFilesFromBackupDirectory(@NotNull final String fileNamePrefix) {
-        final var patterns = Set.of(
-                "^" + fileNamePrefix + "\\.[0-9]{5}\\.cargo$",
-                "^" + fileNamePrefix + "\\.manifest\\.cargo$",
-                "^" + fileNamePrefix + "\\.index\\.cargo$"
-        );
-        try (var list = Files.list(backupDirectory)) {
-            final var toDelete = new ArrayList<Path>();
-            list.filter(path -> patterns.stream().anyMatch(pattern -> path.getFileName().toString().matches(pattern)))
-                    .forEach(toDelete::add);
-            for (final var path : toDelete) {
-                log.info("Deleting obsolete file: {}", path);
-                try {
-                    Files.delete(path);
-                } catch (final IOException e) {
-                    log.warn("Unable to delete file! Will attempt to delete it on exit.", e);
-                    if (Files.exists(path)) {
-                        path.toFile().deleteOnExit();
-                    }
-                }
-            }
-        } catch (final IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void deleteManifestFromHistoryIfExists(@NotNull final String fileNamePrefix) {
-        final var fromHistory = backupDirectory.resolve(".history")
-                .resolve(fileNamePrefix + ".manifest.json.gz");
-        try {
-            if (Files.exists(fromHistory)) {
-                log.info("Deleting obsolete file from history: {}", fromHistory);
-                Files.delete(fromHistory);
-            }
-        } catch (final IOException e) {
-            log.error("Could not delete manifest file from history folder: " + fromHistory, e);
         }
     }
 

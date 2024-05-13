@@ -33,6 +33,8 @@ import java.util.zip.GZIPOutputStream;
  */
 @Slf4j
 public class ManifestManagerImpl implements ManifestManager {
+    private static final String HISTORY_FOLDER = ".history";
+    private static final String MANIFEST_JSON_GZ = ".manifest.json.gz";
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
@@ -76,10 +78,10 @@ public class ManifestManagerImpl implements ManifestManager {
     private void doPersist(
             @NotNull final BackupIncrementManifest manifest,
             @NotNull final File backupDestination) {
-        final var backupHistoryDir = new File(backupDestination, ".history");
+        final var backupHistoryDir = new File(backupDestination, HISTORY_FOLDER);
         //noinspection ResultOfMethodCallIgnored
         backupHistoryDir.mkdirs();
-        final var plainManifestFile = new File(backupHistoryDir, manifest.getFileNamePrefix() + ".manifest.json.gz");
+        final var plainManifestFile = new File(backupHistoryDir, manifest.getFileNamePrefix() + MANIFEST_JSON_GZ);
         try (var fileStream = new FileOutputStream(plainManifestFile);
              var bufferedStream = new BufferedOutputStream(fileStream);
              var gzipStream = new GZIPOutputStream(bufferedStream);
@@ -140,15 +142,16 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     @Override
-    public SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(final BackupJobConfiguration job) {
-        final var historyFolder = job.getDestinationDirectory().resolve(".history");
+    public SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(
+            @NonNull final BackupJobConfiguration job) {
+        final var historyFolder = job.getDestinationDirectory().resolve(HISTORY_FOLDER);
         if (!Files.exists(historyFolder)) {
             return Collections.emptySortedMap();
         }
         try (var pathStream = Files.list(historyFolder)) {
             final var manifestFiles = pathStream
                     .filter(path -> path.getFileName().toString().startsWith(job.getFileNamePrefix()))
-                    .filter(path -> path.getFileName().toString().endsWith(".manifest.json.gz"))
+                    .filter(path -> path.getFileName().toString().endsWith(MANIFEST_JSON_GZ))
                     .sorted(Comparator.comparing(Path::getFileName).reversed())
                     .toList();
             final var manifests = loadManifests(manifestFiles, null, Long.MAX_VALUE);
@@ -200,6 +203,15 @@ public class ManifestManagerImpl implements ManifestManager {
             @NonNull final BackupIncrementManifest manifest,
             @NonNull final Class<? extends ValidationRules> forAction) {
         //TODO: implement validation
+    }
+
+    @Override
+    public void deleteIncrement(
+            @NonNull final Path backupDirectory,
+            @NonNull final BackupIncrementManifest manifest) {
+        final var fileNamePrefix = manifest.getFileNamePrefix();
+        deleteManifestFromHistoryIfExists(backupDirectory, fileNamePrefix);
+        deleteManifestAndArchiveFilesFromBackupDirectory(backupDirectory, fileNamePrefix);
     }
 
     @NotNull
@@ -341,5 +353,46 @@ public class ManifestManagerImpl implements ManifestManager {
                 .filter(k -> k != null && !k.isEmpty())
                 .forEach(keys::putAll);
         return keys;
+    }
+
+    private void deleteManifestAndArchiveFilesFromBackupDirectory(
+            @NotNull final Path backupDirectory, @NotNull final String fileNamePrefix) {
+        final var patterns = Set.of(
+                "^" + fileNamePrefix + "\\.[0-9]{5}\\.cargo$",
+                "^" + fileNamePrefix + "\\.manifest\\.cargo$",
+                "^" + fileNamePrefix + "\\.index\\.cargo$"
+        );
+        try (var list = Files.list(backupDirectory)) {
+            final var toDelete = new ArrayList<Path>();
+            list.filter(path -> patterns.stream().anyMatch(pattern -> path.getFileName().toString().matches(pattern)))
+                    .forEach(toDelete::add);
+            for (final var path : toDelete) {
+                log.info("Deleting obsolete backup file: {}", path);
+                try {
+                    Files.delete(path);
+                } catch (final IOException e) {
+                    log.warn("Unable to delete file! Will attempt to delete it on exit.", e);
+                    if (Files.exists(path)) {
+                        path.toFile().deleteOnExit();
+                    }
+                }
+            }
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void deleteManifestFromHistoryIfExists(
+            @NotNull final Path backupDirectory, @NotNull final String fileNamePrefix) {
+        final var fromHistory = backupDirectory.resolve(HISTORY_FOLDER)
+                .resolve(fileNamePrefix + MANIFEST_JSON_GZ);
+        try {
+            if (Files.exists(fromHistory)) {
+                log.info("Deleting obsolete file from history: {}", fromHistory);
+                Files.delete(fromHistory);
+            }
+        } catch (final IOException e) {
+            log.error("Could not delete manifest file from history folder: {}", fromHistory, e);
+        }
     }
 }

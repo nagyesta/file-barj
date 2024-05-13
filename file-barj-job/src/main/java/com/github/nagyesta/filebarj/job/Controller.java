@@ -6,6 +6,7 @@ import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
+import com.github.nagyesta.filebarj.core.delete.IncrementDeletionController;
 import com.github.nagyesta.filebarj.core.inspect.pipeline.IncrementInspectionController;
 import com.github.nagyesta.filebarj.core.merge.MergeController;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
@@ -91,6 +92,12 @@ public class Controller {
                         .toArray(String[]::new), console).getResult();
                 doInspectIncrements(inspectIncrementsProperties);
                 break;
+            case DELETE_INCREMENTS:
+                final var deleteIncrementsProperties = new CliDeleteIncrementsParser(Arrays.stream(args)
+                        .skip(1)
+                        .toArray(String[]::new), console).getResult();
+                doDeleteIncrements(deleteIncrementsProperties);
+                break;
             default:
                 throw new IllegalArgumentException("No task found.");
         }
@@ -116,7 +123,18 @@ public class Controller {
                 .inspectIncrements(System.out);
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Increment increments inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
+        log.info("Backup increments inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
+    }
+
+    protected void doDeleteIncrements(final DeleteIncrementsProperties properties) {
+        final var kek = getPrivateKey(properties.getKeyProperties());
+        final var startTimeMillis = System.currentTimeMillis();
+        log.info("Bootstrapping delete increments operation...");
+        new IncrementDeletionController(properties.getBackupSource(), properties.getPrefix(), kek)
+                .deleteIncrementsUntilNextFullBackupAfter(properties.getAfterEpochSeconds());
+        final var endTimeMillis = System.currentTimeMillis();
+        final var durationMillis = (endTimeMillis - startTimeMillis);
+        log.info("Increment deletion operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 
     protected void doGenerateKey(final KeyStoreProperties properties) {

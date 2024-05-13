@@ -120,6 +120,26 @@ java -jar build/libs/file-barj-job.jar \
      --at-epoch-seconds 123456
 ```
 
+### Deleting the increments of a backup
+
+This task allows the deletion of those backup increments which became obsolete. In order to keep 
+only working backups, this will remove all increments starting with the one created at the selected 
+epoch seconds time and ending before the next full backup (or deleting all if no full backup found). 
+In the example below, we want to delete the increment started at 123456 (epoch seconds) amd every
+subsequent incremental backup until the next full backup.
+
+Execute the following command (assuming that your executable is named accordingly).
+
+```commandline
+java -jar build/libs/file-barj-job.jar \
+     --delete \
+     --backup-source /backup/directory/path \
+     --prefix backup-job-file-prefix \
+     --key-store keys.p12 \
+     --key-alias alias \
+     --from-epoch-seconds 123456
+```
+
 ## Further reading
 
 Please read more about configuring the BaRJ backup jobs [here](https://github.com/nagyesta/file-barj/wiki/Backup-job-configuration-tips).
