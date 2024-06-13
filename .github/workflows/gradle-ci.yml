@@ -91,21 +91,21 @@ jobs:
             file-barj-stream-io/build/reports/abort-mission/abort-mission-report.html
           retention-days: 5
       - name: Upload coverage to Codecov - Core (if Ubuntu)
-        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
         if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-core/build/reports/jacoco/report.xml
           flags: core
       - name: Upload coverage to Codecov - Job (if Ubuntu)
-        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
         if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./file-barj-job/build/reports/jacoco/report.xml
           flags: job
       - name: Upload coverage to Codecov - Stream IO (if Ubuntu)
-        uses: codecov/codecov-action@125fc84a9a348dbcf27191600683ec096ec9021c # v4.4.1
+        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
         if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
