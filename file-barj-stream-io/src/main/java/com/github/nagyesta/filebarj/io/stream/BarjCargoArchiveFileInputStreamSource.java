@@ -28,7 +28,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
-import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.*;
+import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.toChunkFileName;
+import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.toIndexFileName;
+import static com.github.nagyesta.filebarj.io.stream.ReadOnlyArchiveIndex.INDEX_VERSION;
 import static com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil.newCipherInputStream;
 import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStream.MEBIBYTE;
 import static org.apache.commons.io.FilenameUtils.normalizeNoEndSeparator;
@@ -133,6 +135,7 @@ public class BarjCargoArchiveFileInputStreamSource {
 
     /**
      * Returns the matching entries in order of occurrence in the archive.
+     *
      * @param archiveEntriesInScope the entries in scope
      * @return the matching entries
      */
@@ -298,10 +301,10 @@ public class BarjCargoArchiveFileInputStreamSource {
     @NotNull
     protected List<BarjCargoEntityIndex> parseEntityIndexes(
             @NotNull final Properties properties) {
-        final var totalEntities = Long.parseLong(properties.getProperty(LAST_ENTITY_INDEX_PROPERTY));
-        return LongStream.rangeClosed(1L, totalEntities)
+        final var index = parse(properties);
+        return LongStream.rangeClosed(1L, index.getTotalEntities())
                 .mapToObj(BarjCargoUtil::entryIndexPrefix)
-                .map(prefix -> BarjCargoEntityIndex.fromProperties(properties, prefix))
+                .map(index::entity)
                 .toList();
     }
 
@@ -316,10 +319,10 @@ public class BarjCargoArchiveFileInputStreamSource {
     protected SortedMap<String, Path> generateFilePathMap(
             @NotNull final Properties properties,
             @NotNull final BarjCargoInputStreamConfiguration config) {
-        final var totalChunks = Integer.parseInt(properties.getProperty(LAST_CHUNK_INDEX_PROPERTY));
+        final var index = parse(properties);
         final var map = new TreeMap<String, Path>();
-        IntStream.rangeClosed(1, totalChunks)
-                .mapToObj(index -> toChunkFileName(config.getPrefix(), index))
+        IntStream.rangeClosed(1, index.getNumberOfChunks())
+                .mapToObj(i -> toChunkFileName(config.getPrefix(), i))
                 .map(p -> Path.of(config.getFolder().toAbsolutePath().toString(), p))
                 .map(Path::toAbsolutePath)
                 .forEach(path -> map.put(path.getFileName().toString(), path));
@@ -336,35 +339,45 @@ public class BarjCargoArchiveFileInputStreamSource {
     protected void verifyFilesExistAndHaveExpectedSizes(
             @NotNull final Properties properties,
             @NotNull final SortedMap<String, Path> chunkPaths) throws ArchiveIntegrityException {
-        final var maxChunkSize = Long.parseLong(properties.getProperty(MAX_CHUNK_SIZE_PROPERTY));
-        final var lastChunkSize = Long.parseLong(properties.getProperty(LAST_CHUNK_SIZE_PROPERTY));
-        final var expectedTotalSize = Long.parseLong(properties.getProperty(TOTAL_SIZE_PROPERTY));
+        final var index = parse(properties);
         var totalSize = 0L;
         final var iterator = chunkPaths.keySet().iterator();
         while (iterator.hasNext()) {
             final var key = iterator.next();
             final var path = chunkPaths.get(key);
-            final var file = path.toFile();
-            if (!file.exists()) {
-                throw new ArchiveIntegrityException("Chunk file does not exist: " + path);
-            }
-            final long expectedSize;
-            if (iterator.hasNext()) {
-                expectedSize = maxChunkSize;
-            } else {
-                expectedSize = lastChunkSize;
-            }
-            final var fileSize = file.length();
-            if (expectedSize != fileSize) {
-                throw new ArchiveIntegrityException("Chunk file size is wrong: " + path
-                        + ", expected: " + expectedSize + " bytes, actual: " + fileSize + " bytes.");
-            }
-            totalSize += fileSize;
+            totalSize += verifiedFileSize(index, path, iterator.hasNext());
         }
-        if (totalSize != expectedTotalSize) {
+        if (totalSize != index.getTotalSize()) {
             throw new ArchiveIntegrityException(
-                    "Total size is wrong: " + totalSize + " bytes, expected: " + expectedTotalSize + " bytes.");
+                    "Total size is wrong: " + totalSize + " bytes, expected: " + index.getTotalSize() + " bytes.");
         }
+    }
+
+    private static long verifiedFileSize(
+            final ReadOnlyArchiveIndex index,
+            final Path path,
+            final boolean isNotLast) {
+        final var file = path.toFile();
+        if (!file.exists()) {
+            throw new ArchiveIntegrityException("Chunk file does not exist: " + path);
+        }
+        final long expectedSize;
+        if (isNotLast) {
+            expectedSize = index.getMaxChunkSizeInBytes();
+        } else {
+            expectedSize = index.getLastChunkSizeInBytes();
+        }
+        final var fileSize = file.length();
+        if (expectedSize != fileSize) {
+            throw new ArchiveIntegrityException("Chunk file size is wrong: " + path
+                    + ", expected: " + expectedSize + " bytes, actual: " + fileSize + " bytes.");
+        }
+        return fileSize;
+    }
+
+    private static ReadOnlyArchiveIndex parse(final Properties properties) {
+        return IndexVersion.forVersionString(properties.getProperty(INDEX_VERSION))
+                .createIndex(properties);
     }
 
     private void validateEntityIndexes(
