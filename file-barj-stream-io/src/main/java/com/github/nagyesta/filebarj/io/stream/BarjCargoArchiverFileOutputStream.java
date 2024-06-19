@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.io.stream;
 
+import com.github.nagyesta.filebarj.io.stream.index.ArchiveIndexV2;
 import com.github.nagyesta.filebarj.io.stream.internal.BaseBarjCargoArchiverFileOutputStream;
 import com.github.nagyesta.filebarj.io.stream.internal.model.BarjCargoEntityIndex;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
-import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.*;
+import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.entryIndexPrefix;
+import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.toIndexFileName;
 import static com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil.newCipherOutputStream;
 
 /**
@@ -100,11 +102,14 @@ public class BarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiverFile
 
     private void writeIndexFileFooter() throws IOException {
         final var lastChunk = getCurrentFilePath();
-        final var footer = LAST_CHUNK_INDEX_PROPERTY + COLON + getCurrentChunkIndex() + LINE_BREAK
-                + LAST_CHUNK_SIZE_PROPERTY + COLON + lastChunk.toFile().length() + LINE_BREAK
-                + MAX_CHUNK_SIZE_PROPERTY + COLON + getMaxChunkSizeBytes() + LINE_BREAK
-                + LAST_ENTITY_INDEX_PROPERTY + COLON + entryCount() + LINE_BREAK
-                + TOTAL_SIZE_PROPERTY + COLON + getTotalByteCount() + LINE_BREAK;
+        final var footer = ArchiveIndexV2.builder()
+                .numberOfChunks(getCurrentChunkIndex())
+                .lastChunkSizeInBytes(lastChunk.toFile().length())
+                .maxChunkSizeInBytes(getMaxChunkSizeBytes())
+                .totalEntities(entryCount())
+                .totalSize(getTotalByteCount())
+                .build()
+                .footerAsString();
         indexStreamWriter.write(footer);
     }
 }

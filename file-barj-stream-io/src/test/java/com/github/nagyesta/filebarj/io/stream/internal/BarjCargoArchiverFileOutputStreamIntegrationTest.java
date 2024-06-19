@@ -709,7 +709,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
             //then
             final var actualIndexLines = Files.readAllLines(stream.getIndexFileWritten());
             final var expectedIndexLines = Files.readAllLines(
-                    Path.of(getClass().getResource("/example/index.properties").toURI()));
+                    Path.of(getClass().getResource("/example/index_v2.properties").toURI()));
             Assertions.assertIterableEquals(expectedIndexLines, actualIndexLines);
             final var actualCargoLines = Files.readAllLines(stream.getDataFilesWritten().get(0));
             final var expectedCargoLines = Files.readAllLines(

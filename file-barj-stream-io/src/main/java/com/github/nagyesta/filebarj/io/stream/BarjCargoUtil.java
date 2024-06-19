@@ -18,26 +18,6 @@ public final class BarjCargoUtil {
      */
     public static final String INDEX = ".index";
     /**
-     * The name of the property storing the last entity index.
-     */
-    public static final String LAST_ENTITY_INDEX_PROPERTY = "last.entity.index";
-    /**
-     * The name of the property storing the index of the last chunk.
-     */
-    public static final String LAST_CHUNK_INDEX_PROPERTY = "last.cnunk.index";
-    /**
-     * The name of the property storing the size of the last chunk.
-     */
-    public static final String LAST_CHUNK_SIZE_PROPERTY = "last.cnunk.size";
-    /**
-     * The name of the property storing the maximum chunk size.
-     */
-    public static final String MAX_CHUNK_SIZE_PROPERTY = "max.cnunk.size";
-    /**
-     * The name of the property storing the total size of the archive.
-     */
-    public static final String TOTAL_SIZE_PROPERTY = "total.size";
-    /**
      * A colon character used for separating the key and value in properties.
      */
     public static final String COLON = ":";
