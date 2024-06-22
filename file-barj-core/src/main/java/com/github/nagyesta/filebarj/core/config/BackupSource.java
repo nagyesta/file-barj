@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -34,6 +37,7 @@ public class BackupSource {
     /**
      * The path we want to back up. Can be file or directory.
      */
+    @Valid
     @NonNull
     @JsonProperty("path")
     private final BackupPath path;
@@ -42,13 +46,13 @@ public class BackupSource {
      * with "glob" syntax relative to the value of the path field.
      */
     @JsonProperty("include_patterns")
-    private final Set<String> includePatterns;
+    private final Set<@NotNull @NotBlank String> includePatterns;
     /**
      * Optional exclude patterns for filtering the contents. Uses {@link java.nio.file.PathMatcher}
      * with "glob" syntax relative to the value of the path field.
      */
     @JsonProperty("exclude_patterns")
-    private final Set<String> excludePatterns;
+    private final Set<@NotNull @NotBlank String> excludePatterns;
 
     /**
      * Lists the matching {@link Path} entries.

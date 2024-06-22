@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
@@ -14,9 +15,8 @@ import java.nio.file.Path;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 public class InspectIncrementContentsProperties extends BackupFileProperties {
-
+    @Positive
     private final long pointInTimeEpochSeconds;
-
     @NonNull
     private final Path outputFile;
 }

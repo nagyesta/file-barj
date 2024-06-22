@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
+import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
@@ -12,6 +13,7 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
+import jakarta.validation.ValidationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 import static org.mockito.Mockito.mock;
@@ -27,7 +30,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     public static final int A_SECOND = 1000;
     private final BackupJobConfiguration configuration = BackupJobConfiguration.builder()
             .fileNamePrefix("prefix")
-            .sources(Set.of())
+            .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
             .compression(CompressionAlgorithm.NONE)
             .hashAlgorithm(HashAlgorithm.SHA256)
             .chunkSizeMebibyte(1)
@@ -94,6 +97,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .encryptionKey(keyPair.getPublic())
                 .build();
         final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(expected);
 
         //when
         underTest.persist(expected);
@@ -126,6 +130,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .backupType(BackupType.FULL)
                 .build();
         final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(expected);
 
         //when
         underTest.persist(expected);
@@ -150,7 +155,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                .sources(Set.of(BackupSource.builder().path(BackupPath.of(testDataRoot)).build()))
                 .compression(CompressionAlgorithm.GZIP)
                 .hashAlgorithm(HashAlgorithm.SHA256)
                 .chunkSizeMebibyte(1)
@@ -159,11 +164,13 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .backupType(BackupType.FULL)
                 .build();
         final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(expected);
         underTest.persist(expected);
         Thread.sleep(A_SECOND);
         final var limit = Instant.now().getEpochSecond();
         Thread.sleep(A_SECOND);
         final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(ignored);
         underTest.persist(ignored);
 
         //when
@@ -197,9 +204,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .backupType(BackupType.FULL)
                 .build();
         final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(ignored);
         underTest.persist(ignored);
         Thread.sleep(A_SECOND);
         final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(expected);
         underTest.persist(expected);
 
         //when
@@ -232,8 +241,10 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .backupType(BackupType.INCREMENTAL)
                 .build();
         final var original = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(original);
         Thread.sleep(A_SECOND);
         final var secondIncrement = underTest.generateManifest(config, BackupType.INCREMENTAL, 2);
+        simulateThatADirectoryWasArchived(secondIncrement);
         underTest.persist(original);
         underTest.persist(secondIncrement);
 
@@ -298,6 +309,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .backupType(BackupType.FULL)
                 .build();
         final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(manifest);
         underTest.persist(manifest);
 
         //when
@@ -324,6 +336,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .backupType(BackupType.FULL)
                 .build();
         final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
+        simulateThatADirectoryWasArchived(manifest);
         underTest.persist(manifest);
 
         //when
@@ -367,6 +380,30 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> underTest.validate(manifest, null));
+
+        //then + exception
+    }
+
+    @Test
+    void testValidateShouldThrowExceptionWhenCalledWithInvalidData() {
+        //given
+        final var underTest = new ManifestManagerImpl();
+        final var destinationDirectory = testDataRoot.resolve("destination");
+        final var config = BackupJobConfiguration.builder()
+                .fileNamePrefix("prefix")
+                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                .compression(CompressionAlgorithm.GZIP)
+                .hashAlgorithm(HashAlgorithm.SHA256)
+                .chunkSizeMebibyte(1)
+                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                .destinationDirectory(destinationDirectory)
+                .backupType(BackupType.FULL)
+                .build();
+        final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
+
+        //when
+        Assertions.assertThrows(ValidationException.class,
+                () -> underTest.validate(manifest, ValidationRules.Persisted.class));
 
         //then + exception
     }
@@ -420,5 +457,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 () -> underTest.loadPreviousManifestsForBackup(null));
 
         //then + exception
+    }
+
+    private void simulateThatADirectoryWasArchived(final BackupIncrementManifest expected) {
+        expected.setIndexFileName("index");
+        expected.setDataFileNames(List.of("data"));
+        final var directoryMetadata = FileMetadataParserFactory.newInstance().parse(testDataRoot.toFile(), configuration);
+        expected.getFiles().put(directoryMetadata.getId(), directoryMetadata);
     }
 }

@@ -2,6 +2,8 @@ package com.github.nagyesta.filebarj.core.model;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,6 +12,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 class AppVersionTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    @SuppressWarnings("resource")
+    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedState() throws JsonProcessingException {
@@ -59,5 +63,64 @@ class AppVersionTest {
         Assertions.assertThrows(ArrayIndexOutOfBoundsException.class, () -> new AppVersion(value));
 
         //then + exception
+    }
+
+    @Test
+    void testValidationShouldPassWhenCalledWithValidAppVersion() throws JsonProcessingException {
+        //given
+
+        //when
+        final var actual = validator.validate(new AppVersion(0, 1, 2));
+
+        //then
+        Assertions.assertEquals(0, actual.size());
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testValidationShouldFailWhenCalledWithInvalidMajorVersion() throws JsonProcessingException {
+        //given
+
+        //when
+        final var actual = validator.validate(new AppVersion(-1, 1, 2));
+
+        //then
+        Assertions.assertEquals(1, actual.size());
+        final var violation = actual.stream().findFirst().get();
+        Assertions.assertEquals("major", violation.getPropertyPath().toString());
+        Assertions.assertEquals(-1, violation.getInvalidValue());
+        Assertions.assertEquals("must be greater than or equal to 0", violation.getMessage());
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testValidationShouldFailWhenCalledWithInvalidMinorVersion() throws JsonProcessingException {
+        //given
+
+        //when
+        final var actual = validator.validate(new AppVersion(0, -1, 2));
+
+        //then
+        Assertions.assertEquals(1, actual.size());
+        final var violation = actual.stream().findFirst().get();
+        Assertions.assertEquals("minor", violation.getPropertyPath().toString());
+        Assertions.assertEquals(-1, violation.getInvalidValue());
+        Assertions.assertEquals("must be greater than or equal to 0", violation.getMessage());
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testValidationShouldFailWhenCalledWithInvalidPatchVersion() throws JsonProcessingException {
+        //given
+
+        //when
+        final var actual = validator.validate(new AppVersion(0, 0, -1));
+
+        //then
+        Assertions.assertEquals(1, actual.size());
+        final var violation = actual.stream().findFirst().get();
+        Assertions.assertEquals("patch", violation.getPropertyPath().toString());
+        Assertions.assertEquals(-1, violation.getInvalidValue());
+        Assertions.assertEquals("must be greater than or equal to 0", violation.getMessage());
     }
 }

@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,7 +19,8 @@ import java.util.Objects;
  * @param minor Minor version component
  * @param patch Patch version component
  */
-public record AppVersion(int major, int minor, int patch) implements Comparable<AppVersion> {
+public record AppVersion(
+        @PositiveOrZero int major, @PositiveOrZero int minor, @PositiveOrZero int patch) implements Comparable<AppVersion> {
 
     /**
      * The version of the currently used file-barj component.

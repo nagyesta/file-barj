@@ -3,6 +3,8 @@ package com.github.nagyesta.filebarj.core.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -29,6 +31,7 @@ public class ArchivedFileMetadata {
     /**
      * The location where the archived file contents are stored.
      */
+    @Valid
     @NonNull
     @JsonProperty("archive_location")
     private final ArchiveEntryLocator archiveLocation;
@@ -46,6 +49,7 @@ public class ArchivedFileMetadata {
      * The Ids of the original files which are archived by the current entry. If multiple Ids are
      * listed, then duplicates where eliminated.
      */
+    @Size(min = 1)
     @NonNull
     @JsonProperty("files")
     private Set<UUID> files;

@@ -13,6 +13,9 @@ import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import com.github.nagyesta.filebarj.job.cli.*;
 import com.github.nagyesta.filebarj.job.util.KeyStoreUtil;
+import jakarta.validation.Validation;
+import jakarta.validation.ValidationException;
+import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,6 +43,7 @@ public class Controller {
     private static final String WHITE = "\033[0;37";
     private final String[] args;
     private final Console console;
+    private final Validator validator = createValidator();
 
     /**
      * Creates a new {@link Controller} instance and sets the input arguments.
@@ -60,42 +64,49 @@ public class Controller {
                 final var backupProperties = new CliBackupParser(Arrays.stream(args)
                         .skip(1)
                         .toArray(String[]::new)).getResult();
+                validate(backupProperties);
                 doBackup(backupProperties);
                 break;
             case RESTORE:
                 final var restoreProperties = new CliRestoreParser(Arrays.stream(args)
                         .skip(1)
                         .toArray(String[]::new), console).getResult();
+                validate(restoreProperties);
                 doRestore(restoreProperties);
                 break;
             case MERGE:
                 final var mergeProperties = new CliMergeParser(Arrays.stream(args)
                         .skip(1)
                         .toArray(String[]::new), console).getResult();
+                validate(mergeProperties);
                 doMerge(mergeProperties);
                 break;
             case GEN_KEYS:
                 final var keyStoreProperties = new CliKeyGenParser(Arrays.stream(args)
                         .skip(1)
                         .toArray(String[]::new), console).getResult();
+                validate(keyStoreProperties);
                 doGenerateKey(keyStoreProperties);
                 break;
             case INSPECT_CONTENT:
                 final var inspectContentProperties = new CliInspectContentParser(Arrays.stream(args)
                         .skip(1)
                         .toArray(String[]::new), console).getResult();
+                validate(inspectContentProperties);
                 doInspectContent(inspectContentProperties);
                 break;
             case INSPECT_INCREMENTS:
                 final var inspectIncrementsProperties = new CliInspectIncrementsParser(Arrays.stream(args)
                         .skip(1)
                         .toArray(String[]::new), console).getResult();
+                validate(inspectIncrementsProperties);
                 doInspectIncrements(inspectIncrementsProperties);
                 break;
             case DELETE_INCREMENTS:
                 final var deleteIncrementsProperties = new CliDeleteIncrementsParser(Arrays.stream(args)
                         .skip(1)
                         .toArray(String[]::new), console).getResult();
+                validate(deleteIncrementsProperties);
                 doDeleteIncrements(deleteIncrementsProperties);
                 break;
             default:
@@ -213,5 +224,22 @@ public class Controller {
                                 keyStoreProperties.getKeyStore(), keyStoreProperties.getAlias(),
                                 keyStoreProperties.getPassword(), keyStoreProperties.getPassword()))
                 .orElse(null);
+    }
+
+    private void validate(final Object properties) {
+        final var violations = validator.validate(properties);
+        if (!violations.isEmpty()) {
+            final var violationsMessage = violations.stream()
+                    .map(v -> v.getPropertyPath().toString() + ": " + v.getMessage() + " (found: " + v.getInvalidValue() + ")")
+                    .collect(Collectors.joining("\n\t"));
+            log.error("Properties validation failed:\n\t{}", violationsMessage);
+            throw new ValidationException("The properties are invalid!");
+        }
+    }
+
+    private static Validator createValidator() {
+        try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
+            return validatorFactory.getValidator();
+        }
     }
 }

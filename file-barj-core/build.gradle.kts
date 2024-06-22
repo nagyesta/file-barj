@@ -17,6 +17,7 @@ dependencies {
     compileOnly(libs.jetbrains.annotations)
     implementation(project(":file-barj-stream-io"))
     implementation(libs.slf4j.api)
+    implementation(libs.bundles.validation)
     implementation(libs.bundles.jackson)
     implementation(libs.commons.compress)
     implementation(libs.commons.io)
@@ -43,6 +44,7 @@ licensee {
     allow("MIT")
     allow("Apache-2.0")
     allow("BSD-2-Clause")
+    allow("GPL-2.0-with-classpath-exception")
     allowUrl("https://www.bouncycastle.org/licence.html")
 }
 

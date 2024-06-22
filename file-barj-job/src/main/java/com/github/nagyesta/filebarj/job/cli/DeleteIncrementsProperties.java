@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job.cli;
 
+import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
@@ -11,7 +12,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 public class DeleteIncrementsProperties extends BackupFileProperties {
-
+    @Positive
     private final long afterEpochSeconds;
 }
 

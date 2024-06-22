@@ -9,6 +9,10 @@ import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
 import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.core.util.OsUtil;
+import jakarta.validation.Validation;
+import jakarta.validation.ValidationException;
+import jakarta.validation.Validator;
+import jakarta.validation.groups.Default;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -36,6 +40,7 @@ public class ManifestManagerImpl implements ManifestManager {
     private static final String HISTORY_FOLDER = ".history";
     private static final String MANIFEST_JSON_GZ = ".manifest.json.gz";
     private final ObjectMapper mapper = new ObjectMapper();
+    private final Validator validator = createValidator();
 
     @Override
     public BackupIncrementManifest generateManifest(
@@ -57,6 +62,7 @@ public class ManifestManagerImpl implements ManifestManager {
                 .build();
         Optional.ofNullable(jobConfiguration.getEncryptionKey())
                 .ifPresent(manifest::generateDataEncryptionKeys);
+        validate(manifest, ValidationRules.Created.class);
         return manifest;
     }
 
@@ -197,12 +203,19 @@ public class ManifestManagerImpl implements ManifestManager {
                 .build();
     }
 
-    @SuppressWarnings("checkstyle:TodoComment")
     @Override
     public void validate(
             @NonNull final BackupIncrementManifest manifest,
             @NonNull final Class<? extends ValidationRules> forAction) {
-        //TODO: implement validation
+
+        final var violations = validator.validate(manifest, forAction, Default.class);
+        if (!violations.isEmpty()) {
+            final var violationsMessage = violations.stream()
+                    .map(v -> v.getPropertyPath().toString() + ": " + v.getMessage() + " (found: " + v.getInvalidValue() + ")")
+                    .collect(Collectors.joining("\n\t"));
+            log.error("Manifest validation failed for {} action:\n\t{}", forAction.getSimpleName(), violationsMessage);
+            throw new ValidationException("The manifest is invalid!");
+        }
     }
 
     @Override
@@ -212,6 +225,12 @@ public class ManifestManagerImpl implements ManifestManager {
         final var fileNamePrefix = manifest.getFileNamePrefix();
         deleteManifestFromHistoryIfExists(backupDirectory, fileNamePrefix);
         deleteManifestAndArchiveFilesFromBackupDirectory(backupDirectory, fileNamePrefix);
+    }
+
+    private static Validator createValidator() {
+        try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
+            return validatorFactory.getValidator();
+        }
     }
 
     @NotNull
