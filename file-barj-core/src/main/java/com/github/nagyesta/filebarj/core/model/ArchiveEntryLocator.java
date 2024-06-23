@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -27,6 +28,7 @@ public final class ArchiveEntryLocator {
     /**
      * The backup increment containing the entry.
      */
+    @PositiveOrZero
     @JsonProperty("backup_increment")
     private final int backupIncrement;
     /**

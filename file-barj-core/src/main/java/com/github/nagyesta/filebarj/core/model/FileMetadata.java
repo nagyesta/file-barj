@@ -5,6 +5,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
@@ -36,6 +41,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
     /**
      * The absolute path where the file is located.
      */
+    @Valid
     @NonNull
     @JsonProperty("path")
     private final BackupPath absolutePath;
@@ -50,36 +56,48 @@ public class FileMetadata implements Comparable<FileMetadata> {
     /**
      * The original file size.
      */
+    @NotNull
+    @PositiveOrZero
     @JsonProperty("original_size")
     private Long originalSizeBytes;
     /**
      * The last modified time of the file using UTC epoch seconds.
      */
+    @NotNull
     @JsonProperty("last_modified_utc_epoch_seconds")
     private Long lastModifiedUtcEpochSeconds;
     /**
      * The last access time of the file using UTC epoch seconds.
      */
+    @NotNull
     @JsonProperty("last_accessed_utc_epoch_seconds")
     private Long lastAccessedUtcEpochSeconds;
     /**
      * The creation time of the file using UTC epoch seconds.
      */
+    @NotNull
     @JsonProperty("created_utc_epoch_seconds")
     private Long createdUtcEpochSeconds;
     /**
      * The POSIX permissions of the file.
      */
+    @NotNull
+    @NotBlank
+    @Pattern(regexp = "^([r-][w-][x-]){3}$")
     @JsonProperty("permissions")
     private final String posixPermissions;
     /**
      * The owner of the file.
      */
+    @NotNull
+    @NotBlank
     @JsonProperty("owner")
     private final String owner;
     /**
      * The owner group of the file.
      */
+    @NotNull
+    @NotBlank
     @JsonProperty("group")
     private final String group;
     /**
@@ -91,6 +109,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
     /**
      * The hidden status of the file.
      */
+    @NotNull
     @JsonProperty("hidden")
     private Boolean hidden;
     /**

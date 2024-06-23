@@ -9,6 +9,10 @@ import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.json.PublicKeyDeserializer;
 import com.github.nagyesta.filebarj.core.json.PublicKeySerializer;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.validation.FileNamePrefix;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -26,9 +30,7 @@ import java.util.Set;
 @EqualsAndHashCode
 @Builder
 @Jacksonized
-@SuppressWarnings("checkstyle:TodoComment")
 public class BackupJobConfiguration {
-    //TODO: validate the whole configuration
     private static final int ONE_HUNDRED_GIBIBYTE = 100 * 1024;
     /**
      * The desired backup type which should be used when the job is executed.
@@ -87,6 +89,7 @@ public class BackupJobConfiguration {
      * <br/><br/>
      * NOTE: Using 0 means that the archive won't be chunked.
      */
+    @Positive
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @JsonProperty("chunk_size_mebibyte")
@@ -98,6 +101,7 @@ public class BackupJobConfiguration {
      * increments cannot use a different duplicate handling strategy.
      */
     @NonNull
+    @FileNamePrefix
     @JsonProperty("file_name_prefix")
     private final String fileNamePrefix;
     /**
@@ -112,6 +116,8 @@ public class BackupJobConfiguration {
     /**
      * The source files we want to archive.
      */
+    @Valid
+    @Size(min = 1)
     @NonNull
     @EqualsAndHashCode.Exclude
     @JsonProperty("sources")

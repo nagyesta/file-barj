@@ -1,7 +1,10 @@
 [versions]
 slf4j = "2.0.13"
 logback = "1.5.6"
-#hibernateValidator = "8.0.1.Final"
+jakartaValidationApi = "3.1.0"
+jakartaElApi = "6.0.0"
+hibernateValidator = "8.0.1.Final"
+expressly = "5.0.0"
 bouncycastle = "1.78.1"
 commonsCodec = "1.17.0"
 commonsCompress = "1.26.2"
@@ -34,7 +37,10 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrainsAnnotations" }
 
-#hibernate-validator = { module = "org.hibernate:hibernate-validator", version.ref = "hibernateValidator" }
+jakarta-el-api = { module = "jakarta.el:jakarta.el-api", version.ref = "jakartaElApi" }
+jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakartaValidationApi" }
+hibernate-validator = { module = "org.hibernate:hibernate-validator", version.ref = "hibernateValidator" }
+expressly = { module = "org.glassfish.expressly:expressly", version.ref = "expressly" }
 
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 
@@ -59,6 +65,7 @@ jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-da
 
 [bundles]
 logback = ["logback-classic", "logback-core"]
+validation = ["jakarta-el-api", "jakarta-validation-api", "hibernate-validator", "expressly"]
 jackson = ["jackson-core", "jackson-annotations", "jackson-databind", "jackson-dataformat-xml"]
 
 [plugins]

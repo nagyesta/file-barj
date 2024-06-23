@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import org.apache.commons.io.FilenameUtils;
@@ -31,6 +32,7 @@ public final class BackupPath implements Comparable<BackupPath> {
     private static final Pattern UNIX_FILE_SCHEME = Pattern
             .compile("^" + FILE_SCHEME_DOUBLE_SLASH + "(?<" + PATH_GROUP + ">/[^:]*)$");
     private static final Set<Pattern> PATTERNS = Set.of(WINDOWS_FILE_SCHEME, UNIX_FILE_SCHEME);
+    @NotBlank
     private final String path;
 
     /**

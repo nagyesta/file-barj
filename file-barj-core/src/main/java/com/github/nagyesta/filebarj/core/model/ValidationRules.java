@@ -19,10 +19,4 @@ public interface ValidationRules {
     interface Persisted extends ValidationRules {
     }
 
-    /**
-     * Defines the rule set used for configurations and related entities as they are expected to be
-     * ready for the restore to start.
-     */
-    interface ReadyForRestore extends ValidationRules {
-    }
 }

@@ -57,7 +57,6 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
         return filesFromManifests.get(filesFromManifests.lastKey()).containsKey(fileMetadata.getId());
     }
 
-    @SuppressWarnings("checkstyle:TodoComment")
     @Nullable
     @Override
     public FileMetadata findMostRelevantPreviousVersion(

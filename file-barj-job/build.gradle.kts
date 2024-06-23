@@ -18,6 +18,7 @@ dependencies {
     implementation(project(":file-barj-core"))
     implementation(libs.bundles.jackson)
     implementation(libs.bundles.logback)
+    implementation(libs.bundles.validation)
     implementation(libs.commons.io)
     implementation(libs.commons.cli)
     implementation(libs.bouncycastle.bcpkix)
@@ -62,6 +63,7 @@ licensee {
     allow("Apache-2.0")
     allow("LGPL-2.1-only")
     allow("BSD-2-Clause")
+    allow("GPL-2.0-with-classpath-exception")
     allowUrl("https://www.bouncycastle.org/licence.html")
 }
 

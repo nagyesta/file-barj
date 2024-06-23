@@ -3,6 +3,9 @@ package com.github.nagyesta.filebarj.core.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
@@ -41,9 +44,11 @@ public class EncryptionKeyStore {
      * by 1. A manifest can contain more numbers if the backup increments were merged (consolidated)
      * into a single archive.
      */
+    @Valid
+    @Size(min = 1)
     @NonNull
     @JsonProperty("backup_versions")
-    private SortedSet<Integer> versions;
+    private SortedSet<@PositiveOrZero Integer> versions;
     /**
      * The byte arrays containing the data encryption keys (DEK) encrypted with the key encryption
      * key (KEK).
