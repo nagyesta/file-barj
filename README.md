@@ -6,6 +6,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.nagyesta.file-barj/file-barj-job?logo=apache-maven&color=blue)](https://search.maven.org/search?q=com.github.nagyesta.file-barj)
 [![JavaCI](https://img.shields.io/github/actions/workflow/status/nagyesta/file-barj/gradle.yml?logo=github&branch=main)](https://github.com/nagyesta/file-barj/actions/workflows/gradle.yml)
 
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/9260/badge)](https://bestpractices.coreinfrastructure.org/projects/9260)
 [![code-climate-maintainability](https://img.shields.io/codeclimate/maintainability/nagyesta/file-barj?logo=code%20climate)](https://img.shields.io/codeclimate/maintainability/nagyesta/file-barj?logo=code%20climate)
 [![code-climate-tech-debt](https://img.shields.io/codeclimate/tech-debt/nagyesta/file-barj?logo=code%20climate)](https://img.shields.io/codeclimate/tech-debt/nagyesta/file-barj?logo=code%20climate)
 [![last_commit](https://img.shields.io/github/last-commit/nagyesta/file-barj?logo=git)](https://img.shields.io/github/last-commit/nagyesta/file-barj?logo=git)
