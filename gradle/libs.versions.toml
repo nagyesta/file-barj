@@ -13,7 +13,7 @@ commonsCli = "1.8.0"
 commonsIo = "2.16.1"
 mockitoCore = "5.12.0"
 jupiter = "5.11.0"
-abortMission = "5.0.185"
+abortMission = "5.0.198"
 checkstyle = "10.12.2"
 jacoco = "0.8.10"
 jacksonBom = { strictly = "2.17.2" }
