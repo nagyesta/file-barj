@@ -44,8 +44,7 @@ public enum OperatingSystem {
      * @param name the OS name
      * @return the matching constant or UNKNOWN
      */
-    @NotNull
-    public static OperatingSystem forOsName(@Nullable final String name) {
+    public static @NotNull OperatingSystem forOsName(final @Nullable String name) {
         final var osName = Optional.ofNullable(name)
                 .map(String::toLowerCase)
                 .orElse("unknown");

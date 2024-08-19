@@ -12,6 +12,7 @@ import com.github.nagyesta.filebarj.core.model.ArchiveEntryLocator;
 import com.github.nagyesta.filebarj.core.model.ArchivedFileMetadata;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
     @Test
     void testMergeForRestoreShouldKeepLatestFileSetWhenCalledWithValidIncrementalData() throws IOException, InterruptedException {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var source = testDataRoot.resolve("source");
         final var config = BackupJobConfiguration.builder()

@@ -23,8 +23,8 @@ public class FileMetadataSetterFactory {
      * @return a metadata setter
      */
     public static FileMetadataSetter newInstance(
-            @NotNull final RestoreTargets restoreTargets,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+            final @NotNull RestoreTargets restoreTargets,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         return newInstance(restoreTargets, OsUtil.isWindows(), permissionStrategy);
     }
 
@@ -37,10 +37,9 @@ public class FileMetadataSetterFactory {
      * @param permissionStrategy the permission comparison strategy
      * @return a metadata setter
      */
-    @NotNull
-    static PosixFileMetadataSetter newInstance(
-            @NonNull final RestoreTargets restoreTargets, final boolean isWindows,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+    static @NotNull PosixFileMetadataSetter newInstance(
+            final @NonNull RestoreTargets restoreTargets, final boolean isWindows,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         if (isWindows) {
             return new WindowsFileMetadataSetter(restoreTargets, permissionStrategy);
         }

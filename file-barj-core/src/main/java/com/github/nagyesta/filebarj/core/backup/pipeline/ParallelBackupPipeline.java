@@ -33,14 +33,13 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
      * @param threadCount The number of threads
      * @throws IOException When the stream cannot be created due to an I/O error
      */
-    public ParallelBackupPipeline(@NotNull final BackupIncrementManifest manifest,
+    public ParallelBackupPipeline(final @NotNull BackupIncrementManifest manifest,
                                   final int threadCount) throws IOException {
         super(manifest, convert(manifest, threadCount));
     }
 
-    @NonNull
-    private static ParallelBarjCargoArchiverFileOutputStream convert(
-            @NonNull final BackupIncrementManifest manifest, final int threadCount) throws IOException {
+    private static @NonNull ParallelBarjCargoArchiverFileOutputStream convert(
+            final @NonNull BackupIncrementManifest manifest, final int threadCount) throws IOException {
         return new ParallelBarjCargoArchiverFileOutputStream(
                 BarjCargoOutputStreamConfiguration.builder()
                         .folder(manifest.getConfiguration().getDestinationDirectory())
@@ -60,7 +59,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
      * @throws ArchivalException When the file cannot be archived due to an I/O error from the stream
      */
     public List<ArchivedFileMetadata> storeEntries(
-            @NonNull final List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
+            final @NonNull List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
         final var fileCount = groupedFileMetadataList.stream().filter(Objects::nonNull).mapToInt(List::size).sum();
         final var entryCount = groupedFileMetadataList.size();
         log.info("Storing the file content of {} entries ({} files) in parallel", entryCount, fileCount);
@@ -79,6 +78,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
                                 warnIfHashDoesNotMatch(duplicate, archived);
                                 duplicate.setArchiveMetadataId(archived.getId());
                                 archived.getFiles().add(duplicate.getId());
+                                reportProgress(duplicate);
                             });
                             return archived;
                         });
@@ -118,6 +118,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
             warnIfHashDoesNotMatch(fileMetadata, archivedFileMetadata);
             //commit
             fileMetadata.setArchiveMetadataId(archivedFileMetadata.getId());
+            reportProgress(fileMetadata);
             return archivedFileMetadata;
         });
     }

@@ -31,74 +31,64 @@ public class BackupIncrementManifest extends EncryptionKeyStore {
     /**
      * The version number of the app that generated the manifest.
      */
-    @Valid
-    @NonNull
     @JsonProperty("app_version")
-    private AppVersion appVersion;
+    private @Valid
+    @NonNull AppVersion appVersion;
     /**
      * The time when the backup process was started in UTC epoch
      * seconds.
      */
-    @Positive
     @PastOrPresentEpochSeconds
     @JsonProperty("start_time_utc_epoch_seconds")
-    private long startTimeUtcEpochSeconds;
+    private @Positive long startTimeUtcEpochSeconds;
     /**
      * The file name prefix used by the backup archives.
      */
-    @NonNull
     @FileNamePrefix
     @JsonProperty("file_name_prefix")
-    private String fileNamePrefix;
+    private @NonNull String fileNamePrefix;
     /**
      * The type of the backup.
      */
-    @NonNull
     @JsonProperty("backup_type")
-    private BackupType backupType;
+    private @NonNull BackupType backupType;
     /**
      * The OS of the backup.
      */
-    @NotNull(groups = ValidationRules.Created.class)
-    @NotBlank(groups = ValidationRules.Created.class)
     @JsonProperty("operating_system")
-    private String operatingSystem;
+    private @NotNull(groups = ValidationRules.Created.class)
+    @NotBlank(groups = ValidationRules.Created.class) String operatingSystem;
     /**
      * The snapshot of the backup configuration at the time of backup.
      */
-    @Valid
-    @NonNull
     @JsonProperty("job_configuration")
-    private BackupJobConfiguration configuration;
+    private @Valid
+    @NonNull BackupJobConfiguration configuration;
     /**
      * The map of matching files identified during backup keyed by Id.
      */
-    @Valid
-    @Size(max = 0, groups = ValidationRules.Created.class)
-    @Size(min = 1, groups = ValidationRules.Persisted.class)
     @JsonProperty("files")
-    private Map<UUID, FileMetadata> files;
+    private @Valid
+    @Size(max = 0, groups = ValidationRules.Created.class)
+    @Size(min = 1, groups = ValidationRules.Persisted.class) Map<UUID, FileMetadata> files;
     /**
      * The map of archive entries saved during backup keyed by Id.
      */
-    @Valid
-    @Size(max = 0, groups = ValidationRules.Created.class)
     @JsonProperty("archive_entries")
-    private Map<UUID, ArchivedFileMetadata> archivedEntries;
+    private @Valid
+    @Size(max = 0, groups = ValidationRules.Created.class) Map<UUID, ArchivedFileMetadata> archivedEntries;
     /**
      * The name of the index file.
      */
-    @Null(groups = ValidationRules.Created.class)
-    @NotNull(groups = ValidationRules.Persisted.class)
-    @NotBlank(groups = ValidationRules.Persisted.class)
     @JsonProperty("index_file_name")
-    private String indexFileName;
+    private @Null(groups = ValidationRules.Created.class)
+    @NotNull(groups = ValidationRules.Persisted.class)
+    @NotBlank(groups = ValidationRules.Persisted.class) String indexFileName;
     /**
      * The names of the data files.
      */
-    @Null(groups = ValidationRules.Created.class)
-    @NotNull(groups = ValidationRules.Persisted.class)
-    @Size(min = 1, groups = ValidationRules.Persisted.class)
     @JsonProperty("data_file_names")
-    private List<String> dataFileNames;
+    private @Null(groups = ValidationRules.Created.class)
+    @NotNull(groups = ValidationRules.Persisted.class)
+    @Size(min = 1, groups = ValidationRules.Persisted.class) List<String> dataFileNames;
 }

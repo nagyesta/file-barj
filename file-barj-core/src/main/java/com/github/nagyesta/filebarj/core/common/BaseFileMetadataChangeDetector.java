@@ -29,8 +29,8 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
      * @param permissionStrategy The permission comparison strategy
      */
     protected BaseFileMetadataChangeDetector(
-            @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+            final @NotNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         this.filesFromManifests = new TreeMap<>(filesFromManifests);
         final SortedMap<String, Map<T, List<FileMetadata>>> contentIndex = new TreeMap<>();
         final Map<String, FileMetadata> nameIndex = new TreeMap<>();
@@ -42,8 +42,8 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
 
     @Override
     public boolean hasMetadataChanged(
-            @NonNull final FileMetadata previousMetadata,
-            @NonNull final FileMetadata currentMetadata) {
+            final @NonNull FileMetadata previousMetadata,
+            final @NonNull FileMetadata currentMetadata) {
         final var permissionsChanged = !permissionComparisonStrategy.matches(previousMetadata, currentMetadata);
         final var hiddenStatusChanged = currentMetadata.getHidden() != previousMetadata.getHidden();
         final var timesChanged = currentMetadata.getFileType() != FileType.SYMBOLIC_LINK
@@ -53,14 +53,13 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
 
     @Override
     public boolean isFromLastIncrement(
-            @NonNull final FileMetadata fileMetadata) {
+            final @NonNull FileMetadata fileMetadata) {
         return filesFromManifests.get(filesFromManifests.lastKey()).containsKey(fileMetadata.getId());
     }
 
-    @Nullable
     @Override
-    public FileMetadata findMostRelevantPreviousVersion(
-            @NonNull final FileMetadata currentMetadata) {
+    public @Nullable FileMetadata findMostRelevantPreviousVersion(
+            final @NonNull FileMetadata currentMetadata) {
         final var increments = filesFromManifests.keySet().stream().sorted(Comparator.reverseOrder()).toList();
         final var previousSamePath = nameIndex.getOrDefault(currentMetadata.getAbsolutePath().toString(), null);
         if (previousSamePath != null && !hasContentChanged(previousSamePath, currentMetadata)) {
@@ -82,18 +81,16 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
         return previousSamePath;
     }
 
-    @Nullable
     @Override
-    public FileMetadata findPreviousVersionByAbsolutePath(
-            @NonNull final BackupPath absolutePath) {
+    public @Nullable FileMetadata findPreviousVersionByAbsolutePath(
+            final @NonNull BackupPath absolutePath) {
         return nameIndex.get(absolutePath.toString());
     }
 
-    @NotNull
     @Override
-    public Change classifyChange(
-            @NonNull final FileMetadata previousMetadata,
-            @NonNull final FileMetadata currentMetadata) {
+    public @NotNull Change classifyChange(
+            final @NonNull FileMetadata previousMetadata,
+            final @NonNull FileMetadata currentMetadata) {
         if (currentMetadata.getFileType() == FileType.MISSING) {
             return Change.DELETED;
         } else if (previousMetadata.getFileType() == FileType.MISSING) {
@@ -118,9 +115,9 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     protected abstract T getPrimaryContentCriteria(@NotNull FileMetadata metadata);
 
     private void index(
-            @NotNull final SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests,
-            @NotNull final SortedMap<String, Map<T, List<FileMetadata>>> contentIndexMap,
-            @NotNull final Map<String, FileMetadata> nameIndexMap) {
+            final @NotNull SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @NotNull SortedMap<String, Map<T, List<FileMetadata>>> contentIndexMap,
+            final @NotNull Map<String, FileMetadata> nameIndexMap) {
         filesFromManifests.forEach((increment, files) -> {
             files.forEach((uuid, metadata) -> contentIndexMap.computeIfAbsent(increment, k -> new HashMap<>())
                     .computeIfAbsent(getPrimaryContentCriteria(metadata), k -> new ArrayList<>())

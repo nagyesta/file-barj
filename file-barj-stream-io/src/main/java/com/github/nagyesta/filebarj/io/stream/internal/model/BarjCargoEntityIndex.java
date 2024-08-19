@@ -28,14 +28,11 @@ public class BarjCargoEntityIndex implements BarjCargoBoundarySource {
     private static final String CONTENT = ".content";
     private static final String METADATA = ".metadata";
 
-    @NonNull
-    private final String path;
-    @NonNull
-    private final FileType fileType;
+    private final @NonNull String path;
+    private final @NonNull FileType fileType;
     private final boolean encrypted;
     private final BarjCargoEntryBoundaries content;
-    @NonNull
-    private final BarjCargoEntryBoundaries metadata;
+    private final @NonNull BarjCargoEntryBoundaries metadata;
 
     /**
      * Returns the first relevant boundaries from the content or metadata part of the entity.

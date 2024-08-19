@@ -46,8 +46,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @throws IOException If we cannot create the folder or write to it.
      */
     public ParallelBarjCargoArchiverFileOutputStream(
-            @NotNull final BarjCargoOutputStreamConfiguration config, final int threads)
-            throws IOException {
+            final @NotNull BarjCargoOutputStreamConfiguration config,
+            final int threads) throws IOException {
         super(config);
         this.tempFileConfig = BarjCargoOutputStreamConfiguration.builder()
                 .folder(config.getFolder().resolve(TEMP_DIR_NAME))
@@ -68,8 +68,9 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @return An object with the entity boundaries
      */
     public CompletableFuture<BarjCargoBoundarySource> addFileEntityAsync(
-            @NotNull final String path, @NotNull final InputStream contentStream,
-            @Nullable final SecretKey encryptionKey) {
+            final @NotNull String path,
+            final @NotNull InputStream contentStream,
+            final @Nullable SecretKey encryptionKey) {
         return addFileEntityAsync(path, contentStream, encryptionKey, null);
     }
 
@@ -83,8 +84,10 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @return An object with the entity boundaries
      */
     public CompletableFuture<BarjCargoBoundarySource> addFileEntityAsync(
-            @NotNull final String path, @NonNull final InputStream contentStream,
-            @Nullable final SecretKey encryptionKey, @Nullable final String metadata) {
+            final @NotNull String path,
+            final @NonNull InputStream contentStream,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) {
         normalizeAndValidateUniquePathForAsyncCalls(path, FileType.REGULAR_FILE);
         final var tempStream = new AtomicReference<TempBarjCargoArchiverFileOutputStream>();
         return CompletableFuture.supplyAsync(() -> {
@@ -110,8 +113,9 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @return An object with the entity boundaries
      */
     public CompletableFuture<BarjCargoBoundarySource> addSymbolicLinkEntityAsync(
-            @NotNull final String path, @NotNull final String linkTargetPath,
-            @Nullable final SecretKey encryptionKey) {
+            final @NotNull String path,
+            final @NotNull String linkTargetPath,
+            final @Nullable SecretKey encryptionKey) {
         return addSymbolicLinkEntityAsync(path, linkTargetPath, encryptionKey, null);
     }
 
@@ -125,8 +129,10 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @return An object with the entity boundaries
      */
     public CompletableFuture<BarjCargoBoundarySource> addSymbolicLinkEntityAsync(
-            @NotNull final String path, @NonNull final String linkTargetPath,
-            @Nullable final SecretKey encryptionKey, @Nullable final String metadata) {
+            final @NotNull String path,
+            final @NonNull String linkTargetPath,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) {
         normalizeAndValidateUniquePathForAsyncCalls(path, FileType.SYMBOLIC_LINK);
         final var tempStream = new AtomicReference<TempBarjCargoArchiverFileOutputStream>();
         return CompletableFuture.supplyAsync(() -> {
@@ -151,7 +157,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @return An object with the entity boundaries
      */
     public CompletableFuture<BarjCargoBoundarySource> addDirectoryEntityAsync(
-            @NotNull final String path, @Nullable final SecretKey encryptionKey) {
+            final @NotNull String path,
+            final @Nullable SecretKey encryptionKey) {
         return addDirectoryEntityAsync(path, encryptionKey, null);
     }
 
@@ -164,8 +171,9 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @return An object with the entity boundaries
      */
     public CompletableFuture<BarjCargoBoundarySource> addDirectoryEntityAsync(
-            @NotNull final String path, @Nullable final SecretKey encryptionKey,
-            @Nullable final String metadata) {
+            final @NotNull String path,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) {
         normalizeAndValidateUniquePathForAsyncCalls(path, FileType.DIRECTORY);
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -185,8 +193,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @return The boundary of the entity
      */
     public CompletableFuture<BarjCargoBoundarySource> mergeEntityAsync(
-            @NonNull final BarjCargoBoundarySource boundaryMetadata,
-            @NonNull final InputStream contentAndMetadataStream) {
+            final @NonNull BarjCargoBoundarySource boundaryMetadata,
+            final @NonNull InputStream contentAndMetadataStream) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return super.mergeEntity(boundaryMetadata, contentAndMetadataStream);
@@ -198,8 +206,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource addFileEntity(
-            @NotNull final String path, @NotNull final InputStream contentStream,
-            @Nullable final SecretKey encryptionKey)
+            final @NotNull String path, final @NotNull InputStream contentStream,
+            final @Nullable SecretKey encryptionKey)
             throws IOException {
         try {
             return this.addFileEntityAsync(path, contentStream, encryptionKey).join();
@@ -211,9 +219,10 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource addFileEntity(
-            @NotNull final String path, @NotNull final InputStream contentStream,
-            @Nullable final SecretKey encryptionKey, @Nullable final String metadata)
-            throws IOException {
+            final @NotNull String path,
+            final @NotNull InputStream contentStream,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) throws IOException {
         try {
             return this.addFileEntityAsync(path, contentStream, encryptionKey, metadata).join();
         } catch (final CompletionException ex) {
@@ -224,9 +233,9 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource addSymbolicLinkEntity(
-            @NotNull final String path, @NotNull final String linkTargetPath,
-            @Nullable final SecretKey encryptionKey)
-            throws IOException {
+            final @NotNull String path,
+            final @NotNull String linkTargetPath,
+            final @Nullable SecretKey encryptionKey) throws IOException {
         try {
             return this.addSymbolicLinkEntityAsync(path, linkTargetPath, encryptionKey).join();
         } catch (final CompletionException ex) {
@@ -237,9 +246,10 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource addSymbolicLinkEntity(
-            @NotNull final String path, @NotNull final String linkTargetPath,
-            @Nullable final SecretKey encryptionKey, @Nullable final String metadata)
-            throws IOException {
+            final @NotNull String path,
+            final @NotNull String linkTargetPath,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) throws IOException {
         try {
             return this.addSymbolicLinkEntityAsync(path, linkTargetPath, encryptionKey, metadata).join();
         } catch (final CompletionException ex) {
@@ -250,8 +260,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource addDirectoryEntity(
-            @NotNull final String path,
-            @Nullable final SecretKey encryptionKey) throws IOException {
+            final @NotNull String path,
+            final @Nullable SecretKey encryptionKey) throws IOException {
         try {
             return this.addDirectoryEntityAsync(path, encryptionKey).join();
         } catch (final CompletionException ex) {
@@ -262,9 +272,9 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource addDirectoryEntity(
-            @NotNull final String path,
-            @Nullable final SecretKey encryptionKey,
-            @Nullable final String metadata) throws IOException {
+            final @NotNull String path,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) throws IOException {
         try {
             return this.addDirectoryEntityAsync(path, encryptionKey, metadata).join();
         } catch (final CompletionException ex) {
@@ -275,8 +285,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource mergeEntity(
-            @NotNull final BarjCargoBoundarySource boundaryMetadata,
-            @NotNull final InputStream contentAndMetadataStream) throws IOException {
+            final @NotNull BarjCargoBoundarySource boundaryMetadata,
+            final @NotNull InputStream contentAndMetadataStream) throws IOException {
         try {
             return this.mergeEntityAsync(boundaryMetadata, contentAndMetadataStream).join();
         } catch (final CompletionException ex) {
@@ -294,7 +304,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
     }
 
     private void normalizeAndValidateUniquePathForAsyncCalls(
-            @NotNull final String path, @NotNull final FileType fileType) {
+            final @NotNull String path,
+            final @NotNull FileType fileType) {
         final var entityPath = normalizeEntityPath(path);
         assertEntityNameIsValidAndUnique(asyncEntityPaths, entityPath, fileType);
     }
@@ -309,9 +320,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
         }
     }
 
-    @NotNull
-    private Function<BarjCargoBoundarySource, BarjCargoBoundarySource> mergeEntityFromTempStreamAsync(
-            @NotNull final AtomicReference<TempBarjCargoArchiverFileOutputStream> tempStream) {
+    private @NotNull Function<BarjCargoBoundarySource, BarjCargoBoundarySource> mergeEntityFromTempStreamAsync(
+            final @NotNull AtomicReference<TempBarjCargoArchiverFileOutputStream> tempStream) {
         return entity -> {
             try {
                 final var stream = tempStream.get();
@@ -338,8 +348,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
     }
 
     private void autoCreateDirectories(
-            @NotNull final String path,
-            @NotNull final BaseBarjCargoArchiverFileOutputStream stream) throws IOException {
+            final @NotNull String path,
+            final @NotNull BaseBarjCargoArchiverFileOutputStream stream) throws IOException {
         final var normalizedPath = normalizeEntityPath(path);
         if (normalizedPath != null) {
             final var tokens = normalizedPath.split(SLASH);

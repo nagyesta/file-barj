@@ -21,15 +21,15 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
      * @param permissionStrategy The permission comparison strategy
      */
     protected SimpleFileMetadataChangeDetector(
-            @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+            final @NotNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         super(filesFromManifests, permissionStrategy);
     }
 
     @Override
     public boolean hasContentChanged(
-            @NonNull final FileMetadata previousMetadata,
-            @NonNull final FileMetadata currentMetadata) {
+            final @NonNull FileMetadata previousMetadata,
+            final @NonNull FileMetadata currentMetadata) {
         final var isContentSource = previousMetadata.getFileType().isContentSource() || currentMetadata.getFileType().isContentSource();
         final var hasContentChanged = !Objects.equals(previousMetadata.getFileType(), currentMetadata.getFileType())
                 || !Objects.equals(previousMetadata.getOriginalSizeBytes(), currentMetadata.getOriginalSizeBytes())
@@ -39,12 +39,11 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
     }
 
     @Override
-    protected Long getPrimaryContentCriteria(@NotNull final FileMetadata metadata) {
+    protected Long getPrimaryContentCriteria(final @NotNull FileMetadata metadata) {
         return metadata.getOriginalSizeBytes();
     }
 
-    @NotNull
-    private static String getFileName(@NotNull final FileMetadata fileMetadata) {
+    private static @NotNull String getFileName(final @NotNull FileMetadata fileMetadata) {
         return fileMetadata.getAbsolutePath().getFileName();
     }
 }

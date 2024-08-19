@@ -33,10 +33,8 @@ public class BarjCargoEntryBoundaries {
 
     private final long chunkRelativeStartIndexInclusive;
     private final long chunkRelativeEndIndexExclusive;
-    @NonNull
-    private final String startChunkName;
-    @NonNull
-    private final String endChunkName;
+    private final @NonNull String startChunkName;
+    private final @NonNull String endChunkName;
     private final long absoluteStartIndexInclusive;
     private final long absoluteEndIndexExclusive;
     private final String originalHash;

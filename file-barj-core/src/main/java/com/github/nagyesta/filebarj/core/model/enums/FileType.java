@@ -74,7 +74,7 @@ public enum FileType {
      * @return The file type.
      */
     public static FileType findForAttributes(
-            @NonNull final BasicFileAttributes attributes) {
+            final @NonNull BasicFileAttributes attributes) {
         return Arrays.stream(values())
                 .filter(f -> f.test.test(attributes))
                 .findFirst()

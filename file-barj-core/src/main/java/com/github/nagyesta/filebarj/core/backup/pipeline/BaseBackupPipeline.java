@@ -6,9 +6,13 @@ import com.github.nagyesta.filebarj.core.model.ArchivedFileMetadata;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
+import com.github.nagyesta.filebarj.core.progress.ProgressStep;
+import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoBoundarySource;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
@@ -28,6 +32,8 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
 
     private final BackupIncrementManifest manifest;
     private final T outputStream;
+    @Setter
+    private @NonNull ProgressTracker progressTracker = new NoOpProgressTracker();
 
     /**
      * Creates a new instance for the manifest that must be used for the backup.
@@ -36,8 +42,8 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
      * @param outputStream The stream to write to
      */
     protected BaseBackupPipeline(
-            @NotNull final BackupIncrementManifest manifest,
-            @NotNull final T outputStream) {
+            final @NotNull BackupIncrementManifest manifest,
+            final @NotNull T outputStream) {
         this.manifest = manifest;
         this.outputStream = outputStream;
         manifest.getVersions().forEach(version -> {
@@ -77,7 +83,7 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
      * @throws ArchivalException When the file cannot be archived due to an I/O error from the stream
      */
     public List<ArchivedFileMetadata> storeEntries(
-            @NonNull final List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
+            final @NonNull List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
         return groupedFileMetadataList.stream().map(fileMetadataList -> {
             if (fileMetadataList == null || fileMetadataList.isEmpty()) {
                 throw new IllegalArgumentException("File metadata list cannot be null or empty");
@@ -92,6 +98,7 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
                     warnIfHashDoesNotMatch(duplicate, archivedFileMetadata);
                     archivedFileMetadata.getFiles().add(duplicate.getId());
                     duplicate.setArchiveMetadataId(archivedFileMetadata.getId());
+                    reportProgress(duplicate);
                 });
                 return archivedFileMetadata;
             } catch (final Exception e) {
@@ -163,6 +170,7 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
         warnIfHashDoesNotMatch(fileMetadata, archivedFileMetadata);
         //commit
         fileMetadata.setArchiveMetadataId(archivedFileMetadata.getId());
+        reportProgress(fileMetadata);
     }
 
     /**
@@ -173,9 +181,15 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
      */
     protected void warnIfHashDoesNotMatch(final FileMetadata fileMetadata, final ArchivedFileMetadata archivedFileMetadata) {
         if (!Objects.equals(archivedFileMetadata.getOriginalHash(), fileMetadata.getOriginalHash())) {
-            log.warn("The hash changed between delta calculation and archival for: " + fileMetadata.getAbsolutePath()
-                    + " The archive might contain corrupt data for the file.");
+            log.warn("The hash changed between delta calculation and archival for: {} The archive might contain corrupt data for the file.",
+                    fileMetadata.getAbsolutePath());
             fileMetadata.setError("The hash changed between delta calculation and archival.");
+        }
+    }
+
+    protected void reportProgress(final FileMetadata fileMetadata) {
+        if (fileMetadata.getOriginalSizeBytes() > 0) {
+            progressTracker.recordProgressInSubSteps(ProgressStep.BACKUP, fileMetadata.getOriginalSizeBytes());
         }
     }
 

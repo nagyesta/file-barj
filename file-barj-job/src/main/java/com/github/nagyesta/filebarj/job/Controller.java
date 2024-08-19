@@ -2,14 +2,19 @@ package com.github.nagyesta.filebarj.job;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
+import com.github.nagyesta.filebarj.core.backup.pipeline.BackupParameters;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
 import com.github.nagyesta.filebarj.core.delete.IncrementDeletionController;
+import com.github.nagyesta.filebarj.core.delete.IncrementDeletionParameters;
 import com.github.nagyesta.filebarj.core.inspect.pipeline.IncrementInspectionController;
+import com.github.nagyesta.filebarj.core.inspect.pipeline.InspectParameters;
 import com.github.nagyesta.filebarj.core.merge.MergeController;
+import com.github.nagyesta.filebarj.core.merge.MergeParameters;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
+import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreParameters;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import com.github.nagyesta.filebarj.job.cli.*;
 import com.github.nagyesta.filebarj.job.util.KeyStoreUtil;
@@ -119,7 +124,12 @@ public class Controller {
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping inspect content operation...");
         final var pointInTimeEpochSeconds = properties.getPointInTimeEpochSeconds();
-        new IncrementInspectionController(properties.getBackupSource(), properties.getPrefix(), kek)
+        new IncrementInspectionController(
+                InspectParameters.builder()
+                        .backupDirectory(properties.getBackupSource())
+                        .fileNamePrefix(properties.getPrefix())
+                        .kek(kek)
+                        .build())
                 .inspectContent(pointInTimeEpochSeconds, properties.getOutputFile());
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
@@ -130,7 +140,12 @@ public class Controller {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping inspect increments operation...");
-        new IncrementInspectionController(properties.getBackupSource(), properties.getPrefix(), kek)
+        new IncrementInspectionController(
+                InspectParameters.builder()
+                        .backupDirectory(properties.getBackupSource())
+                        .fileNamePrefix(properties.getPrefix())
+                        .kek(kek)
+                        .build())
                 .inspectIncrements(System.out);
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
@@ -141,7 +156,12 @@ public class Controller {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping delete increments operation...");
-        new IncrementDeletionController(properties.getBackupSource(), properties.getPrefix(), kek)
+        new IncrementDeletionController(
+                IncrementDeletionParameters.builder()
+                        .backupDirectory(properties.getBackupSource())
+                        .fileNamePrefix(properties.getPrefix())
+                        .kek(kek)
+                        .build())
                 .deleteIncrementsUntilNextFullBackupAfter(properties.getAfterEpochSeconds());
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
@@ -175,7 +195,13 @@ public class Controller {
                 .includedPath(properties.getIncludedPath())
                 .permissionComparisonStrategy(properties.getPermissionComparisonStrategy())
                 .build();
-        new RestoreController(properties.getBackupSource(), properties.getPrefix(), kek, properties.getPointInTimeEpochSeconds())
+        new RestoreController(
+                RestoreParameters.builder()
+                        .backupDirectory(properties.getBackupSource())
+                        .fileNamePrefix(properties.getPrefix())
+                        .kek(kek)
+                        .atPointInTime(properties.getPointInTimeEpochSeconds())
+                        .build())
                 .execute(restoreTask);
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
@@ -186,8 +212,14 @@ public class Controller {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping merge operation...");
-        new MergeController(properties.getBackupSource(), properties.getPrefix(), kek,
-                properties.getFromTimeEpochSeconds(), properties.getToTimeEpochSeconds())
+        new MergeController(
+                MergeParameters.builder()
+                        .backupDirectory(properties.getBackupSource())
+                        .fileNamePrefix(properties.getPrefix())
+                        .kek(kek)
+                        .rangeStartEpochSeconds(properties.getFromTimeEpochSeconds())
+                        .rangeEndEpochSeconds(properties.getToTimeEpochSeconds())
+                        .build())
                 .execute(properties.isDeleteObsoleteFiles());
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
@@ -198,7 +230,11 @@ public class Controller {
         final var config = new ObjectMapper().reader().readValue(properties.getConfig().toFile(), BackupJobConfiguration.class);
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping backup operation...");
-        new BackupController(config, properties.isForceFullBackup())
+        new BackupController(
+                BackupParameters.builder()
+                        .job(config)
+                        .forceFull(properties.isForceFullBackup())
+                        .build())
                 .execute(properties.getThreads());
         final var endTimeMillis = System.currentTimeMillis();
         final var durationMillis = (endTimeMillis - startTimeMillis);
@@ -216,8 +252,7 @@ public class Controller {
                 .forEach(System.out::println);
     }
 
-    @Nullable
-    private PrivateKey getPrivateKey(final KeyStoreProperties keyProperties) {
+    private @Nullable PrivateKey getPrivateKey(final KeyStoreProperties keyProperties) {
         return Optional.ofNullable(keyProperties)
                 .map(keyStoreProperties -> KeyStoreUtil
                         .readPrivateKey(

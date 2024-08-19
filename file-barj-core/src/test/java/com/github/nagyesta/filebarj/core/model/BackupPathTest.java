@@ -111,7 +111,7 @@ class BackupPathTest extends TempFileAwareTest {
         //given
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> BackupPath.of((Path) null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> BackupPath.of(null));
 
         //then + exception
     }
@@ -135,7 +135,7 @@ class BackupPathTest extends TempFileAwareTest {
         //given
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> BackupPath.ofPathAsIs((String) null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> BackupPath.ofPathAsIs(null));
 
         //then + exception
     }

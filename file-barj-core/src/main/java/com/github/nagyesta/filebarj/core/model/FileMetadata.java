@@ -32,104 +32,88 @@ public class FileMetadata implements Comparable<FileMetadata> {
     /**
      * The unique Id of the file.
      */
-    @NonNull
     @JsonProperty("id")
-    private final UUID id;
-    @Nullable
+    private final @NonNull UUID id;
     @JsonProperty("file_system_key")
-    private final String fileSystemKey;
+    private final @Nullable String fileSystemKey;
     /**
      * The absolute path where the file is located.
      */
-    @Valid
-    @NonNull
     @JsonProperty("path")
-    private final BackupPath absolutePath;
+    private final @Valid
+    @NonNull BackupPath absolutePath;
     /**
      * The hash of the file content using the configured hash algorithm.
      * <br/>
      * {@link com.github.nagyesta.filebarj.core.config.BackupJobConfiguration#getHashAlgorithm()}
      */
-    @Nullable
     @JsonProperty("original_hash")
-    private final String originalHash;
+    private final @Nullable String originalHash;
     /**
      * The original file size.
      */
-    @NotNull
-    @PositiveOrZero
     @JsonProperty("original_size")
-    private Long originalSizeBytes;
+    private @NotNull
+    @PositiveOrZero Long originalSizeBytes;
     /**
      * The last modified time of the file using UTC epoch seconds.
      */
-    @NotNull
     @JsonProperty("last_modified_utc_epoch_seconds")
-    private Long lastModifiedUtcEpochSeconds;
+    private @NotNull Long lastModifiedUtcEpochSeconds;
     /**
      * The last access time of the file using UTC epoch seconds.
      */
-    @NotNull
     @JsonProperty("last_accessed_utc_epoch_seconds")
-    private Long lastAccessedUtcEpochSeconds;
+    private @NotNull Long lastAccessedUtcEpochSeconds;
     /**
      * The creation time of the file using UTC epoch seconds.
      */
-    @NotNull
     @JsonProperty("created_utc_epoch_seconds")
-    private Long createdUtcEpochSeconds;
+    private @NotNull Long createdUtcEpochSeconds;
     /**
      * The POSIX permissions of the file.
      */
-    @NotNull
-    @NotBlank
-    @Pattern(regexp = "^([r-][w-][x-]){3}$")
     @JsonProperty("permissions")
-    private final String posixPermissions;
+    private final @NotNull
+    @NotBlank
+    @Pattern(regexp = "^([r-][w-][x-]){3}$") String posixPermissions;
     /**
      * The owner of the file.
      */
-    @NotNull
-    @NotBlank
     @JsonProperty("owner")
-    private final String owner;
+    private final @NotNull
+    @NotBlank String owner;
     /**
      * The owner group of the file.
      */
-    @NotNull
-    @NotBlank
     @JsonProperty("group")
-    private final String group;
+    private final @NotNull
+    @NotBlank String group;
     /**
      * The file type (file/directory/symbolic link/other).
      */
-    @NonNull
     @JsonProperty("file_type")
-    private final FileType fileType;
+    private final @NonNull FileType fileType;
     /**
      * The hidden status of the file.
      */
-    @NotNull
     @JsonProperty("hidden")
-    private Boolean hidden;
+    private @NotNull Boolean hidden;
     /**
      * The detected change status of the file.
      */
-    @NonNull
     @JsonProperty("status")
-    private Change status;
+    private @NonNull Change status;
     /**
      * The Id of the archive metadata for the entity storing this file.
      */
-    @Nullable
     @JsonProperty("archive_metadata_id")
-    private UUID archiveMetadataId;
+    private @Nullable UUID archiveMetadataId;
     /**
      * An optional error message in case of blocker issues during backup.
      */
-    @Nullable
     @JsonProperty("error")
-    private String error;
+    private @Nullable String error;
 
     /**
      * Streams the content of the file. Verifies that the {@link #fileType} is supported by calling
@@ -158,7 +142,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
     }
 
     @Override
-    public int compareTo(@NonNull final FileMetadata o) {
+    public int compareTo(final @NonNull FileMetadata o) {
         return getAbsolutePath().compareTo(o.getAbsolutePath());
     }
 }

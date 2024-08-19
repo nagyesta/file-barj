@@ -25,16 +25,14 @@ public class ArchivedFileMetadata {
     /**
      * The unique Id of the metadata record.
      */
-    @NonNull
     @JsonProperty("id")
-    private final UUID id;
+    private final @NonNull UUID id;
     /**
      * The location where the archived file contents are stored.
      */
-    @Valid
-    @NonNull
     @JsonProperty("archive_location")
-    private final ArchiveEntryLocator archiveLocation;
+    private final @Valid
+    @NonNull ArchiveEntryLocator archiveLocation;
     /**
      * The hash of the archived content.
      */
@@ -49,10 +47,9 @@ public class ArchivedFileMetadata {
      * The Ids of the original files which are archived by the current entry. If multiple Ids are
      * listed, then duplicates where eliminated.
      */
-    @Size(min = 1)
-    @NonNull
     @JsonProperty("files")
-    private Set<UUID> files;
+    private @Size(min = 1)
+    @NonNull Set<UUID> files;
 
     /**
      * Copies the metadata except the Id and the files.

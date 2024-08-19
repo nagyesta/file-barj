@@ -19,8 +19,7 @@ public class RestoreTask {
     /**
      * Defines the target directories to restore files to.
      */
-    @NonNull
-    private final RestoreTargets restoreTargets;
+    private final @NonNull RestoreTargets restoreTargets;
     /**
      * The number of threads to use for parallel restore.
      */

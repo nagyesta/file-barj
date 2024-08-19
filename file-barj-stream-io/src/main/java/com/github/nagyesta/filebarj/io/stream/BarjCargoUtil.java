@@ -34,7 +34,7 @@ public final class BarjCargoUtil {
      * @return The chunk file name
      */
     public static String toChunkFileName(
-            @NonNull final String prefix, final int counter) {
+            final @NonNull String prefix, final int counter) {
         if (counter <= 0) {
             throw new IllegalArgumentException("Invalid counter: " + counter);
         }
@@ -48,7 +48,7 @@ public final class BarjCargoUtil {
      * @return The chunk file name
      */
     public static String toIndexFileName(
-            @NonNull final String prefix) {
+            final @NonNull String prefix) {
         return String.format("%s%s%s", prefix, INDEX, CARGO);
     }
 

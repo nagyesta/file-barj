@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
+import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
 import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.core.util.OsUtil;
 import jakarta.validation.Validation;
@@ -32,6 +33,8 @@ import java.util.stream.IntStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import static com.github.nagyesta.filebarj.core.progress.ProgressStep.LOAD_MANIFESTS;
+
 /**
  * Default implementation of {@link ManifestManager}.
  */
@@ -41,11 +44,17 @@ public class ManifestManagerImpl implements ManifestManager {
     private static final String MANIFEST_JSON_GZ = ".manifest.json.gz";
     private final ObjectMapper mapper = new ObjectMapper();
     private final Validator validator = createValidator();
+    private final ProgressTracker progressTracker;
+
+    public ManifestManagerImpl(final @NonNull ProgressTracker progressTracker) {
+        progressTracker.assertSupports(LOAD_MANIFESTS);
+        this.progressTracker = progressTracker;
+    }
 
     @Override
     public BackupIncrementManifest generateManifest(
-            @NonNull final BackupJobConfiguration jobConfiguration,
-            @NonNull final BackupType backupTypeOverride,
+            final @NonNull BackupJobConfiguration jobConfiguration,
+            final @NonNull BackupType backupTypeOverride,
             final int nextVersion) {
         final var startTimeEpochSecond = Instant.now().getEpochSecond();
         final var fileNamePrefix = jobConfiguration.getFileNamePrefix() + "-" + startTimeEpochSecond;
@@ -68,22 +77,22 @@ public class ManifestManagerImpl implements ManifestManager {
 
     @Override
     public void persist(
-            @NonNull final BackupIncrementManifest manifest) {
+            final @NonNull BackupIncrementManifest manifest) {
         final var backupDestination = manifest.getConfiguration().getDestinationDirectory();
         persist(manifest, backupDestination);
     }
 
     @Override
     public void persist(
-            @NonNull final BackupIncrementManifest manifest,
-            @NonNull final Path backupDestination) {
+            final @NonNull BackupIncrementManifest manifest,
+            final @NonNull Path backupDestination) {
         validate(manifest, ValidationRules.Persisted.class);
         doPersist(manifest, backupDestination.toFile());
     }
 
     private void doPersist(
-            @NotNull final BackupIncrementManifest manifest,
-            @NotNull final File backupDestination) {
+            final @NotNull BackupIncrementManifest manifest,
+            final @NotNull File backupDestination) {
         final var backupHistoryDir = new File(backupDestination, HISTORY_FOLDER);
         //noinspection ResultOfMethodCallIgnored
         backupHistoryDir.mkdirs();
@@ -112,9 +121,9 @@ public class ManifestManagerImpl implements ManifestManager {
 
     @Override
     public SortedMap<Integer, BackupIncrementManifest> load(
-            @NonNull final Path destinationDirectory,
-            @NonNull final String fileNamePrefix,
-            @Nullable final PrivateKey privateKey,
+            final @NonNull Path destinationDirectory,
+            final @NonNull String fileNamePrefix,
+            final @Nullable PrivateKey privateKey,
             final long latestBeforeEpochMillis) {
         try (var pathStream = Files.list(destinationDirectory)) {
             final var manifestFiles = pathStream
@@ -132,9 +141,9 @@ public class ManifestManagerImpl implements ManifestManager {
 
     @Override
     public SortedMap<Long, BackupIncrementManifest> loadAll(
-            @NonNull final Path destinationDirectory,
-            @NonNull final String fileNamePrefix,
-            @Nullable final PrivateKey privateKey) {
+            final @NonNull Path destinationDirectory,
+            final @NonNull String fileNamePrefix,
+            final @Nullable PrivateKey privateKey) {
         try (var pathStream = Files.list(destinationDirectory)) {
             final var manifestFiles = pathStream
                     .filter(path -> path.getFileName().toString().startsWith(fileNamePrefix))
@@ -149,7 +158,7 @@ public class ManifestManagerImpl implements ManifestManager {
 
     @Override
     public SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(
-            @NonNull final BackupJobConfiguration job) {
+            final @NonNull BackupJobConfiguration job) {
         final var historyFolder = job.getDestinationDirectory().resolve(HISTORY_FOLDER);
         if (!Files.exists(historyFolder)) {
             return Collections.emptySortedMap();
@@ -174,7 +183,7 @@ public class ManifestManagerImpl implements ManifestManager {
 
     @Override
     public RestoreManifest mergeForRestore(
-            @NonNull final SortedMap<Integer, BackupIncrementManifest> manifests) {
+            final @NonNull SortedMap<Integer, BackupIncrementManifest> manifests) {
         final var maximumAppVersion = findMaximumAppVersion(manifests);
         final var lastIncrementManifest = manifests.get(manifests.lastKey());
         final var maximumTimeStamp = lastIncrementManifest.getStartTimeUtcEpochSeconds();
@@ -205,8 +214,8 @@ public class ManifestManagerImpl implements ManifestManager {
 
     @Override
     public void validate(
-            @NonNull final BackupIncrementManifest manifest,
-            @NonNull final Class<? extends ValidationRules> forAction) {
+            final @NonNull BackupIncrementManifest manifest,
+            final @NonNull Class<? extends ValidationRules> forAction) {
 
         final var violations = validator.validate(manifest, forAction, Default.class);
         if (!violations.isEmpty()) {
@@ -220,8 +229,8 @@ public class ManifestManagerImpl implements ManifestManager {
 
     @Override
     public void deleteIncrement(
-            @NonNull final Path backupDirectory,
-            @NonNull final BackupIncrementManifest manifest) {
+            final @NonNull Path backupDirectory,
+            final @NonNull BackupIncrementManifest manifest) {
         final var fileNamePrefix = manifest.getFileNamePrefix();
         deleteManifestFromHistoryIfExists(backupDirectory, fileNamePrefix);
         deleteManifestAndArchiveFilesFromBackupDirectory(backupDirectory, fileNamePrefix);
@@ -233,12 +242,12 @@ public class ManifestManagerImpl implements ManifestManager {
         }
     }
 
-    @NotNull
-    private SortedMap<Integer, BackupIncrementManifest> loadManifests(
-            @NotNull final List<Path> manifestFiles,
-            @Nullable final PrivateKey privateKey,
+    private @NotNull SortedMap<Integer, BackupIncrementManifest> loadManifests(
+            final @NotNull List<Path> manifestFiles,
+            final @Nullable PrivateKey privateKey,
             final long latestBeforeEpochMillis) {
         final SortedMap<Integer, BackupIncrementManifest> manifests = new TreeMap<>();
+        progressTracker.estimateStepSubtotal(LOAD_MANIFESTS, manifestFiles.size());
         for (final var path : manifestFiles) {
             try (var fileStream = new FileInputStream(path.toFile());
                  var bufferedStream = new BufferedInputStream(fileStream);
@@ -258,15 +267,17 @@ public class ManifestManagerImpl implements ManifestManager {
             } catch (final Exception e) {
                 log.warn("Failed to load manifest file: {}", path, e);
             }
+            progressTracker.recordProgressInSubSteps(LOAD_MANIFESTS);
         }
+        progressTracker.completeStep(LOAD_MANIFESTS);
         return manifests;
     }
 
-    @NotNull
-    private SortedMap<Long, BackupIncrementManifest> loadAllManifests(
-            @NotNull final List<Path> manifestFiles,
-            @Nullable final PrivateKey privateKey) {
+    private @NotNull SortedMap<Long, BackupIncrementManifest> loadAllManifests(
+            final @NotNull List<Path> manifestFiles,
+            final @Nullable PrivateKey privateKey) {
         final SortedMap<Long, BackupIncrementManifest> manifests = new TreeMap<>();
+        progressTracker.estimateStepSubtotal(LOAD_MANIFESTS, manifestFiles.size());
         for (final var path : manifestFiles) {
             try (var fileStream = new FileInputStream(path.toFile());
                  var bufferedStream = new BufferedInputStream(fileStream);
@@ -277,6 +288,7 @@ public class ManifestManagerImpl implements ManifestManager {
                         .readValue(reader, BackupIncrementManifest.class);
                 validate(manifest, ValidationRules.Persisted.class);
                 manifests.put(manifest.getStartTimeUtcEpochSeconds(), manifest);
+                progressTracker.recordProgressInSubSteps(LOAD_MANIFESTS);
             } catch (final Exception e) {
                 log.warn("Failed to load manifest file: {}", path, e);
             }
@@ -284,6 +296,7 @@ public class ManifestManagerImpl implements ManifestManager {
         if (manifests.isEmpty()) {
             throw new ArchivalException("No manifests found.");
         }
+        progressTracker.completeStep(LOAD_MANIFESTS);
         return manifests;
     }
 
@@ -326,9 +339,8 @@ public class ManifestManagerImpl implements ManifestManager {
         });
     }
 
-    @NotNull
-    private Set<BackupPath> calculateRemainingFilesAndLinks(
-            @NotNull final BackupIncrementManifest lastIncrementManifest) {
+    private @NotNull Set<BackupPath> calculateRemainingFilesAndLinks(
+            final @NotNull BackupIncrementManifest lastIncrementManifest) {
         return lastIncrementManifest.getFiles().values().stream()
                 .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
                 .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
@@ -337,8 +349,8 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     private void addDirectoriesToFiles(
-            @NotNull final BackupIncrementManifest lastIncrementManifest,
-            @NotNull final Map<String, Map<UUID, FileMetadata>> files) {
+            final @NotNull BackupIncrementManifest lastIncrementManifest,
+            final @NotNull Map<String, Map<UUID, FileMetadata>> files) {
         lastIncrementManifest.getFiles().values().stream()
                 .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
                 .filter(fileMetadata -> !fileMetadata.getFileType().isContentSource())
@@ -346,26 +358,23 @@ public class ManifestManagerImpl implements ManifestManager {
                         .put(file.getId(), file));
     }
 
-    @NotNull
-    private AppVersion findMaximumAppVersion(
-            @NotNull final SortedMap<Integer, BackupIncrementManifest> manifests) {
+    private @NotNull AppVersion findMaximumAppVersion(
+            final @NotNull SortedMap<Integer, BackupIncrementManifest> manifests) {
         return manifests.values().stream()
                 .map(BackupIncrementManifest::getAppVersion)
                 .max(AppVersion::compareTo)
                 .orElse(new AppVersion());
     }
 
-    @NotNull
-    private SortedMap<String, SortedSet<Integer>> findAllFilenamePrefixes(
-            @NotNull final SortedMap<Integer, BackupIncrementManifest> manifests) {
+    private @NotNull SortedMap<String, SortedSet<Integer>> findAllFilenamePrefixes(
+            final @NotNull SortedMap<Integer, BackupIncrementManifest> manifests) {
         final var result = new TreeMap<String, SortedSet<Integer>>();
         manifests.values().forEach(manifest -> result.put(manifest.getFileNamePrefix(), manifest.getVersions()));
         return result;
     }
 
-    @NotNull
-    private SortedMap<Integer, Map<Integer, String>> mergeEncryptionKeys(
-            @NotNull final SortedMap<Integer, BackupIncrementManifest> manifests) {
+    private @NotNull SortedMap<Integer, Map<Integer, String>> mergeEncryptionKeys(
+            final @NotNull SortedMap<Integer, BackupIncrementManifest> manifests) {
         final var keys = new TreeMap<Integer, Map<Integer, String>>();
         manifests.values().stream()
                 .map(BackupIncrementManifest::getEncryptionKeys)
@@ -375,7 +384,7 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     private void deleteManifestAndArchiveFilesFromBackupDirectory(
-            @NotNull final Path backupDirectory, @NotNull final String fileNamePrefix) {
+            final @NotNull Path backupDirectory, final @NotNull String fileNamePrefix) {
         final var patterns = Set.of(
                 "^" + fileNamePrefix + "\\.[0-9]{5}\\.cargo$",
                 "^" + fileNamePrefix + "\\.manifest\\.cargo$",
@@ -402,7 +411,7 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     private void deleteManifestFromHistoryIfExists(
-            @NotNull final Path backupDirectory, @NotNull final String fileNamePrefix) {
+            final @NotNull Path backupDirectory, final @NotNull String fileNamePrefix) {
         final var fromHistory = backupDirectory.resolve(HISTORY_FOLDER)
                 .resolve(fileNamePrefix + MANIFEST_JSON_GZ);
         try {

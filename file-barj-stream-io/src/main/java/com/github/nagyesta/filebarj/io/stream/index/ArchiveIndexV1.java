@@ -24,7 +24,7 @@ public class ArchiveIndexV1 implements ReadOnlyArchiveIndex {
     private final long lastChunkSizeInBytes;
     private final long totalSize;
 
-    public ArchiveIndexV1(@NotNull final Properties properties) {
+    public ArchiveIndexV1(final @NotNull Properties properties) {
         this.properties = properties;
         this.indexVersion = IndexVersion.forVersionString(properties.getProperty(INDEX_VERSION));
         this.totalEntities = Long.parseLong(properties.getProperty(LAST_ENTITY_INDEX_PROPERTY));
@@ -35,7 +35,7 @@ public class ArchiveIndexV1 implements ReadOnlyArchiveIndex {
     }
 
     @Override
-    public BarjCargoEntityIndex entity(@NotNull final String prefix) {
+    public BarjCargoEntityIndex entity(final @NotNull String prefix) {
         return BarjCargoEntityIndex.fromProperties(properties, prefix);
     }
 }

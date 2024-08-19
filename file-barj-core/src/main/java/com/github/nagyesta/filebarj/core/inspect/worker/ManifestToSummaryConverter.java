@@ -36,8 +36,7 @@ public class ManifestToSummaryConverter {
                 + "\tCompression: " + manifest.getConfiguration().getCompression().name();
     }
 
-    @NotNull
-    private String getFormattedType(@NotNull final BackupIncrementManifest manifest) {
+    private @NotNull String getFormattedType(final @NotNull BackupIncrementManifest manifest) {
         if (manifest.getBackupType() == BackupType.INCREMENTAL) {
             return manifest.getBackupType().name();
         }

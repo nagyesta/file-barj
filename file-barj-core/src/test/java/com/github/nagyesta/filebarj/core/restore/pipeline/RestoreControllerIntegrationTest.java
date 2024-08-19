@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
+import com.github.nagyesta.filebarj.core.backup.pipeline.BackupParameters;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.*;
@@ -55,10 +56,15 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var configuration = getBackupJobConfiguration(BackupType.FULL, source, backup, null, HashAlgorithm.SHA256);
+        final var parameters = RestoreParameters.builder()
+                .backupDirectory(configuration.getDestinationDirectory())
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(null)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
 
         //when
-        Assertions.assertThrows(ArchivalException.class, () -> new RestoreController(
-                configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null));
+        Assertions.assertThrows(ArchivalException.class, () -> new RestoreController(parameters));
 
         //then + exception
     }
@@ -71,10 +77,19 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var configuration = getBackupJobConfiguration(BackupType.FULL, source, backup, null, HashAlgorithm.SHA256);
         FileUtils.copyFile(getExampleResource(), source.resolve("A.png").toFile());
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
-        final var underTest = new RestoreController(
-                configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(configuration.getDestinationDirectory())
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(null)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.execute(null));
@@ -90,11 +105,20 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var restore = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
         final var configuration = getBackupJobConfiguration(BackupType.FULL, source, backup, null, HashAlgorithm.SHA256);
         FileUtils.copyFile(getExampleResource(), source.resolve("A.png").toFile());
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
 
-        final var underTest = new RestoreController(
-                configuration.getDestinationDirectory(), configuration.getFileNamePrefix(), null);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(configuration.getDestinationDirectory())
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(null)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(backup), restore)));
 
         //when
@@ -137,13 +161,22 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
 
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
 
         Files.move(backupDir, movedBackupDir);
 
-        final var underTest = new RestoreController(
-                movedBackupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(movedBackupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
 
         //when
@@ -195,13 +228,22 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
 
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
 
         Files.move(backupDir, movedBackupDir);
 
-        final var underTest = new RestoreController(
-                movedBackupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(movedBackupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
         final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         final var restoredAPng = realRestorePath.resolve(aPng.getFileName().toString());
@@ -275,11 +317,20 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
 
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
 
-        final var underTest = new RestoreController(
-                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(backupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
         final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         Files.createDirectories(realRestorePath);
@@ -339,11 +390,20 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
 
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
 
-        final var underTest = new RestoreController(
-                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(backupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
         final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         Files.createDirectories(realRestorePath);
@@ -404,11 +464,20 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
 
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
 
-        final var underTest = new RestoreController(
-                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(backupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
         final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         Files.createDirectories(realRestorePath);
@@ -475,7 +544,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(originalLinkExternal, externalLinkTarget);
 
-        new BackupController(configuration, true).execute(1);
+        final var parameters1 = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        new BackupController(parameters1).execute(1);
 
         Files.delete(deleted);
         final var expectedChangedContent = "changed content";
@@ -492,10 +565,19 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
         final var fullBackupTime = Instant.now().getEpochSecond();
         Thread.sleep(A_SECOND);
-        new BackupController(configuration, false).execute(1);
+        final var parameters2 = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(false)
+                .build();
+        new BackupController(parameters2).execute(1);
         //create restore controller to read full backup increment
-        final var restoreFullBackup = new RestoreController(
-                backupDir, configuration.getFileNamePrefix(), decryptionKey, fullBackupTime);
+        final var restoreParameters1 = RestoreParameters.builder()
+                .backupDirectory(backupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(fullBackupTime)
+                .build();
+        final var restoreFullBackup = new RestoreController(restoreParameters1);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
         final var restoreTask = RestoreTask.builder()
                 .restoreTargets(restoreTargets)
@@ -509,8 +591,13 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Assertions.assertTrue(Files.exists(realRestorePath.resolve("folder/deleted.png")));
 
         //recreate restore controller to read new backup increment
-        final var underTest = new RestoreController(
-                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreParameters2 = RestoreParameters.builder()
+                .backupDirectory(backupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters2);
 
         //when
         underTest.execute(restoreTask);
@@ -564,11 +651,20 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
 
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
 
-        final var underTest = new RestoreController(
-                backupDir, configuration.getFileNamePrefix(), decryptionKey);
+        final var restoreParameters = RestoreParameters.builder()
+                .backupDirectory(backupDir)
+                .fileNamePrefix(configuration.getFileNamePrefix())
+                .kek(decryptionKey)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
+        final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
 
         //when

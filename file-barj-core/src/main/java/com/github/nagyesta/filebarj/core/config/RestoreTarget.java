@@ -20,7 +20,7 @@ public record RestoreTarget(BackupPath backupPath, Path restorePath) {
      * @param archivedFilePath the original path of a file which was archived during the backup
      * @return whether the given path matches the backup path
      */
-    public boolean matchesArchivedFile(@NonNull final BackupPath archivedFilePath) {
+    public boolean matchesArchivedFile(final @NonNull BackupPath archivedFilePath) {
         return archivedFilePath.equals(backupPath) || archivedFilePath.startsWith(backupPath);
     }
 
@@ -30,7 +30,7 @@ public record RestoreTarget(BackupPath backupPath, Path restorePath) {
      * @param filePath the original path
      * @return the mapped path where the file should be restored to
      */
-    public Path mapBackupPathToRestorePath(@NotNull final BackupPath filePath) {
+    public Path mapBackupPathToRestorePath(final @NotNull BackupPath filePath) {
         if (!matchesArchivedFile(filePath)) {
             throw new IllegalArgumentException("The given path is not a child of the backup path");
         }

@@ -31,34 +31,34 @@ public class DryRunRestorePipeline extends RestorePipeline {
      * @param restoreTargets  the mappings of the root paths where we would like to restore
      * @param kek             the key encryption key we would like to use to decrypt files
      */
-    public DryRunRestorePipeline(@NotNull final RestoreManifest manifest,
-                                 @NotNull final Path backupDirectory,
-                                 @NotNull final RestoreTargets restoreTargets,
-                                 @Nullable final PrivateKey kek) {
+    public DryRunRestorePipeline(final @NotNull RestoreManifest manifest,
+                                 final @NotNull Path backupDirectory,
+                                 final @NotNull RestoreTargets restoreTargets,
+                                 final @Nullable PrivateKey kek) {
         super(manifest, backupDirectory, restoreTargets, kek, null);
     }
 
     @Override
-    public void evaluateRestoreSuccess(@NotNull final List<FileMetadata> files, @NotNull final ForkJoinPool threadPool) {
+    public void evaluateRestoreSuccess(final @NotNull List<FileMetadata> files, final @NotNull ForkJoinPool threadPool) {
         //no-op
     }
 
     @Override
-    protected void setFileProperties(@NotNull final FileMetadata fileMetadata) {
+    protected void setFileProperties(final @NotNull FileMetadata fileMetadata) {
         log.info("> Set file properties for {}", getRestoreTargets().mapToRestorePath(fileMetadata.getAbsolutePath()));
     }
 
     @Override
     protected void createSymbolicLink(
-            @NotNull final Path linkTarget,
-            @NotNull final Path symbolicLink) throws IOException {
+            final @NotNull Path linkTarget,
+            final @NotNull Path symbolicLink) throws IOException {
         log.info("+ Create symbolic link {} -> {}", symbolicLink, linkTarget);
     }
 
     @Override
     protected void copyRestoredFileToRemainingLocations(
-            @NotNull final FileMetadata original,
-            @NotNull final List<FileMetadata> remainingCopies) {
+            final @NotNull FileMetadata original,
+            final @NotNull List<FileMetadata> remainingCopies) {
         final var unpackedPath = getRestoreTargets().mapToRestorePath(original.getAbsolutePath());
         remainingCopies.forEach(file -> {
             final var copy = getRestoreTargets().mapToRestorePath(file.getAbsolutePath());
@@ -72,7 +72,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
     }
 
     @Override
-    protected void createDirectory(@NotNull final Path path) throws IOException {
+    protected void createDirectory(final @NotNull Path path) throws IOException {
         if (!Files.exists(path)) {
             log.info("+ Create directory {}", path);
         }
@@ -80,8 +80,8 @@ public class DryRunRestorePipeline extends RestorePipeline {
 
     @Override
     protected void restoreFileContent(
-            @NotNull final InputStream content,
-            @NotNull final Path target) {
+            final @NotNull InputStream content,
+            final @NotNull Path target) {
         log.info("+ Create file {}", target);
         try {
             content.readAllBytes();
@@ -91,7 +91,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
     }
 
     @Override
-    protected void deleteIfExists(@NotNull final Path currentFile) {
+    protected void deleteIfExists(final @NotNull Path currentFile) {
         if (Files.exists(currentFile)) {
             if (Files.isDirectory(currentFile)) {
                 log.info("- Delete directory {}", currentFile);

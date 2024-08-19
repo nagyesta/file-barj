@@ -836,7 +836,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
         //given
         final var outConfig = getBarjCargoOutputStreamConfiguration(null, IoFunction.IDENTITY_OUTPUT_STREAM);
         try (var out = new BarjCargoArchiverFileOutputStream(outConfig)) {
-            out.addFileEntity("/" + UUID.randomUUID().toString(), new ByteArrayInputStream(RANDOM_DATA), null);
+            out.addFileEntity("/" + UUID.randomUUID(), new ByteArrayInputStream(RANDOM_DATA), null);
         }
 
         final var inConfig = getBarjCargoInputStreamConfiguration(null, IoFunction.IDENTITY_INPUT_STREAM);
@@ -853,7 +853,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
         //given
         final var outConfig = getBarjCargoOutputStreamConfiguration(SHA_256, GzipCompressorOutputStream::new);
         try (var out = new BarjCargoArchiverFileOutputStream(outConfig)) {
-            out.addFileEntity("/" + UUID.randomUUID().toString(), new ByteArrayInputStream(RANDOM_DATA), null);
+            out.addFileEntity("/" + UUID.randomUUID(), new ByteArrayInputStream(RANDOM_DATA), null);
         }
 
         final var inConfig = getBarjCargoInputStreamConfiguration(SHA_256, GzipCompressorInputStream::new);
@@ -871,7 +871,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
         //given
         final var outConfig = getBarjCargoOutputStreamConfiguration(SHA_256, GzipCompressorOutputStream::new);
         try (var out = new BarjCargoArchiverFileOutputStream(outConfig)) {
-            out.addFileEntity("/" + UUID.randomUUID().toString(), new ByteArrayInputStream(RANDOM_DATA), null);
+            out.addFileEntity("/" + UUID.randomUUID(), new ByteArrayInputStream(RANDOM_DATA), null);
             out.close();
             final var written = out.getDataFilesWritten();
             final var firstPath = written.get(0);
@@ -896,7 +896,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
         //given
         final var outConfig = getBarjCargoOutputStreamConfiguration(SHA_256, GzipCompressorOutputStream::new);
         try (var out = new BarjCargoArchiverFileOutputStream(outConfig)) {
-            out.addFileEntity("/" + UUID.randomUUID().toString(), new ByteArrayInputStream(RANDOM_DATA), null);
+            out.addFileEntity("/" + UUID.randomUUID(), new ByteArrayInputStream(RANDOM_DATA), null);
             out.write(1);
         }
 
@@ -914,7 +914,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
         //given
         final var outConfig = getBarjCargoOutputStreamConfiguration(SHA_256, GzipCompressorOutputStream::new);
         try (var out = new BarjCargoArchiverFileOutputStream(outConfig)) {
-            out.addFileEntity("/" + UUID.randomUUID().toString(), new ByteArrayInputStream(RANDOM_DATA), null);
+            out.addFileEntity("/" + UUID.randomUUID(), new ByteArrayInputStream(RANDOM_DATA), null);
             out.close();
             Assertions.assertTrue(out.getCurrentFilePath().toFile().delete());
         }
@@ -932,7 +932,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
         //given
         final var outConfig = getBarjCargoOutputStreamConfiguration(SHA_256, GzipCompressorOutputStream::new);
         try (var out = new BarjCargoArchiverFileOutputStream(outConfig)) {
-            out.addFileEntity("/" + UUID.randomUUID().toString(), new ByteArrayInputStream(RANDOM_DATA), null);
+            out.addFileEntity("/" + UUID.randomUUID(), new ByteArrayInputStream(RANDOM_DATA), null);
             out.close();
             try (var hack = new FileOutputStream(out.getCurrentFilePath().toFile(), true)) {
                 hack.write(1);

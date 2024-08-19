@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.inspect.pipeline;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
+import com.github.nagyesta.filebarj.core.backup.pipeline.BackupParameters;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
@@ -30,24 +31,33 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullBackupDirectory() {
+    void testConstructorShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var fileNamePrefix = "prefix";
 
         //when
-        assertThrows(IllegalArgumentException.class, () -> new IncrementInspectionController(null, fileNamePrefix, null));
+        assertThrows(IllegalArgumentException.class, () -> new IncrementInspectionController(null));
 
         //then + exception
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullPrefix() {
+    void testBuilderShouldThrowExceptionWhenCalledWithNullBackupDirectory() {
         //given
-        final var backupDirectory = testDataRoot;
 
         //when
-        assertThrows(IllegalArgumentException.class, () -> new IncrementInspectionController(backupDirectory, null, null));
+        assertThrows(IllegalArgumentException.class, () -> InspectParameters.builder().backupDirectory(null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testBuilderShouldThrowExceptionWhenCalledWithNullPrefix() {
+        //given
+
+        //when
+        assertThrows(IllegalArgumentException.class, () -> InspectParameters.builder().fileNamePrefix(null));
 
         //then + exception
     }
@@ -61,7 +71,12 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
         Files.createDirectories(originalDirectory);
         Files.writeString(originalDirectory.resolve("file1.txt"), "content");
         doBackup(backupDirectory, originalDirectory, "prefix");
-        final var underTest = new IncrementInspectionController(backupDirectory, "prefix", null);
+        final var parameters = InspectParameters.builder()
+                .backupDirectory(backupDirectory)
+                .fileNamePrefix("prefix")
+                .kek(null)
+                .build();
+        final var underTest = new IncrementInspectionController(parameters);
 
         //when
         assertThrows(IllegalArgumentException.class, () -> underTest.inspectContent(Long.MAX_VALUE, null));
@@ -79,7 +94,12 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
         Files.writeString(originalFile, "content");
         final var prefix = "file-prefix";
         doBackup(backupDirectory, originalDirectory, prefix);
-        final var underTest = new IncrementInspectionController(backupDirectory, prefix, null);
+        final var parameters = InspectParameters.builder()
+                .backupDirectory(backupDirectory)
+                .fileNamePrefix(prefix)
+                .kek(null)
+                .build();
+        final var underTest = new IncrementInspectionController(parameters);
         final var outputFile = originalDirectory.resolve("content.csv");
 
         //when
@@ -103,7 +123,12 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
         Files.createDirectories(originalDirectory);
         Files.writeString(originalDirectory.resolve("file1.txt"), "content");
         doBackup(backupDirectory, originalDirectory, "prefix");
-        final var underTest = new IncrementInspectionController(backupDirectory, "prefix", null);
+        final var parameters = InspectParameters.builder()
+                .backupDirectory(backupDirectory)
+                .fileNamePrefix("prefix")
+                .kek(null)
+                .build();
+        final var underTest = new IncrementInspectionController(parameters);
 
         //when
         assertThrows(IllegalArgumentException.class, () -> underTest.inspectIncrements(null));
@@ -123,7 +148,12 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
             doBackup(backupDirectory, originalDirectory, prefix);
             Thread.sleep(ONE_SECOND);
         }
-        final var underTest = new IncrementInspectionController(backupDirectory, prefix, null);
+        final var parameters = InspectParameters.builder()
+                .backupDirectory(backupDirectory)
+                .fileNamePrefix(prefix)
+                .kek(null)
+                .build();
+        final var underTest = new IncrementInspectionController(parameters);
 
         final var byteArrayOutputStream = new ByteArrayOutputStream();
         final var printStream = new PrintStream(byteArrayOutputStream);
@@ -152,6 +182,10 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
                 .compression(CompressionAlgorithm.NONE)
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP)
                 .build();
-        new BackupController(configuration, false).execute(1);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(false)
+                .build();
+        new BackupController(parameters).execute(1);
     }
 }

@@ -40,10 +40,9 @@ public class BackupJobConfiguration {
      * increment was saved. As a side effect, this property is ignored during the first execution
      * after each configuration change.
      */
-    @NonNull
     @EqualsAndHashCode.Exclude
     @JsonProperty("backup_type")
-    private final BackupType backupType;
+    private final @NonNull BackupType backupType;
     /**
      * The algorithm used for hash calculations before and after archival. Useful for data
      * integrity verifications.
@@ -51,18 +50,16 @@ public class BackupJobConfiguration {
      * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
      * increments cannot use a different hash algorithm.
      */
-    @NonNull
     @JsonProperty("hash_algorithm")
-    private final HashAlgorithm hashAlgorithm;
+    private final @NonNull HashAlgorithm hashAlgorithm;
     /**
      * The algorithm used for compression before writing the archived stream to the file system.
      * <br/><br/>
      * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
      * increments cannot use a different hash algorithm.
      */
-    @NonNull
     @JsonProperty("compression_algorithm")
-    private final CompressionAlgorithm compression;
+    private final @NonNull CompressionAlgorithm compression;
     /**
      * The public key of an RSA key pair used for encryption. The files will be encrypted using
      * automatically generated AES keys (DEK) which will be encrypted using the RSA public key
@@ -81,45 +78,40 @@ public class BackupJobConfiguration {
      * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
      * increments cannot use a different duplicate handling strategy.
      */
-    @NonNull
     @JsonProperty("duplicate_strategy")
-    private final DuplicateHandlingStrategy duplicateStrategy;
+    private final @NonNull DuplicateHandlingStrategy duplicateStrategy;
     /**
      * The desired maximum chunk size for the backup archive part.
      * <br/><br/>
      * NOTE: Using 0 means that the archive won't be chunked.
      */
-    @Positive
     @Builder.Default
     @EqualsAndHashCode.Exclude
     @JsonProperty("chunk_size_mebibyte")
-    private final int chunkSizeMebibyte = ONE_HUNDRED_GIBIBYTE;
+    private final @Positive int chunkSizeMebibyte = ONE_HUNDRED_GIBIBYTE;
     /**
      * The prefix of the backup file names.
      * <br/><br/>
      * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
      * increments cannot use a different duplicate handling strategy.
      */
-    @NonNull
     @FileNamePrefix
     @JsonProperty("file_name_prefix")
-    private final String fileNamePrefix;
+    private final @NonNull String fileNamePrefix;
     /**
      * The destination where the backup files will be saved.
      * <br/><br/>
      * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the metadata of the
      * previous increments must be found in the destination in order to calculate changes.
      */
-    @NonNull
     @JsonProperty("destination_directory")
-    private final Path destinationDirectory;
+    private final @NonNull Path destinationDirectory;
     /**
      * The source files we want to archive.
      */
-    @Valid
-    @Size(min = 1)
-    @NonNull
     @EqualsAndHashCode.Exclude
     @JsonProperty("sources")
-    private final Set<BackupSource> sources;
+    private final @Valid
+    @Size(min = 1)
+    @NonNull Set<BackupSource> sources;
 }

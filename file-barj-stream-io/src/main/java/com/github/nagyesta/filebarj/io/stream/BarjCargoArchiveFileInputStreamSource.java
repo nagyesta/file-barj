@@ -57,7 +57,7 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @throws IOException               If we cannot access the folder or read from it.
      * @throws ArchiveIntegrityException If the archive is in an invalid state.
      */
-    public BarjCargoArchiveFileInputStreamSource(@NotNull final BarjCargoInputStreamConfiguration config)
+    public BarjCargoArchiveFileInputStreamSource(final @NotNull BarjCargoInputStreamConfiguration config)
             throws IOException, ArchiveIntegrityException {
         final var folderPath = config.getFolder().toAbsolutePath();
         final var indexFile = Path.of(folderPath.toString(), toIndexFileName(config.getPrefix()));
@@ -81,7 +81,7 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @return the entry stored in the archive or {@code null} if not found
      */
     public BarjCargoArchiveEntry getEntry(
-            @NonNull final String path) {
+            final @NonNull String path) {
         return entityIndexes.stream()
                 .filter(e -> e.getPath().equals(path))
                 .map(index -> new RandomAccessBarjCargoArchiveEntry(this, index))
@@ -108,7 +108,7 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @throws IOException if an I/O error occurs
      */
     public BarjCargoArchiveEntryIterator getIteratorForScope(
-            @NonNull final Set<String> archiveEntriesInScope) throws IOException {
+            final @NonNull Set<String> archiveEntriesInScope) throws IOException {
         final var orderedMatches = getMatchingEntriesInOrderOfOccurrence(archiveEntriesInScope);
         if (orderedMatches.isEmpty()) {
             return new BarjCargoArchiveEntryIterator(this, Collections.emptyList());
@@ -139,9 +139,8 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @param archiveEntriesInScope the entries in scope
      * @return the matching entries
      */
-    @NonNull
-    public List<BarjCargoEntityIndex> getMatchingEntriesInOrderOfOccurrence(
-            @NonNull final Set<String> archiveEntriesInScope) {
+    public @NonNull List<BarjCargoEntityIndex> getMatchingEntriesInOrderOfOccurrence(
+            final @NonNull Set<String> archiveEntriesInScope) {
         final var normalized = archiveEntriesInScope.stream()
                 .map(FilenameUtils::normalizeNoEndSeparator)
                 .map(FilenameUtils::separatorsToUnix)
@@ -160,8 +159,8 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @throws IOException If the entry cannot be read
      */
     public InputStream getStreamFor(
-            @NonNull final BarjCargoEntryBoundaries boundary,
-            @Nullable final SecretKey key) throws IOException {
+            final @NonNull BarjCargoEntryBoundaries boundary,
+            final @Nullable SecretKey key) throws IOException {
         final var files = getFilesFor(boundary);
         MergingFileInputStream merging = null;
         InputStream originalDataStream = null;
@@ -191,9 +190,9 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @throws IOException If the entry cannot be read
      */
     public InputStream getNextStreamFor(
-            @NonNull final InputStream mergingInputStream,
-            @NonNull final BarjCargoEntryBoundaries boundary,
-            @Nullable final SecretKey key) throws IOException {
+            final @NonNull InputStream mergingInputStream,
+            final @NonNull BarjCargoEntryBoundaries boundary,
+            final @Nullable SecretKey key) throws IOException {
         InputStream shielded = null;
         InputStream originalDataStream = null;
         try {
@@ -258,8 +257,8 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @throws IOException If the archive cannot be read
      */
     public InputStream openStreamForSequentialAccess(
-            @NonNull final List<Path> relevantFiles,
-            @NonNull final List<BarjCargoEntityIndex> list) throws IOException {
+            final @NonNull List<Path> relevantFiles,
+            final @NonNull List<BarjCargoEntityIndex> list) throws IOException {
         final var fileInputStream = new MergingFileInputStream(relevantFiles);
         final var start = list.get(0).getContentOrElseMetadata();
         final var skip = start.getChunkRelativeStartIndexInclusive();
@@ -277,8 +276,8 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @throws IOException If the index file cannot be read
      */
     protected Properties readProperties(
-            @NotNull final BarjCargoInputStreamConfiguration config,
-            @NotNull final Path indexFile) throws IOException {
+            final @NotNull BarjCargoInputStreamConfiguration config,
+            final @NotNull Path indexFile) throws IOException {
         try (var indexStream = new FileInputStream(indexFile.toFile());
              var indexBufferedStream = new BufferedInputStream(indexStream);
              var indexEncryptionStream = newCipherInputStream(config.getIndexDecryptionKey()).decorate(indexBufferedStream);
@@ -298,9 +297,8 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @param properties the properties
      * @return the entity indexes
      */
-    @NotNull
-    protected List<BarjCargoEntityIndex> parseEntityIndexes(
-            @NotNull final Properties properties) {
+    protected @NotNull List<BarjCargoEntityIndex> parseEntityIndexes(
+            final @NotNull Properties properties) {
         final var index = parse(properties);
         return LongStream.rangeClosed(1L, index.getTotalEntities())
                 .mapToObj(BarjCargoUtil::entryIndexPrefix)
@@ -315,10 +313,9 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @param config     the configuration
      * @return the file path map
      */
-    @NotNull
-    protected SortedMap<String, Path> generateFilePathMap(
-            @NotNull final Properties properties,
-            @NotNull final BarjCargoInputStreamConfiguration config) {
+    protected @NotNull SortedMap<String, Path> generateFilePathMap(
+            final @NotNull Properties properties,
+            final @NotNull BarjCargoInputStreamConfiguration config) {
         final var index = parse(properties);
         final var map = new TreeMap<String, Path>();
         IntStream.rangeClosed(1, index.getNumberOfChunks())
@@ -337,8 +334,8 @@ public class BarjCargoArchiveFileInputStreamSource {
      * @throws ArchiveIntegrityException If the archive is in an invalid state
      */
     protected void verifyFilesExistAndHaveExpectedSizes(
-            @NotNull final Properties properties,
-            @NotNull final SortedMap<String, Path> chunkPaths) throws ArchiveIntegrityException {
+            final @NotNull Properties properties,
+            final @NotNull SortedMap<String, Path> chunkPaths) throws ArchiveIntegrityException {
         final var index = parse(properties);
         var totalSize = 0L;
         final var iterator = chunkPaths.keySet().iterator();
@@ -381,7 +378,7 @@ public class BarjCargoArchiveFileInputStreamSource {
     }
 
     private void validateEntityIndexes(
-            @NotNull final List<BarjCargoEntityIndex> entityIndexes) {
+            final @NotNull List<BarjCargoEntityIndex> entityIndexes) {
         final var paths = entityIndexes.stream()
                 .map(BarjCargoEntityIndex::getPath)
                 .map(FilenameUtils::separatorsToUnix)
@@ -404,32 +401,30 @@ public class BarjCargoArchiveFileInputStreamSource {
         return examples;
     }
 
-    @NotNull
-    private List<Path> getAllFiles() {
+    private @NotNull List<Path> getAllFiles() {
         return chunkPaths.values().stream()
                 .sorted()
                 .toList();
     }
 
-    @NotNull
-    private List<IoFunction<InputStream, InputStream>> restoreTransformationSteps(
-            @Nullable final SecretKey key, final long skipBytes, final long length) {
+    private @NotNull List<IoFunction<InputStream, InputStream>> restoreTransformationSteps(
+            final @Nullable SecretKey key, final long skipBytes, final long length) {
         return List.of(input -> new FixedRangeInputStream(input, skipBytes, length),
                 newCipherInputStream(key),
                 decompressionFunction
         );
     }
 
-    private List<Path> getFilesFor(@NotNull final BarjCargoEntryBoundaries boundary) {
+    private List<Path> getFilesFor(final @NotNull BarjCargoEntryBoundaries boundary) {
         return chunkPaths.subMap(boundary.getStartChunkName(), boundary.getEndChunkName() + "_include_end")
                 .values().stream()
                 .toList();
     }
 
     private boolean isArchiveHashValid(
-            @NotNull final String path,
-            @NotNull final BarjCargoEntryBoundaries entry,
-            @NotNull final MergingFileInputStream mergingStream) throws IOException {
+            final @NotNull String path,
+            final @NotNull BarjCargoEntryBoundaries entry,
+            final @NotNull MergingFileInputStream mergingStream) throws IOException {
         try (var digestCalculatorStream = new OptionalDigestOutputStream(OutputStream.nullOutputStream(), hashAlgorithm)) {
             final var remaining = entry.getArchivedSizeBytes();
             copyNBytes(mergingStream, digestCalculatorStream, remaining);
@@ -446,8 +441,8 @@ public class BarjCargoArchiveFileInputStreamSource {
     }
 
     private void copyNBytes(
-            @NotNull final MergingFileInputStream from,
-            @NotNull final OptionalDigestOutputStream to, final long n) throws IOException {
+            final @NotNull MergingFileInputStream from,
+            final @NotNull OptionalDigestOutputStream to, final long n) throws IOException {
         for (var i = n; i > 0; i -= MEBIBYTE) {
             final var bufferSize = (int) Math.min(MEBIBYTE, i);
             to.write(from.readNBytes(bufferSize));

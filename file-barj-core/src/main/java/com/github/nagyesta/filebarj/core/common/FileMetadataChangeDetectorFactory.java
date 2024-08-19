@@ -23,9 +23,9 @@ public class FileMetadataChangeDetectorFactory {
      * @return The new instance
      */
     public static FileMetadataChangeDetector create(
-            @NonNull final BackupJobConfiguration configuration,
-            @NonNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+            final @NonNull BackupJobConfiguration configuration,
+            final @NonNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         if (filesFromManifests.isEmpty()) {
             throw new IllegalArgumentException("Previous manifests cannot be empty");
         }

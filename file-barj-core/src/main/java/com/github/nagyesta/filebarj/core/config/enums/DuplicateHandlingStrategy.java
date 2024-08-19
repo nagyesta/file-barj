@@ -37,7 +37,7 @@ public enum DuplicateHandlingStrategy {
      * @param hashAlgorithm the hash algorithm
      * @return the grouping function
      */
-    public Function<FileMetadata, String> fileGroupingFunctionForHash(@NonNull final HashAlgorithm hashAlgorithm) {
+    public Function<FileMetadata, String> fileGroupingFunctionForHash(final @NonNull HashAlgorithm hashAlgorithm) {
         return fileMetadata -> fileMetadata.getId().toString();
     }
 }

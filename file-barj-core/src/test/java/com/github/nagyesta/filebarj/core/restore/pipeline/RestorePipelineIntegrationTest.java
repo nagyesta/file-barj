@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
+import com.github.nagyesta.filebarj.core.backup.pipeline.BackupParameters;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
@@ -15,6 +16,7 @@ import com.github.nagyesta.filebarj.core.model.AppVersion;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -117,7 +119,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         //given
         final var backupController = executeABackup();
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
@@ -136,7 +139,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         //given
         final var backupController = executeABackup();
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var backupDirectory = testDataRoot.resolve("backup-dir");
 
         //when
@@ -155,7 +159,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -177,7 +182,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -199,7 +205,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -221,7 +228,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -246,7 +254,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -268,7 +277,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -289,7 +299,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -315,7 +326,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -355,10 +367,15 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
         Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
 
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
 
         final var underTest = new RestorePipeline(
@@ -398,7 +415,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
         final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl().mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
+                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var sourceDirectory = getSourceDirectory(backupController);
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
@@ -427,7 +445,11 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var backup = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
         final var configuration = getBackupJobConfiguration(source, backup);
         FileUtils.copyFile(getExampleResource(), source.resolve("A.png").toFile());
-        final var backupController = new BackupController(configuration, true);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(true)
+                .build();
+        final var backupController = new BackupController(parameters);
         backupController.execute(1);
         return backupController;
     }

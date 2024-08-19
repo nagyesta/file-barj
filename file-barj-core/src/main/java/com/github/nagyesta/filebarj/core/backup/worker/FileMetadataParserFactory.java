@@ -15,8 +15,7 @@ public class FileMetadataParserFactory {
      *
      * @return the parser
      */
-    @NotNull
-    public static FileMetadataParser newInstance() {
+    public static @NotNull FileMetadataParser newInstance() {
         final var isWindows = OsUtil.isWindows();
         return newInstance(isWindows);
     }
@@ -27,8 +26,7 @@ public class FileMetadataParserFactory {
      * @param isWindows should be true if the current OS is Windows
      * @return the parser
      */
-    @NotNull
-    static PosixFileMetadataParser newInstance(final boolean isWindows) {
+    static @NotNull PosixFileMetadataParser newInstance(final boolean isWindows) {
         if (isWindows) {
             return new WindowsFileMetadataParser();
         }

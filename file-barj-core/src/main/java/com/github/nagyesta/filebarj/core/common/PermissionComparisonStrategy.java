@@ -20,8 +20,8 @@ public enum PermissionComparisonStrategy {
     STRICT(true, true) {
         @Override
         public boolean matches(
-                @NonNull final FileMetadata previousMetadata,
-                @NonNull final FileMetadata currentMetadata) {
+                final @NonNull FileMetadata previousMetadata,
+                final @NonNull FileMetadata currentMetadata) {
             return Objects.equals(previousMetadata.getPosixPermissions(), currentMetadata.getPosixPermissions())
                     && Objects.equals(previousMetadata.getOwner(), currentMetadata.getOwner())
                     && Objects.equals(previousMetadata.getGroup(), currentMetadata.getGroup());
@@ -34,8 +34,8 @@ public enum PermissionComparisonStrategy {
     PERMISSION_ONLY(true, false) {
         @Override
         public boolean matches(
-                @NonNull final FileMetadata previousMetadata,
-                @NonNull final FileMetadata currentMetadata) {
+                final @NonNull FileMetadata previousMetadata,
+                final @NonNull FileMetadata currentMetadata) {
             return Objects.equals(previousMetadata.getPosixPermissions(), currentMetadata.getPosixPermissions());
         }
     },
@@ -49,13 +49,12 @@ public enum PermissionComparisonStrategy {
 
         @Override
         public boolean matches(
-                @NonNull final FileMetadata previousMetadata,
-                @NonNull final FileMetadata currentMetadata) {
+                final @NonNull FileMetadata previousMetadata,
+                final @NonNull FileMetadata currentMetadata) {
             return Objects.equals(transform(previousMetadata.getPosixPermissions()), transform(currentMetadata.getPosixPermissions()));
         }
 
-        @Nullable
-        private static String transform(final String permissions) {
+        private static @Nullable String transform(final String permissions) {
             return Optional.ofNullable(permissions)
                     .map(s -> s.substring(FIRST_SIGNIFICANT_CHAR_INCLUSIVE, LAST_SIGNIFICANT_CHAR_EXCLUSIVE))
                     .orElse(null);
@@ -68,8 +67,8 @@ public enum PermissionComparisonStrategy {
     IGNORE(false, false) {
         @Override
         public boolean matches(
-                @NonNull final FileMetadata previousMetadata,
-                @NonNull final FileMetadata currentMetadata) {
+                final @NonNull FileMetadata previousMetadata,
+                final @NonNull FileMetadata currentMetadata) {
             return true;
         }
     };

@@ -20,15 +20,12 @@ import java.util.Map;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 public class RestoreProperties extends BackupFileProperties {
-    @NonNull
-    private final Map<BackupPath, Path> targets;
-    @Positive
-    private final int threads;
+    private final @NonNull Map<BackupPath, Path> targets;
+    private final @Positive int threads;
     private final boolean dryRun;
     private final boolean deleteFilesNotInBackup;
     @PastOrPresentEpochSeconds
     private final long pointInTimeEpochSeconds;
-    @Valid
-    private final BackupPath includedPath;
+    private final @Valid BackupPath includedPath;
     private final PermissionComparisonStrategy permissionComparisonStrategy;
 }

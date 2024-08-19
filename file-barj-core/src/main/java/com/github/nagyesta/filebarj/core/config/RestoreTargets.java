@@ -20,8 +20,7 @@ public record RestoreTargets(@NonNull Set<RestoreTarget> restoreTargets) {
      * @param originalPath the original path
      * @return the restore path
      */
-    @NotNull
-    public Path mapToRestorePath(@NonNull final BackupPath originalPath) {
+    public @NotNull Path mapToRestorePath(final @NonNull BackupPath originalPath) {
         return restoreTargets.stream()
                 .filter(restoreTarget -> restoreTarget.matchesArchivedFile(originalPath))
                 .findFirst()

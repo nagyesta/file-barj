@@ -29,9 +29,9 @@ public class SelfValidatingOptionalDigestInputStream extends DigestInputStream {
      * @param expectedDigest the expected digest of the data read fully.
      */
     public SelfValidatingOptionalDigestInputStream(
-            @NonNull final InputStream stream,
-            @Nullable final String algorithm,
-            @Nullable final String expectedDigest) {
+            final @NonNull InputStream stream,
+            final @Nullable String algorithm,
+            final @Nullable String expectedDigest) {
         super(stream, Optional.ofNullable(algorithm)
                 .map(DigestUtils::getDigest)
                 .orElse(null));

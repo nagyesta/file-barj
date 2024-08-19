@@ -37,10 +37,10 @@ public class CompositeRestoreStream extends DoOnCloseInputStream {
      *                                read fully.
      * @throws IOException When the stream cannot be decorated.
      */
-    public CompositeRestoreStream(@NonNull final InputStream sourceStream,
-                                  @Nullable final String digestAlgorithm,
-                                  @NonNull final List<IoFunction<InputStream, InputStream>> transformationFunctions,
-                                  @Nullable final String expectedDigest) throws IOException {
+    public CompositeRestoreStream(final @NonNull InputStream sourceStream,
+                                  final @Nullable String digestAlgorithm,
+                                  final @NonNull List<IoFunction<InputStream, InputStream>> transformationFunctions,
+                                  final @Nullable String expectedDigest) throws IOException {
         SelfValidatingOptionalDigestInputStream dis = null;
         BufferedInputStream bis = null;
         final List<InputStream> ts = new ArrayList<>();
@@ -66,9 +66,8 @@ public class CompositeRestoreStream extends DoOnCloseInputStream {
         }
     }
 
-    @NotNull
     @Override
-    protected @NonNull InputStream getInputStream() {
+    protected @NotNull @NonNull InputStream getInputStream() {
         return bufferedStream;
     }
 

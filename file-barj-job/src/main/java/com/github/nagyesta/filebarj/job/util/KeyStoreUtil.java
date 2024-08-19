@@ -41,8 +41,8 @@ public final class KeyStoreUtil {
      * @return the private key
      */
     public static PrivateKey readPrivateKey(
-            @NotNull final Path source,
-            @NotNull final String alias,
+            final @NotNull Path source,
+            final @NotNull String alias,
             final char @NotNull [] storePass,
             final char @NotNull [] keyPass) {
         try {
@@ -62,8 +62,8 @@ public final class KeyStoreUtil {
      * @return the public key
      */
     public static PublicKey readPublicKey(
-            @NotNull final Path source,
-            @NotNull final String alias,
+            final @NotNull Path source,
+            final @NotNull String alias,
             final char @NotNull [] storePass) {
         try {
             return KeyStore.getInstance(source.toFile(), storePass)
@@ -83,9 +83,9 @@ public final class KeyStoreUtil {
      * @param keyPass   the password protecting the key
      */
     public static void writeKey(
-            @NotNull final Path target,
-            @NotNull final String alias,
-            @NotNull final KeyPair keyPair,
+            final @NotNull Path target,
+            final @NotNull String alias,
+            final @NotNull KeyPair keyPair,
             final char @NotNull [] storePass,
             final char @NotNull [] keyPass) {
         try (var stream = Files.newOutputStream(target)) {
@@ -98,9 +98,8 @@ public final class KeyStoreUtil {
         }
     }
 
-    @NotNull
-    private static Certificate[] createChainFor(
-            @NotNull final KeyPair keyPair) throws Exception {
+    private static @NotNull Certificate[] createChainFor(
+            final @NotNull KeyPair keyPair) throws Exception {
         final var subject = new X500Name("CN=Ignore");
         final var now = new Date(Instant.now().toEpochMilli());
         final var future = new Date(Instant.now().toEpochMilli() + ONE_HUNDRED_YEARS_IN_MILLIS);
@@ -116,8 +115,7 @@ public final class KeyStoreUtil {
         return new X509Certificate[]{converter.getCertificate(holder)};
     }
 
-    @NotNull
-    private static KeyStore newKeyStore(
+    private static @NotNull KeyStore newKeyStore(
             final char @NotNull [] password) throws Exception {
         final var store = KeyStore.getInstance(PKCS_12);
         store.load(null, password);

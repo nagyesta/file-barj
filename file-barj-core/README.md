@@ -57,7 +57,11 @@ final var configuration = BackupJobConfiguration.builder()
         .chunkSizeMebibyte(1)
         .encryptionKey(null)
         .build();
-final var backupController = new BackupController(configuration, false);
+final var backupParameters = BackupParameters.builder()
+        .job(configuration)
+        .forceFull(false)
+        .build();
+final var backupController = new BackupController(backupParameters);
 
 //executing the backup
 backupController.execute(1);
@@ -66,13 +70,14 @@ backupController.execute(1);
 ### Merging increments
 
 ```java
-final var mergeController = new MergeController(
-        Path.of("/tmp/backup"), 
-        "prefix", 
-        null, //optional key encryption key
-        123L, //Backup start epoch seconds for the first file of the range (inclusive)
-        234L  //Backup start epoch seconds for the last file of the range (inclusive)
-);
+final var mergeParameters = MergeParameters.builder()
+        .backupDirectory(Path.of("/tmp/backup"))
+        .fileNamePrefix("prefix")
+        .kek(null) //optional key encryption key
+        .rangeStartEpochSeconds(123L) //Backup start epoch seconds for the first file of the range (inclusive)
+        .rangeEndEpochSeconds(234L) //Backup start epoch seconds for the last file of the range (inclusive)
+        .build();
+final var mergeController = new MergeController(mergeParameters);
 
 mergeController.execute(false);
 ```
@@ -91,8 +96,13 @@ final var restoreTask = RestoreTask.builder()
         .includedPath(BackupPath.of("/source/dir")) //optional path filter
         .permissionComparisonStrategy(PermissionComparisonStrategy.STRICT) //optional
         .build();
-final var pointInTime = 123456L;
-final var restoreController = new RestoreController(Path.of("/tmp/backup"), "test", null, pointInTime);
+final var restoreParameters = RestoreParameters.builder()
+        .backupDirectory(Path.of("/tmp/backup"))
+        .fileNamePrefix("test")
+        .kek(null)
+        .atPointInTime(123456L)
+        .build();
+final var restoreController = new RestoreController(restoreParameters);
 
 //executing the restore
 restoreController.execute(restoreTask);
@@ -104,7 +114,12 @@ restoreController.execute(restoreTask);
 //configuring the inspection job
 final var backupDir = Path.of("/backup/directory");
 final var outputFile = Path.of("/backup/directory");
-final var controller = new IncrementInspectionController(backupDir, "file-prefix", null);
+final var inspectParameters = InspectParameters.builder()
+        .backupDirectory(backupDir)
+        .fileNamePrefix("file-prefix")
+        .kek(null)
+        .build();
+final var controller = new IncrementInspectionController(inspectParameters);
 
 //list the summary of the available increments
 controller.inspectIncrements(System.out);
@@ -119,7 +134,12 @@ controller.inspectContent(Long.MAX_VALUE, outputFile);
 //configuring the deletion job
 final var backupDir = Path.of("/backup/directory");
 final var outputFile = Path.of("/backup/directory");
-final var controller = new IncrementDeletionController(backupDir, "file-prefix", null);
+final var deletionParameters = IncrementDeletionParameters.builder()
+        .backupDirectory(backupDir)
+        .fileNamePrefix("file-prefix")
+        .kek(null)
+        .build();
+final var controller = new IncrementDeletionController(deletionParameters);
 
 //Delete all backup increments:
 // - starting with the one created at 123456

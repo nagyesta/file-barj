@@ -17,7 +17,7 @@ public class CloseShieldingOutputStream extends OutputStream {
      *
      * @param stream The stream to wrap
      */
-    public CloseShieldingOutputStream(@NonNull final OutputStream stream) {
+    public CloseShieldingOutputStream(final @NonNull OutputStream stream) {
         this.internal = stream;
     }
 

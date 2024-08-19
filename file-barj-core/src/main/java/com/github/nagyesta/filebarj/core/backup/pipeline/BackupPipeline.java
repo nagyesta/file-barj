@@ -21,13 +21,12 @@ public class BackupPipeline extends BaseBackupPipeline<BarjCargoArchiverFileOutp
      * @param manifest The manifest
      * @throws IOException When the stream cannot be created due to an I/O error
      */
-    public BackupPipeline(@NotNull final BackupIncrementManifest manifest) throws IOException {
+    public BackupPipeline(final @NotNull BackupIncrementManifest manifest) throws IOException {
         super(manifest, convert(manifest));
     }
 
-    @NonNull
-    private static BarjCargoArchiverFileOutputStream convert(
-            @NonNull final BackupIncrementManifest manifest) throws IOException {
+    private static @NonNull BarjCargoArchiverFileOutputStream convert(
+            final @NonNull BackupIncrementManifest manifest) throws IOException {
         return new BarjCargoArchiverFileOutputStream(
                 BarjCargoOutputStreamConfiguration.builder()
                         .folder(manifest.getConfiguration().getDestinationDirectory())

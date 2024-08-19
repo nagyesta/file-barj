@@ -32,8 +32,7 @@ public final class BackupPath implements Comparable<BackupPath> {
     private static final Pattern UNIX_FILE_SCHEME = Pattern
             .compile("^" + FILE_SCHEME_DOUBLE_SLASH + "(?<" + PATH_GROUP + ">/[^:]*)$");
     private static final Set<Pattern> PATTERNS = Set.of(WINDOWS_FILE_SCHEME, UNIX_FILE_SCHEME);
-    @NotBlank
-    private final String path;
+    private final @NotBlank String path;
 
     /**
      * Creates a new instance and sets the path.
@@ -43,7 +42,7 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @throws IllegalArgumentException if the uri does not start with file://
      */
     @JsonCreator
-    public static BackupPath fromUri(@NonNull final String uri) {
+    public static BackupPath fromUri(final @NonNull String uri) {
         return PATTERNS.stream()
                 .map(p -> {
                     final var matcher = p.matcher(uri);
@@ -64,7 +63,7 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @param path the absolute OS path
      * @return the new instance
      */
-    public static BackupPath ofPathAsIs(@NonNull final String path) {
+    public static BackupPath ofPathAsIs(final @NonNull String path) {
         return new BackupPath(normalizePath(path));
     }
 
@@ -75,7 +74,7 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @param suffix the suffix of the path
      * @return the new instance
      */
-    public static BackupPath of(@NonNull final Path prefix, @NonNull final String suffix) {
+    public static BackupPath of(final @NonNull Path prefix, final @NonNull String suffix) {
         return BackupPath.ofPathAsIs(prefix.toAbsolutePath() + UNIX_SEPARATOR + suffix);
     }
 
@@ -87,7 +86,7 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @param suffix the suffix of the path
      * @return the new instance
      */
-    public static BackupPath of(@NonNull final Path prefix, @NonNull final String middle, @NonNull final String suffix) {
+    public static BackupPath of(final @NonNull Path prefix, final @NonNull String middle, final @NonNull String suffix) {
         return BackupPath.of(prefix, middle + UNIX_SEPARATOR + suffix);
     }
 
@@ -97,7 +96,7 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @param path the OS path
      * @return the new instance
      */
-    public static BackupPath of(@NonNull final Path path) {
+    public static BackupPath of(final @NonNull Path path) {
         return new BackupPath(toStringWithUnixSeparator(path));
     }
 
@@ -129,7 +128,7 @@ public final class BackupPath implements Comparable<BackupPath> {
     }
 
     @Override
-    public int compareTo(@NotNull final BackupPath o) {
+    public int compareTo(final @NotNull BackupPath o) {
         return PATH_COMPARATOR.compare(this, o);
     }
 
@@ -186,7 +185,7 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @param child the name of the child we want to resolve
      * @return the resolved path
      */
-    public BackupPath resolve(@NonNull final String child) {
+    public BackupPath resolve(final @NonNull String child) {
         return BackupPath.ofPathAsIs(path + UNIX_SEPARATOR + child);
     }
 

@@ -23,7 +23,20 @@ class BackupControllerTest extends TempFileAwareTest {
         //given
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> new BackupController(null, false));
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> new BackupController(null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testBuilderShouldThrowExceptionWhenCalledWithNullJob() {
+        //given
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> BackupParameters.builder().job(null));
 
         //then + exception
     }
@@ -45,9 +58,13 @@ class BackupControllerTest extends TempFileAwareTest {
                 .encryptionKey(keyPair.getPublic())
                 .sources(Set.of(backupSource))
                 .build();
+        final var parameters = BackupParameters.builder()
+                .job(job)
+                .forceFull(false)
+                .build();
 
         //when
-        final var underTest = new BackupController(job, false);
+        final var underTest = new BackupController(parameters);
         final var actual = underTest.getManifest();
 
         //then

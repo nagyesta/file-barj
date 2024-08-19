@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.delete;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.pipeline.BackupController;
+import com.github.nagyesta.filebarj.core.backup.pipeline.BackupParameters;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
@@ -44,24 +45,34 @@ class IncrementDeletionControllerTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullBackupDirectory() {
+    void testBuilderShouldThrowExceptionWhenCalledWithNullBackupDirectory() {
         //given
-        final var fileNamePrefix = "prefix";
 
         //when
-        assertThrows(IllegalArgumentException.class, () -> new IncrementDeletionController(null, fileNamePrefix, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> IncrementDeletionParameters.builder().backupDirectory(null));
 
         //then + exception
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullPrefix() {
+    void testBuilderShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
-        final var backupDirectory = testDataRoot;
 
         //when
-        assertThrows(IllegalArgumentException.class, () -> new IncrementDeletionController(backupDirectory, null, null));
+        assertThrows(IllegalArgumentException.class, () -> IncrementDeletionParameters.builder().fileNamePrefix(null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testConstructorShouldThrowExceptionWhenCalledWithNull() {
+        //given
+
+        //when
+        assertThrows(IllegalArgumentException.class, () -> new IncrementDeletionController(null));
 
         //then + exception
     }
@@ -82,7 +93,12 @@ class IncrementDeletionControllerTest extends TempFileAwareTest {
             doBackup(backupDirectory, originalDirectory, prefix);
             Thread.sleep(ONE_SECOND);
         }
-        final var underTest = new IncrementDeletionController(backupDirectory, prefix, null);
+        final var parameters = IncrementDeletionParameters.builder()
+                .backupDirectory(backupDirectory)
+                .fileNamePrefix(prefix)
+                .kek(null)
+                .build();
+        final var underTest = new IncrementDeletionController(parameters);
         final var firstBackupStarted = Arrays.stream(Objects.requireNonNull(backupDirectory.toFile().list()))
                 .filter(child -> child.startsWith(prefix) && child.endsWith(".manifest.cargo"))
                 .sorted()
@@ -121,6 +137,10 @@ class IncrementDeletionControllerTest extends TempFileAwareTest {
                 .compression(CompressionAlgorithm.NONE)
                 .duplicateStrategy(DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP)
                 .build();
-        new BackupController(configuration, false).execute(1);
+        final var parameters = BackupParameters.builder()
+                .job(configuration)
+                .forceFull(false)
+                .build();
+        new BackupController(parameters).execute(1);
     }
 }

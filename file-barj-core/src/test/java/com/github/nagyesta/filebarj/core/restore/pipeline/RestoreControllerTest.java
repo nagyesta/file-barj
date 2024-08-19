@@ -3,30 +3,40 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
-
 class RestoreControllerTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullDirectory() {
+    void testBuilderShouldThrowExceptionWhenCalledWithNullDirectory() {
         //given
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestoreController(null, "prefix", null));
+                () -> RestoreParameters.builder().backupDirectory(null));
 
         //then + exception
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullPrefix() {
+    void testBuilderShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestoreController(Path.of("dir"), null, null));
+                () -> RestoreParameters.builder().fileNamePrefix(null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testConstructorShouldThrowExceptionWhenCalledWithNull() {
+        //given
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> new RestoreController(null));
 
         //then + exception
     }

@@ -25,8 +25,7 @@ public final class OsUtil {
      *
      * @return the current OS
      */
-    @NotNull
-    public static OperatingSystem getOs() {
+    public static @NotNull OperatingSystem getOs() {
         return OperatingSystem.forOsName(getRawOsName());
     }
 
@@ -36,8 +35,7 @@ public final class OsUtil {
      *
      * @return the raw OS name
      */
-    @NotNull
-    public static String getRawOsName() {
+    public static @NotNull String getRawOsName() {
         return System.getProperty("os.name");
     }
 }
