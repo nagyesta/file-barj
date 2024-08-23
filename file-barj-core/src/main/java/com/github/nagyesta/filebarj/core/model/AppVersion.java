@@ -61,8 +61,7 @@ public record AppVersion(
         return major + "." + minor + "." + patch;
     }
 
-    @NonNull
-    private static String getDefaultVersion() {
+    private static @NonNull String getDefaultVersion() {
         try (var stream = AppVersion.class.getResourceAsStream("/file-barj-component.version");
              var reader = new InputStreamReader(Objects.requireNonNull(stream), StandardCharsets.UTF_8);
              var buffered = new LineNumberReader(reader)) {
@@ -72,7 +71,7 @@ public record AppVersion(
         }
     }
 
-    public int compareTo(@NotNull final AppVersion appVersion) {
+    public int compareTo(final @NotNull AppVersion appVersion) {
         return Comparator.comparing(AppVersion::major)
                 .thenComparing(AppVersion::minor)
                 .thenComparing(AppVersion::patch)

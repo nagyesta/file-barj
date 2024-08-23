@@ -15,8 +15,6 @@ import java.nio.file.Path;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 public class InspectIncrementContentsProperties extends BackupFileProperties {
-    @Positive
-    private final long pointInTimeEpochSeconds;
-    @NonNull
-    private final Path outputFile;
+    private final @Positive long pointInTimeEpochSeconds;
+    private final @NonNull Path outputFile;
 }

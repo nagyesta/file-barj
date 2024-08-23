@@ -199,9 +199,8 @@ class DoOnCloseInputStreamTest {
             onCloseCalled = 0;
         }
 
-        @NonNull
         @Override
-        protected InputStream getInputStream() {
+        protected @NonNull InputStream getInputStream() {
             return stream;
         }
 

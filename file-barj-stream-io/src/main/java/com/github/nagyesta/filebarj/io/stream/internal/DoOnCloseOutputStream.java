@@ -73,8 +73,7 @@ public abstract class DoOnCloseOutputStream extends OutputStream {
      *
      * @return the output stream
      */
-    @NotNull
-    protected abstract OutputStream getOutputStream();
+    protected abstract @NotNull OutputStream getOutputStream();
 
     /**
      * Performs some action exactly once when the close method is first called on the stream.

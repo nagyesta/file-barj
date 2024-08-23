@@ -56,7 +56,7 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException If we cannot create the folder or write to it.
      */
     public BaseBarjCargoArchiverFileOutputStream(
-            @NotNull final BarjCargoOutputStreamConfiguration config) throws IOException {
+            final @NotNull BarjCargoOutputStreamConfiguration config) throws IOException {
         super(config.getFolder(), config.getPrefix(), config.getMaxFileSizeMebibyte());
         this.compressionFunction = config.getCompressionFunction();
         this.hashAlgorithm = config.getHashAlgorithm();
@@ -73,9 +73,9 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource addFileEntity(
-            @NotNull final String path,
-            @NotNull final InputStream contentStream,
-            @Nullable final SecretKey encryptionKey) throws IOException {
+            final @NotNull String path,
+            final @NotNull InputStream contentStream,
+            final @Nullable SecretKey encryptionKey) throws IOException {
         return addFileEntity(path, contentStream, encryptionKey, null);
     }
 
@@ -91,10 +91,10 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource addFileEntity(
-            @NotNull final String path,
-            @NonNull final InputStream contentStream,
-            @Nullable final SecretKey encryptionKey,
-            @Nullable final String metadata) throws IOException {
+            final @NotNull String path,
+            final @NonNull InputStream contentStream,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) throws IOException {
         try (var entity = openEntity(path, FileType.REGULAR_FILE, encryptionKey)) {
             writeContent(contentStream);
             writeMetadata(metadata);
@@ -114,9 +114,9 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource addSymbolicLinkEntity(
-            @NotNull final String path,
-            @NotNull final String linkTargetPath,
-            @Nullable final SecretKey encryptionKey) throws IOException {
+            final @NotNull String path,
+            final @NotNull String linkTargetPath,
+            final @Nullable SecretKey encryptionKey) throws IOException {
         return addSymbolicLinkEntity(path, linkTargetPath, encryptionKey, null);
     }
 
@@ -132,10 +132,10 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource addSymbolicLinkEntity(
-            @NotNull final String path,
-            @NonNull final String linkTargetPath,
-            @Nullable final SecretKey encryptionKey,
-            @Nullable final String metadata) throws IOException {
+            final @NotNull String path,
+            final @NonNull String linkTargetPath,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) throws IOException {
         try (var entity = openEntity(path, FileType.SYMBOLIC_LINK, encryptionKey)) {
             writeContent(new ByteArrayInputStream(linkTargetPath.getBytes(StandardCharsets.UTF_8)));
             writeMetadata(metadata);
@@ -154,8 +154,8 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource addDirectoryEntity(
-            @NotNull final String path,
-            @Nullable final SecretKey encryptionKey) throws IOException {
+            final @NotNull String path,
+            final @Nullable SecretKey encryptionKey) throws IOException {
         return addDirectoryEntity(path, encryptionKey, null);
     }
 
@@ -170,9 +170,9 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource addDirectoryEntity(
-            @NotNull final String path,
-            @Nullable final SecretKey encryptionKey,
-            @Nullable final String metadata) throws IOException {
+            final @NotNull String path,
+            final @Nullable SecretKey encryptionKey,
+            final @Nullable String metadata) throws IOException {
         try (var entity = openEntity(path, FileType.DIRECTORY, encryptionKey)) {
             writeMetadata(metadata);
             closeCurrentEntity();
@@ -190,8 +190,8 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException When an IO exception occurs during the write operation
      */
     public BarjCargoBoundarySource mergeEntity(
-            @NonNull final BarjCargoBoundarySource boundaryMetadata,
-            @NotNull final InputStream contentAndMetadataStream) throws IOException {
+            final @NonNull BarjCargoBoundarySource boundaryMetadata,
+            final @NotNull InputStream contentAndMetadataStream) throws IOException {
         if (this.hasOpenEntity()) {
             throw new IllegalStateException("Entity is already open.");
         }
@@ -258,9 +258,8 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @param fileType The file type
      * @return The normalized and validated path
      */
-    @Nullable
-    protected String normalizeAndValidateUniquePath(
-            @NotNull final String path, @NotNull final FileType fileType) {
+    protected @Nullable String normalizeAndValidateUniquePath(
+            final @NotNull String path, final @NotNull FileType fileType) {
         final var entityPath = normalizeEntityPath(path);
         assertEntityNameIsValidAndUnique(entityPaths, entityPath, fileType);
         return entityPath;
@@ -306,7 +305,7 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @see #addDirectoryEntity(String, SecretKey, String)
      */
     protected BarjCargoEntityArchiver openEntity(
-            @NotNull final String archiveEntityPath, @NotNull final FileType fileType, @Nullable final SecretKey encryptionKey) {
+            final @NotNull String archiveEntityPath, final @NotNull FileType fileType, final @Nullable SecretKey encryptionKey) {
         if (this.hasOpenEntity()) {
             throw new IllegalStateException("Entity is already open.");
         }
@@ -348,12 +347,11 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @param entityToIndex the closed entity's to index
      * @throws IOException If the entity could not be closed due to an exception@
      */
-    protected void doOnEntityClosed(@Nullable final BarjCargoEntityIndex entityToIndex) throws IOException {
+    protected void doOnEntityClosed(final @Nullable BarjCargoEntityIndex entityToIndex) throws IOException {
 
     }
 
-    @Nullable
-    protected String normalizeEntityPath(final String archiveEntityPath) {
+    protected @Nullable String normalizeEntityPath(final String archiveEntityPath) {
         return separatorsToUnix(normalizeNoEndSeparator(archiveEntityPath));
     }
 
@@ -384,9 +382,9 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
     }
 
     private void doMerge(
-            @NotNull final BarjCargoEntryBoundaries boundary,
-            @NotNull final InputStream contentAndMetadataStream,
-            @NotNull final Consumer<BarjCargoEntryBoundaries> resultConsumer) throws IOException {
+            final @NotNull BarjCargoEntryBoundaries boundary,
+            final @NotNull InputStream contentAndMetadataStream,
+            final @NotNull Consumer<BarjCargoEntryBoundaries> resultConsumer) throws IOException {
         final var start = boundary.getAbsoluteStartIndexInclusive();
         final var length = boundary.getAbsoluteEndIndexExclusive() - start;
         final var hash = boundary.getArchivedHash();
@@ -399,8 +397,8 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
     }
 
     private BarjCargoEntryBoundaries mergePart(
-            @NotNull final BarjCargoEntryBoundaries boundary,
-            @NonNull final InputStream stream) throws IOException {
+            final @NotNull BarjCargoEntryBoundaries boundary,
+            final @NonNull InputStream stream) throws IOException {
         final var builder = BarjCargoEntryBoundaries.builder()
                 .absoluteStartIndexInclusive(getTotalByteCount())
                 .startChunkName(getCurrentFilePath().getFileName().toString())

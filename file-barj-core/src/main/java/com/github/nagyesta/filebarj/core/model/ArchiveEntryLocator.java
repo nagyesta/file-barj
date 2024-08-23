@@ -28,15 +28,13 @@ public final class ArchiveEntryLocator {
     /**
      * The backup increment containing the entry.
      */
-    @PositiveOrZero
     @JsonProperty("backup_increment")
-    private final int backupIncrement;
+    private final @PositiveOrZero int backupIncrement;
     /**
      * The name of the entry (file) stored within the archive.
      */
-    @NonNull
     @JsonProperty("entry_name")
-    private final UUID entryName;
+    private final @NonNull UUID entryName;
 
     /**
      * Returns the path to the entry.
@@ -44,8 +42,7 @@ public final class ArchiveEntryLocator {
      * @return the path
      */
     @JsonIgnore
-    @NotNull
-    public String asEntryPath() {
+    public @NotNull String asEntryPath() {
         return String.format("/%s/%s", backupIncrement, entryName);
     }
 
@@ -55,7 +52,7 @@ public final class ArchiveEntryLocator {
      * @param entryPath the path
      * @return the locator
      */
-    public static ArchiveEntryLocator fromEntryPath(@NonNull final String entryPath) {
+    public static ArchiveEntryLocator fromEntryPath(final @NonNull String entryPath) {
         final var matcher = PATH_REGEX.matcher(entryPath);
         if (matcher.matches()) {
             return ArchiveEntryLocator.builder()

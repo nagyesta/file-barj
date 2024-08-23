@@ -34,10 +34,15 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
                 .threads(1)
                 .permissionComparisonStrategy(PermissionComparisonStrategy.RELAXED)
                 .build();
+        final var parameters = RestoreParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix("windows-backup")
+                .kek(null)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
 
         //when
-        new RestoreController(backupPath, "windows-backup", null)
-                .execute(task);
+        new RestoreController(parameters).execute(task);
 
         //then
         verifyContent(restoredR, restoredU);
@@ -61,10 +66,15 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
                 .threads(1)
                 .permissionComparisonStrategy(PermissionComparisonStrategy.RELAXED)
                 .build();
+        final var parameters = RestoreParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix("ubuntu-backup")
+                .kek(null)
+                .atPointInTime(Long.MAX_VALUE)
+                .build();
 
         //when
-        new RestoreController(backupPath, "ubuntu-backup", null)
-                .execute(task);
+        new RestoreController(parameters).execute(task);
 
         //then
         verifyContent(restoredR, restoredU);

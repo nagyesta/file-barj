@@ -4,14 +4,18 @@ import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
+import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
-import java.security.PrivateKey;
 import java.util.Comparator;
+import java.util.List;
 import java.util.SortedMap;
+
+import static com.github.nagyesta.filebarj.core.progress.ProgressStep.DELETE_OBSOLETE_FILES;
+import static com.github.nagyesta.filebarj.core.progress.ProgressStep.LOAD_MANIFESTS;
 
 /**
  * Controller for the backup increment deletion task.
@@ -22,22 +26,20 @@ public class IncrementDeletionController {
     private final SortedMap<Long, BackupIncrementManifest> manifests;
     private final @NonNull Path backupDirectory;
     private final ManifestManager manifestManager;
+    private final ProgressTracker progressTracker;
 
     /**
      * Creates a new instance and initializes it for the specified job.
      *
-     * @param backupDirectory the directory where the backup files are located
-     * @param fileNamePrefix  the prefix of the backup file names
-     * @param kek             The key encryption key we want to use to decrypt the files (optional).
-     *                        If null, no decryption will be performed.
+     * @param parameters The parameters.
      */
     public IncrementDeletionController(
-            @NonNull final Path backupDirectory,
-            @NonNull final String fileNamePrefix,
-            @Nullable final PrivateKey kek) {
-        this.manifestManager = new ManifestManagerImpl();
-        this.backupDirectory = backupDirectory;
-        this.manifests = this.manifestManager.loadAll(this.backupDirectory, fileNamePrefix, kek);
+            final @NonNull IncrementDeletionParameters parameters) {
+        this.progressTracker = new ObservableProgressTracker(List.of(LOAD_MANIFESTS, DELETE_OBSOLETE_FILES));
+        progressTracker.registerListener(parameters.getProgressListener());
+        this.manifestManager = new ManifestManagerImpl(progressTracker);
+        this.backupDirectory = parameters.getBackupDirectory();
+        this.manifests = this.manifestManager.loadAll(this.backupDirectory, parameters.getFileNamePrefix(), parameters.getKek());
     }
 
     /**
@@ -57,11 +59,14 @@ public class IncrementDeletionController {
         if (incrementsStartingWithThreshold.get(0).getStartTimeUtcEpochSeconds() != startingWithEpochSeconds) {
             throw new IllegalArgumentException("Unable to find backup which started at: " + startingWithEpochSeconds);
         }
+        progressTracker.estimateStepSubtotal(DELETE_OBSOLETE_FILES, incrementsStartingWithThreshold.size());
         for (final var current : incrementsStartingWithThreshold) {
             if (current.getStartTimeUtcEpochSeconds() > startingWithEpochSeconds && current.getBackupType() == BackupType.FULL) {
                 break;
             }
             manifestManager.deleteIncrement(backupDirectory, current);
+            progressTracker.recordProgressInSubSteps(DELETE_OBSOLETE_FILES);
         }
+        progressTracker.completeStep(DELETE_OBSOLETE_FILES);
     }
 }

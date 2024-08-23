@@ -27,8 +27,8 @@ public class TabSeparatedBackupContentExporter {
      * @param outputFile The output file.
      */
     public void writeManifestContent(
-            @NonNull final BackupIncrementManifest manifest,
-            @NonNull final Path outputFile) {
+            final @NonNull BackupIncrementManifest manifest,
+            final @NonNull Path outputFile) {
         try (var stream = new FileOutputStream(outputFile.toFile());
              var buffered = new BufferedOutputStream(stream);
              var writer = new OutputStreamWriter(buffered, StandardCharsets.UTF_8)) {

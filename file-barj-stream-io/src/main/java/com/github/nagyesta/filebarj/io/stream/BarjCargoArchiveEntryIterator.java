@@ -28,8 +28,8 @@ public class BarjCargoArchiveEntryIterator implements Iterator<SequentialBarjCar
      * @throws IOException when the list cannot be read
      */
     public BarjCargoArchiveEntryIterator(
-            @NonNull final BarjCargoArchiveFileInputStreamSource source,
-            @NonNull final List<BarjCargoEntityIndex> list) throws IOException {
+            final @NonNull BarjCargoArchiveFileInputStreamSource source,
+            final @NonNull List<BarjCargoEntityIndex> list) throws IOException {
         this.source = source;
         this.inputStream = source.openStreamForSequentialAccess();
         this.iterator = list.listIterator();
@@ -44,9 +44,9 @@ public class BarjCargoArchiveEntryIterator implements Iterator<SequentialBarjCar
      * @throws IOException when the list cannot be read
      */
     public BarjCargoArchiveEntryIterator(
-            @NonNull final BarjCargoArchiveFileInputStreamSource source,
-            @NonNull final List<Path> relevantFiles,
-            @NonNull final List<BarjCargoEntityIndex> list) throws IOException {
+            final @NonNull BarjCargoArchiveFileInputStreamSource source,
+            final @NonNull List<Path> relevantFiles,
+            final @NonNull List<BarjCargoEntityIndex> list) throws IOException {
         this.source = source;
         this.inputStream = source.openStreamForSequentialAccess(relevantFiles, list);
         this.iterator = list.listIterator();

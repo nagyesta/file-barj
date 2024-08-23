@@ -90,7 +90,11 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
                 .encryptionKey(keyPair.getPublic())
                 .sources(Set.of(backupSource))
                 .build();
-        final var backupController = new BackupController(job, false);
+        final var parameters = BackupParameters.builder()
+                .job(job)
+                .forceFull(false)
+                .build();
+        final var backupController = new BackupController(parameters);
         return backupController.getManifest();
     }
 }

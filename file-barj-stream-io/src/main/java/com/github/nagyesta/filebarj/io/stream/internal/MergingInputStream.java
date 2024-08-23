@@ -35,8 +35,8 @@ public class MergingInputStream extends InputStream {
      * @throws IOException If we cannot read the sources.
      */
     public MergingInputStream(
-            @NonNull final List<IoSupplier<InputStream>> allStreams,
-            @Nullable final Long totalBytes)
+            final @NonNull List<IoSupplier<InputStream>> allStreams,
+            final @Nullable Long totalBytes)
             throws IOException {
         this.remainingBytes = Optional.ofNullable(totalBytes).orElse(UNKNOWN);
         this.chunkIterator = List.copyOf(allStreams).iterator();

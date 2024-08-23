@@ -7,6 +7,7 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
+import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreParameters;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -84,16 +85,34 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
                 .build();
     }
 
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testConstructorShouldThrowExceptionWhenCalledWithNull() {
+        //given
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> new MergeController(null));
+
+        //then + exception
+    }
+
     @Test
     void testConstructorShouldThrowExceptionWhenCalledWithInvalidStartTime() throws IOException {
         //given
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_BACKUP, backupPath);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(0L)
+                .rangeEndEpochSeconds(B_INCREMENT_1)
+                .build();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new MergeController(backupPath, UBUNTU_BACKUP, null, 0L, B_INCREMENT_1));
+                () -> new MergeController(parameters));
 
         //then + exception
     }
@@ -104,10 +123,17 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_BACKUP, backupPath);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(B_FIRST_FULL)
+                .rangeEndEpochSeconds(B_INCREMENT_1 + 1L)
+                .build();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new MergeController(backupPath, UBUNTU_BACKUP, null, B_FIRST_FULL, B_INCREMENT_1 + 1L));
+                () -> new MergeController(parameters));
 
         //then + exception
     }
@@ -119,9 +145,16 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_BACKUP, backupPath);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(start)
+                .rangeEndEpochSeconds(end)
+                .build();
 
         //when
-        final var actual = new MergeController(backupPath, UBUNTU_BACKUP, null, start, end);
+        final var actual = new MergeController(parameters);
 
         //then
         Assertions.assertNotNull(actual);
@@ -134,7 +167,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(BOTH_SETS_UBUNTU_BACKUP, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_BACKUP, null, B_FIRST_FULL, B_INCREMENT_1);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(B_FIRST_FULL)
+                .rangeEndEpochSeconds(B_INCREMENT_1)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -159,7 +199,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(BOTH_SETS_UBUNTU_ENCRYPTED, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_ENCRYPTED, KEK, E_FIRST_FULL, E_INCREMENT_1);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_ENCRYPTED)
+                .kek(KEK)
+                .rangeStartEpochSeconds(E_FIRST_FULL)
+                .rangeEndEpochSeconds(E_INCREMENT_1)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -184,7 +231,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_BACKUP, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_BACKUP, null, B_INCREMENT_1, B_INCREMENT_3);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(B_INCREMENT_1)
+                .rangeEndEpochSeconds(B_INCREMENT_3)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -211,7 +265,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_ENCRYPTED, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_ENCRYPTED, KEK, E_INCREMENT_1, E_INCREMENT_3);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_ENCRYPTED)
+                .kek(KEK)
+                .rangeStartEpochSeconds(E_INCREMENT_1)
+                .rangeEndEpochSeconds(E_INCREMENT_3)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -238,7 +299,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_BACKUP, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_BACKUP, null, B_INCREMENT_1, B_INCREMENT_2);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(B_INCREMENT_1)
+                .rangeEndEpochSeconds(B_INCREMENT_2)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -265,7 +333,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_ENCRYPTED, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_ENCRYPTED, KEK, E_INCREMENT_1, E_INCREMENT_2);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_ENCRYPTED)
+                .kek(KEK)
+                .rangeStartEpochSeconds(E_INCREMENT_1)
+                .rangeEndEpochSeconds(E_INCREMENT_2)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -296,7 +371,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
                 UB_INCREMENT_1,
                 UB_INCREMENT_2);
         prepareBackupFiles(prefixes, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_BACKUP, null, B_FIRST_FULL, B_INCREMENT_2);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(B_FIRST_FULL)
+                .rangeEndEpochSeconds(B_INCREMENT_2)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -327,7 +409,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
                 UE_INCREMENT_1,
                 UE_INCREMENT_2);
         prepareBackupFiles(prefixes, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_ENCRYPTED, KEK, E_FIRST_FULL, E_INCREMENT_2);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_ENCRYPTED)
+                .kek(KEK)
+                .rangeStartEpochSeconds(E_FIRST_FULL)
+                .rangeEndEpochSeconds(E_INCREMENT_2)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -355,7 +444,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(BOTH_SETS_UBUNTU_BACKUP, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_BACKUP, null, B_INCREMENT_1, B_SECOND_FULL);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(B_INCREMENT_1)
+                .rangeEndEpochSeconds(B_SECOND_FULL)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -383,7 +479,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(BOTH_SETS_UBUNTU_ENCRYPTED, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_ENCRYPTED, KEK, E_INCREMENT_1, E_SECOND_FULL);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_ENCRYPTED)
+                .kek(KEK)
+                .rangeStartEpochSeconds(E_INCREMENT_1)
+                .rangeEndEpochSeconds(E_SECOND_FULL)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(true);
@@ -410,7 +513,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_BACKUP, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_BACKUP, null, B_INCREMENT_1, B_INCREMENT_2);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_BACKUP)
+                .kek(null)
+                .rangeStartEpochSeconds(B_INCREMENT_1)
+                .rangeEndEpochSeconds(B_INCREMENT_2)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(false);
@@ -427,7 +537,14 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
         prepareBackupFiles(FIRST_SET_UBUNTU_ENCRYPTED, backupPath);
-        final var underTest = new MergeController(backupPath, UBUNTU_ENCRYPTED, KEK, E_INCREMENT_1, E_INCREMENT_2);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(UBUNTU_ENCRYPTED)
+                .kek(KEK)
+                .rangeStartEpochSeconds(E_INCREMENT_1)
+                .rangeEndEpochSeconds(E_INCREMENT_2)
+                .build();
+        final var underTest = new MergeController(parameters);
 
         //when
         final var actual = underTest.execute(false);
@@ -467,8 +584,12 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
                 .threads(1)
                 .permissionComparisonStrategy(PermissionComparisonStrategy.RELAXED)
                 .build();
-        new RestoreController(backupPath, fileNamePrefix, kek)
-                .execute(task);
+        final var parameters = RestoreParameters.builder()
+                .backupDirectory(backupPath)
+                .fileNamePrefix(fileNamePrefix)
+                .kek(kek)
+                .build();
+        new RestoreController(parameters).execute(task);
         verifyContents(restoredR, rContents);
         verifyContents(restoredU, uContents);
     }

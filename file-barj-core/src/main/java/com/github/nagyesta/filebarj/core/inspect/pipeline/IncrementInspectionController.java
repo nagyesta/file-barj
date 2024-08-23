@@ -5,14 +5,15 @@ import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.inspect.worker.ManifestToSummaryConverter;
 import com.github.nagyesta.filebarj.core.inspect.worker.TabSeparatedBackupContentExporter;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
+import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.security.PrivateKey;
 import java.time.Instant;
+import java.util.List;
 import java.util.SortedMap;
 
 /**
@@ -26,17 +27,15 @@ public class IncrementInspectionController {
     /**
      * Creates a new instance and initializes it for the specified job.
      *
-     * @param backupDirectory the directory where the backup files are located
-     * @param fileNamePrefix  the prefix of the backup file names
-     * @param kek             The key encryption key we want to use to decrypt the files (optional).
-     *                        If null, no decryption will be performed.
+     * @param parameters The parameters.
      */
     public IncrementInspectionController(
-            @NonNull final Path backupDirectory,
-            @NonNull final String fileNamePrefix,
-            @Nullable final PrivateKey kek) {
-        final ManifestManager manifestManager = new ManifestManagerImpl();
-        this.manifests = manifestManager.loadAll(backupDirectory, fileNamePrefix, kek);
+            final @NonNull InspectParameters parameters) {
+        final var progressTracker = new ObservableProgressTracker(List.of(ProgressStep.LOAD_MANIFESTS));
+        progressTracker.registerListener(parameters.getProgressListener());
+        final ManifestManager manifestManager = new ManifestManagerImpl(progressTracker);
+        this.manifests = manifestManager
+                .loadAll(parameters.getBackupDirectory(), parameters.getFileNamePrefix(), parameters.getKek());
     }
 
     /**
@@ -47,7 +46,7 @@ public class IncrementInspectionController {
      */
     public void inspectContent(
             final long latestStartTimeEpochSeconds,
-            @NonNull final Path outputFile) {
+            final @NonNull Path outputFile) {
         final var selectedUpperLimit = Math.min(Instant.now().getEpochSecond(), latestStartTimeEpochSeconds);
         final var relevant = this.manifests.headMap(selectedUpperLimit + 1).lastKey();
         log.info("Found increment with start timestamp: {}", relevant);
@@ -60,7 +59,7 @@ public class IncrementInspectionController {
      *
      * @param outputStream the output stream
      */
-    public void inspectIncrements(@NonNull final PrintStream outputStream) {
+    public void inspectIncrements(final @NonNull PrintStream outputStream) {
         final var manifestToSummaryConverter = new ManifestToSummaryConverter();
         manifests.forEach((key, value) -> outputStream.println(manifestToSummaryConverter.convertToSummaryString(value)));
     }

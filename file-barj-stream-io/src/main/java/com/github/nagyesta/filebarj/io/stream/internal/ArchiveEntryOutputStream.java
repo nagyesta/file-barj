@@ -31,8 +31,8 @@ public class ArchiveEntryOutputStream extends DoOnCloseOutputStream {
      * @throws IOException When the stream cannot be decorated.
      */
     public ArchiveEntryOutputStream(
-            @NonNull final BaseBarjCargoArchiverFileOutputStream destinationStream,
-            @NonNull final IoFunction<OutputStream, OutputStream> encryptionFunction) throws IOException {
+            final @NonNull BaseBarjCargoArchiverFileOutputStream destinationStream,
+            final @NonNull IoFunction<OutputStream, OutputStream> encryptionFunction) throws IOException {
         this.destinationStream = destinationStream;
 
         // save boundary information before anything could interfere with the stream
@@ -74,9 +74,8 @@ public class ArchiveEntryOutputStream extends DoOnCloseOutputStream {
         return boundaries;
     }
 
-    @NotNull
     @Override
-    protected OutputStream getOutputStream() {
+    protected @NotNull OutputStream getOutputStream() {
         return originalDigestStream;
     }
 

@@ -29,21 +29,19 @@ public class DefaultBackupScopePartitioner implements BackupScopePartitioner {
      */
     public DefaultBackupScopePartitioner(
             final int batchSize,
-            @NonNull final DuplicateHandlingStrategy duplicateHandlingStrategy,
-            @NonNull final HashAlgorithm hashAlgorithm) {
+            final @NonNull DuplicateHandlingStrategy duplicateHandlingStrategy,
+            final @NonNull HashAlgorithm hashAlgorithm) {
         this.batchSize = batchSize;
         this.groupingFunction = duplicateHandlingStrategy.fileGroupingFunctionForHash(hashAlgorithm);
     }
 
     @Override
-    @NotNull
-    public List<List<List<FileMetadata>>> partitionBackupScope(@NonNull final Collection<FileMetadata> scope) {
+    public @NotNull List<List<List<FileMetadata>>> partitionBackupScope(final @NonNull Collection<FileMetadata> scope) {
         final var groupedScope = filterAndGroup(scope);
         return partition(groupedScope);
     }
 
-    @NotNull
-    private Collection<List<FileMetadata>> filterAndGroup(@NotNull final Collection<FileMetadata> scope) {
+    private @NotNull Collection<List<FileMetadata>> filterAndGroup(final @NotNull Collection<FileMetadata> scope) {
         return scope.stream()
                 .filter(metadata -> metadata.getStatus().isStoreContent())
                 .filter(metadata -> metadata.getFileType().isContentSource())
@@ -51,8 +49,7 @@ public class DefaultBackupScopePartitioner implements BackupScopePartitioner {
                 .values();
     }
 
-    @NotNull
-    private List<List<List<FileMetadata>>> partition(@NotNull final Collection<List<FileMetadata>> groupedScope) {
+    private @NotNull List<List<List<FileMetadata>>> partition(final @NotNull Collection<List<FileMetadata>> groupedScope) {
         final List<List<List<FileMetadata>>> partitionedScope = new ArrayList<>();
         var batch = new ArrayList<List<FileMetadata>>();
         var size = 0;

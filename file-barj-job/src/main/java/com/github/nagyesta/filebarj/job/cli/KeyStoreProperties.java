@@ -12,10 +12,8 @@ import java.nio.file.Path;
 @Data
 @Builder
 public class KeyStoreProperties {
-    @NonNull
-    private final Path keyStore;
+    private final @NonNull Path keyStore;
     private final char[] password;
-    @NonNull
     @Builder.Default
-    private final String alias = "default";
+    private final @NonNull String alias = "default";
 }

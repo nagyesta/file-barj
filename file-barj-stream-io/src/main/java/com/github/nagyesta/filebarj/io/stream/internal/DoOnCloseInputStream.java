@@ -58,8 +58,7 @@ public abstract class DoOnCloseInputStream extends InputStream {
      *
      * @return the input stream
      */
-    @NotNull
-    protected abstract InputStream getInputStream();
+    protected abstract @NotNull InputStream getInputStream();
 
     /**
      * Performs some action exactly once when the close method is first called on the stream.

@@ -10,6 +10,9 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
+import com.github.nagyesta.filebarj.core.progress.ProgressStep;
+import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetter;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
 import com.github.nagyesta.filebarj.core.util.LogUtil;
@@ -46,6 +49,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static com.github.nagyesta.filebarj.core.progress.ProgressStep.*;
 import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
 import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStream.MEBIBYTE;
 
@@ -54,7 +58,6 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStre
  */
 @Slf4j
 public class RestorePipeline {
-
     private final Map<String, BarjCargoArchiveFileInputStreamSource> cache = new ConcurrentHashMap<>();
     private final FileMetadataChangeDetector changeDetector;
     private final Path backupDirectory;
@@ -63,6 +66,7 @@ public class RestorePipeline {
     private final RestoreManifest manifest;
     private final FileMetadataSetter fileMetadataSetter;
     private final ReentrantLock streamLock = new ReentrantLock();
+    private @NonNull ProgressTracker progressTracker = new NoOpProgressTracker();
 
     /**
      * Creates a new pipeline instance for the specified manifests.
@@ -73,11 +77,11 @@ public class RestorePipeline {
      * @param kek                the key encryption key we would like to use to decrypt files
      * @param permissionStrategy the permission comparison strategy
      */
-    public RestorePipeline(@NonNull final RestoreManifest manifest,
-                           @NonNull final Path backupDirectory,
-                           @NonNull final RestoreTargets restoreTargets,
-                           @Nullable final PrivateKey kek,
-                           @Nullable final PermissionComparisonStrategy permissionStrategy) {
+    public RestorePipeline(final @NonNull RestoreManifest manifest,
+                           final @NonNull Path backupDirectory,
+                           final @NonNull RestoreTargets restoreTargets,
+                           final @Nullable PrivateKey kek,
+                           final @Nullable PermissionComparisonStrategy permissionStrategy) {
         if (manifest.getMaximumAppVersion().compareTo(new AppVersion()) > 0) {
             throw new IllegalArgumentException("Manifests were saved with a newer version of the application");
         }
@@ -95,12 +99,14 @@ public class RestorePipeline {
      *
      * @param directories the directories
      */
-    public void restoreDirectories(@NonNull final List<FileMetadata> directories) {
+    public void restoreDirectories(final @NonNull List<FileMetadata> directories) {
         log.info("Restoring {} directories", directories.size());
+        progressTracker.estimateStepSubtotal(RESTORE_DIRECTORIES, directories.size());
         directories.stream()
                 .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
                 .sorted(Comparator.comparing(FileMetadata::getAbsolutePath))
                 .forEachOrdered(this::restoreDirectory);
+        progressTracker.completeStep(RESTORE_DIRECTORIES);
         log.info("Restored {} directories", directories.size());
     }
 
@@ -111,10 +117,12 @@ public class RestorePipeline {
      * @param threadPool     the thread pool we can use for parallel processing
      */
     public void restoreFiles(
-            @NonNull final Collection<FileMetadata> contentSources,
-            @NonNull final ForkJoinPool threadPool) {
+            final @NonNull Collection<FileMetadata> contentSources,
+            final @NonNull ForkJoinPool threadPool) {
         log.info("Restoring {} items", contentSources.size());
-        final var changeStatus = detectChanges(contentSources, threadPool, false);
+
+        progressTracker.estimateStepSubtotal(PARSE_METADATA, contentSources.size());
+        final var changeStatus = detectChanges(contentSources, threadPool, false, PARSE_METADATA);
         final var pathsToRestore = contentSources.stream()
                 .map(FileMetadata::getAbsolutePath)
                 .collect(Collectors.toSet());
@@ -145,23 +153,24 @@ public class RestorePipeline {
      * @param threadPool The thread pool we can use for parallel processing
      */
     public void finalizePermissions(
-            @NonNull final List<FileMetadata> files,
-            @NonNull final ForkJoinPool threadPool) {
+            final @NonNull List<FileMetadata> files,
+            final @NonNull ForkJoinPool threadPool) {
         log.info("Finalizing metadata for {} files", files.size());
-        final var changeStatus = detectChanges(files, threadPool, false);
+        progressTracker.estimateStepSubtotal(VERIFY_CONTENT, files.size());
+        final var changeStatus = detectChanges(files, threadPool, false, VERIFY_CONTENT);
         final var filesWithMetadataChanges = files.stream()
                 .filter(entry -> changeStatus.get(entry.getAbsolutePath()).isRestoreMetadata())
                 .toList();
-        final var doneCount = new AtomicInteger();
+        progressTracker.estimateStepSubtotal(RESTORE_METADATA, filesWithMetadataChanges.size());
         filesWithMetadataChanges.stream()
                 .sorted(Comparator.comparing(FileMetadata::getAbsolutePath).reversed())
                 .forEachOrdered(fileMetadata -> {
                     setFileProperties(fileMetadata);
-                    LogUtil.logIfThresholdReached(doneCount.incrementAndGet(), filesWithMetadataChanges.size(),
-                            (done, total) -> log.info("Finalized metadata for {} of {} paths.", done, total));
+                    progressTracker.recordProgressInSubSteps(RESTORE_METADATA);
                 });
         final var totalCount = LogUtil.countsByType(files);
         final var changedCount = LogUtil.countsByType(filesWithMetadataChanges);
+        progressTracker.completeStep(RESTORE_METADATA);
         changedCount.keySet().forEach(type -> log.info("Finalized metadata for {} of {} {} entries.",
                 changedCount.get(type), totalCount.get(type), type));
     }
@@ -174,7 +183,7 @@ public class RestorePipeline {
      * @param threadPool          The thread pool we can use for parallel processing
      */
     public void deleteLeftOverFiles(
-            final BackupPath includedPath, final boolean deleteLeftOverFiles, @NonNull final ForkJoinPool threadPool) {
+            final BackupPath includedPath, final boolean deleteLeftOverFiles, final @NonNull ForkJoinPool threadPool) {
         if (!deleteLeftOverFiles) {
             log.info("Skipping left-over files deletion...");
             return;
@@ -216,6 +225,7 @@ public class RestorePipeline {
                         throw new ArchivalException("Failed to delete left-over file: " + path, e);
                     }
                 })).join();
+        progressTracker.completeStep(DELETE_OBSOLETE_FILES);
         log.info("Deleted {} left-over files.", counter.get());
     }
 
@@ -227,9 +237,10 @@ public class RestorePipeline {
      * @param threadPool The thread pool
      */
     public void evaluateRestoreSuccess(
-            @NonNull final List<FileMetadata> files,
-            @NonNull final ForkJoinPool threadPool) {
-        final var checkOutcome = detectChanges(files, threadPool, true);
+            final @NonNull List<FileMetadata> files,
+            final @NonNull ForkJoinPool threadPool) {
+        progressTracker.estimateStepSubtotal(VERIFY_METADATA, files.size());
+        final var checkOutcome = detectChanges(files, threadPool, true, VERIFY_METADATA);
         files.stream()
                 //cannot verify symbolic links because they can be referencing files from the
                 //restore folder which is not necessarily the same as the original backup folder
@@ -249,7 +260,7 @@ public class RestorePipeline {
      *
      * @param fileMetadata the file metadata
      */
-    protected void setFileProperties(@NotNull final FileMetadata fileMetadata) {
+    protected void setFileProperties(final @NotNull FileMetadata fileMetadata) {
         final var restorePath = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         if (!Files.exists(restorePath, LinkOption.NOFOLLOW_LINKS)) {
             return;
@@ -274,7 +285,7 @@ public class RestorePipeline {
      * @throws IOException if an I/O error occurs
      */
     protected void createSymbolicLink(
-            @NotNull final Path linkTarget, @NotNull final Path symbolicLink) throws IOException {
+            final @NotNull Path linkTarget, final @NotNull Path symbolicLink) throws IOException {
         Files.createSymbolicLink(symbolicLink, linkTarget);
     }
 
@@ -285,8 +296,8 @@ public class RestorePipeline {
      * @param remainingCopies the remaining copies we need tp restore
      */
     protected void copyRestoredFileToRemainingLocations(
-            @NotNull final FileMetadata original,
-            @NotNull final List<FileMetadata> remainingCopies) {
+            final @NotNull FileMetadata original,
+            final @NotNull List<FileMetadata> remainingCopies) {
         final var unpackedFile = restoreTargets.mapToRestorePath(original.getAbsolutePath());
         remainingCopies.forEach(file -> {
             final var copy = restoreTargets.mapToRestorePath(file.getAbsolutePath());
@@ -298,6 +309,7 @@ public class RestorePipeline {
                 } else {
                     Files.copy(unpackedFile, copy);
                 }
+                progressTracker.recordProgressInSubSteps(RESTORE_CONTENT);
             } catch (final IOException e) {
                 throw new ArchivalException("Failed to copy file: " + unpackedFile + " to: " + copy, e);
             }
@@ -310,7 +322,7 @@ public class RestorePipeline {
      * @param path the path
      * @throws IOException if an I/O error occurs
      */
-    protected void createDirectory(@NotNull final Path path) throws IOException {
+    protected void createDirectory(final @NotNull Path path) throws IOException {
         Files.createDirectories(path);
     }
 
@@ -320,13 +332,14 @@ public class RestorePipeline {
      * @param content the content
      * @param target  the target where we need to store the content
      */
-    protected void restoreFileContent(@NotNull final InputStream content, @NotNull final Path target) {
+    protected void restoreFileContent(final @NotNull InputStream content, final @NotNull Path target) {
         createParentDirectoryAsFallbackIfMissing(target);
         try (var outputStream = new FileOutputStream(target.toFile());
              var bufferedStream = new BufferedOutputStream(outputStream);
              var countingStream = new CountingOutputStream(bufferedStream)) {
             IOUtils.copy(content, countingStream);
             log.debug("Restored file: {}", target);
+            progressTracker.recordProgressInSubSteps(RESTORE_CONTENT);
         } catch (final IOException e) {
             throw new ArchivalException("Failed to restore content: " + target, e);
         }
@@ -338,7 +351,7 @@ public class RestorePipeline {
      * @param currentFile the current file
      * @throws IOException if an I/O error occurs
      */
-    protected void deleteIfExists(@NotNull final Path currentFile) throws IOException {
+    protected void deleteIfExists(final @NotNull Path currentFile) throws IOException {
         if (!Files.exists(currentFile, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
@@ -349,7 +362,7 @@ public class RestorePipeline {
         }
     }
 
-    private void createParentDirectoryAsFallbackIfMissing(@NotNull final Path target) {
+    private void createParentDirectoryAsFallbackIfMissing(final @NotNull Path target) {
         try {
             if (target.getParent() != null && !Files.exists(target.getParent())) {
                 log.warn("Creating missing parent directory: {}", target.getParent());
@@ -362,7 +375,7 @@ public class RestorePipeline {
 
     private void restoreContent(
             final ForkJoinPool threadPool,
-            @NotNull final RestoreScope restoreScope,
+            final @NotNull RestoreScope restoreScope,
             final int totalFiles) {
         final var changedContentSourcesByPath = restoreScope.getChangedContentSourcesByPath();
         final var size = changedContentSourcesByPath.size();
@@ -370,6 +383,7 @@ public class RestorePipeline {
                 .map(FileMetadata::getOriginalSizeBytes)
                 .mapToLong(Long::longValue)
                 .sum() / MEBIBYTE;
+        progressTracker.estimateStepSubtotal(RESTORE_CONTENT, size);
         log.info("Restoring {} entries with content changes ({} MiB).", size, restoreSize);
         final var linkPaths = new ConcurrentHashMap<FileMetadata, Path>();
         final var contentSourcesInScopeByLocator = restoreScope.getContentSourcesInScopeByLocator();
@@ -425,13 +439,13 @@ public class RestorePipeline {
             linkPaths.putAll(resolvedLinks);
         })).join();
         createSymbolicLinks(linkPaths, threadPool);
+        progressTracker.completeStep(RESTORE_CONTENT);
         log.info("Restored {} changed entries of {} files", size, totalFiles);
     }
 
-    @NotNull
-    private List<Map<ArchiveEntryLocator, SortedSet<FileMetadata>>> partition(
-            @NotNull final List<BarjCargoEntityIndex> input,
-            @NotNull final Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator,
+    private @NotNull List<Map<ArchiveEntryLocator, SortedSet<FileMetadata>>> partition(
+            final @NotNull List<BarjCargoEntityIndex> input,
+            final @NotNull Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator,
             final int partitions) {
         final var chunks = new ArrayList<Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>();
         final var threshold = (input.size() / partitions) + 1;
@@ -453,10 +467,10 @@ public class RestorePipeline {
     }
 
     private Map<FileMetadata, Path> restoreMatchingEntriesOfManifest(
-            @NotNull final RestoreManifest manifest,
-            @NotNull final RestoreScope restoreScope,
-            @NotNull final String prefix,
-            @NotNull final Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator) {
+            final @NotNull RestoreManifest manifest,
+            final @NotNull RestoreScope restoreScope,
+            final @NotNull String prefix,
+            final @NotNull Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator) {
         final var remaining = contentSourcesInScopeByLocator
                 .keySet().stream()
                 .filter(locator -> manifest.getFileNamePrefixes().get(prefix).contains(locator.getBackupIncrement()))
@@ -508,14 +522,13 @@ public class RestorePipeline {
         }
     }
 
-    @NotNull
-    private Map<BackupPath, Change> detectChanges(
-            @NotNull final Collection<FileMetadata> files,
-            @NotNull final ForkJoinPool threadPool,
-            final boolean ignoreLinks) {
+    private @NotNull Map<BackupPath, Change> detectChanges(
+            final @NotNull Collection<FileMetadata> files,
+            final @NotNull ForkJoinPool threadPool,
+            final boolean ignoreLinks,
+            final ProgressStep step) {
         final var parser = FileMetadataParserFactory.newInstance();
         final Map<BackupPath, Change> changeStatuses = new ConcurrentHashMap<>();
-        final var doneCount = new AtomicInteger();
         threadPool.submit(() -> files.parallelStream()
                 .filter(fileMetadata -> !ignoreLinks || fileMetadata.getFileType() != FileType.SYMBOLIC_LINK)
                 .forEach(file -> {
@@ -526,17 +539,17 @@ public class RestorePipeline {
                     final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
                     final var current = parser.parse(restorePath.toFile(), manifest.getConfiguration());
                     final var change = changeDetector.classifyChange(previous, current);
-                    LogUtil.logIfThresholdReached(doneCount.incrementAndGet(), files.size(),
-                            (done, total) -> log.info("Parsed {} of {} unique paths.", done, total));
+                    progressTracker.recordProgressInSubSteps(step);
                     changeStatuses.put(file.getAbsolutePath(), change);
                 })).join();
         final var stats = new TreeMap<>(changeStatuses.values().stream()
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting())));
         log.info("Detected changes: {}", stats);
+        progressTracker.completeStep(step);
         return changeStatuses;
     }
 
-    private void createSymbolicLinks(@NotNull final ConcurrentHashMap<FileMetadata, Path> linkPaths, final ForkJoinPool threadPool) {
+    private void createSymbolicLinks(final @NotNull ConcurrentHashMap<FileMetadata, Path> linkPaths, final ForkJoinPool threadPool) {
         threadPool.submit(() -> linkPaths.entrySet().parallelStream().forEach(entry -> {
             final var metadata = entry.getKey();
             final var linkTarget = entry.getValue();
@@ -546,8 +559,9 @@ public class RestorePipeline {
                     deleteIfExists(symbolicLink);
                     createSymbolicLink(linkTarget, symbolicLink);
                 }
+                progressTracker.recordProgressInSubSteps(RESTORE_CONTENT);
             } catch (final IOException e) {
-                log.error("Failed to create symbolic link: " + symbolicLink + " pointing to: " + linkTarget, e);
+                log.error("Failed to create symbolic link: {} pointing to: {}", symbolicLink, linkTarget, e);
             }
         })).join();
     }
@@ -571,8 +585,8 @@ public class RestorePipeline {
     }
 
     private boolean skipIfNotInScope(
-            @NotNull final Set<ArchiveEntryLocator> archiveEntryPathsInScope,
-            @NotNull final SequentialBarjCargoArchiveEntry archiveEntry) {
+            final @NotNull Set<ArchiveEntryLocator> archiveEntryPathsInScope,
+            final @NotNull SequentialBarjCargoArchiveEntry archiveEntry) {
         final var locator = ArchiveEntryLocator.fromEntryPath(archiveEntry.getPath());
         if (locator == null) {
             return true;
@@ -589,8 +603,8 @@ public class RestorePipeline {
     }
 
     private FileType getSingleEntryType(
-            @NotNull final Collection<FileMetadata> files,
-            @NotNull final UUID archiveEntryId) {
+            final @NotNull Collection<FileMetadata> files,
+            final @NotNull UUID archiveEntryId) {
         final var types = files.stream()
                 .map(FileMetadata::getFileType)
                 .collect(Collectors.toCollection(TreeSet::new));
@@ -601,9 +615,9 @@ public class RestorePipeline {
     }
 
     private void restoreFileContent(
-            @NotNull final SequentialBarjCargoArchiveEntry archiveEntry,
-            @NotNull final FileMetadata fileMetadata,
-            @Nullable final SecretKey key) {
+            final @NotNull SequentialBarjCargoArchiveEntry archiveEntry,
+            final @NotNull FileMetadata fileMetadata,
+            final @Nullable SecretKey key) {
         log.debug("Restoring entry: {} to file: {}", archiveEntry.getPath(), fileMetadata.getAbsolutePath());
         final var unpackTo = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         try (var fileContent = archiveEntry.getFileContent(key)) {
@@ -614,12 +628,11 @@ public class RestorePipeline {
         }
     }
 
-    @NotNull
-    private Path resolveLinkTarget(
-            @NotNull final SequentialBarjCargoArchiveEntry archiveEntry,
-            @NotNull final FileMetadata fileMetadata,
-            @Nullable final SecretKey key,
-            @NotNull final RestoreScope restoreScope) {
+    private @NotNull Path resolveLinkTarget(
+            final @NotNull SequentialBarjCargoArchiveEntry archiveEntry,
+            final @NotNull FileMetadata fileMetadata,
+            final @Nullable SecretKey key,
+            final @NotNull RestoreScope restoreScope) {
         final var to = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         try {
             final var target = FilenameUtils.separatorsToUnix(archiveEntry.getLinkTarget(key));
@@ -638,7 +651,7 @@ public class RestorePipeline {
         }
     }
 
-    private void skipMetadata(@NotNull final SequentialBarjCargoArchiveEntry archiveEntry) {
+    private void skipMetadata(final @NotNull SequentialBarjCargoArchiveEntry archiveEntry) {
         try {
             archiveEntry.skipMetadata();
         } catch (final IOException e) {
@@ -646,7 +659,7 @@ public class RestorePipeline {
         }
     }
 
-    private void restoreDirectory(@NotNull final FileMetadata fileMetadata) {
+    private void restoreDirectory(final @NotNull FileMetadata fileMetadata) {
         final var path = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         log.debug("Restoring directory: {}", path);
         try {
@@ -654,6 +667,7 @@ public class RestorePipeline {
                 deleteIfExists(path);
             }
             createDirectory(path);
+            progressTracker.recordProgressInSubSteps(RESTORE_DIRECTORIES);
             log.debug("Restored directory: {}", path);
         } catch (final IOException e) {
             throw new ArchivalException("Failed to restore directory: " + path, e);
@@ -662,25 +676,23 @@ public class RestorePipeline {
     }
 
     private void restoreFileSequentially(
-            @NotNull final InputStream inputStream,
-            @NotNull final FileMetadata fileMetadata) {
+            final @NotNull InputStream inputStream,
+            final @NotNull FileMetadata fileMetadata) {
         final var path = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         restoreFileContent(inputStream, path);
     }
 
-    @Nullable
-    private SecretKey getDecryptionKey(
-            @NotNull final RestoreManifest relevantManifest,
-            @NotNull final ArchiveEntryLocator entryName) {
+    private @Nullable SecretKey getDecryptionKey(
+            final @NotNull RestoreManifest relevantManifest,
+            final @NotNull ArchiveEntryLocator entryName) {
         return Optional.ofNullable(kek)
                 .map(k -> relevantManifest.dataDecryptionKey(k, entryName))
                 .orElse(null);
     }
 
-    @NotNull
-    private BarjCargoArchiveFileInputStreamSource getStreamSource(
-            @NotNull final RestoreManifest manifest,
-            @NotNull final String fileNamePrefix) throws IOException {
+    private @NotNull BarjCargoArchiveFileInputStreamSource getStreamSource(
+            final @NotNull RestoreManifest manifest,
+            final @NotNull String fileNamePrefix) throws IOException {
         if (cache.containsKey(fileNamePrefix)) {
             return cache.get(fileNamePrefix);
         }
@@ -703,5 +715,16 @@ public class RestorePipeline {
         } finally {
             streamLock.unlock();
         }
+    }
+
+    public void setProgressTracker(final @NonNull ProgressTracker progressTracker) {
+        progressTracker.assertSupports(RESTORE_DIRECTORIES);
+        progressTracker.assertSupports(PARSE_METADATA);
+        progressTracker.assertSupports(RESTORE_CONTENT);
+        progressTracker.assertSupports(VERIFY_CONTENT);
+        progressTracker.assertSupports(RESTORE_METADATA);
+        progressTracker.assertSupports(VERIFY_METADATA);
+        progressTracker.assertSupports(DELETE_OBSOLETE_FILES);
+        this.progressTracker = progressTracker;
     }
 }

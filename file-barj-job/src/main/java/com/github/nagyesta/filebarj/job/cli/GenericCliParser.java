@@ -14,7 +14,7 @@ import java.util.function.Function;
 public abstract class GenericCliParser<T> {
 
     private static final int MAX_WIDTH = 120;
-    private T result;
+    private final T result;
 
     /**
      * Creates a new instance and sets the input arguments.

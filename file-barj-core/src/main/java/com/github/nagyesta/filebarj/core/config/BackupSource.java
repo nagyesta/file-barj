@@ -37,10 +37,9 @@ public class BackupSource {
     /**
      * The path we want to back up. Can be file or directory.
      */
-    @Valid
-    @NonNull
     @JsonProperty("path")
-    private final BackupPath path;
+    private final @Valid
+    @NonNull BackupPath path;
     /**
      * Optional include patterns for filtering the contents. Uses {@link java.nio.file.PathMatcher}
      * with "glob" syntax relative to the value of the path field.

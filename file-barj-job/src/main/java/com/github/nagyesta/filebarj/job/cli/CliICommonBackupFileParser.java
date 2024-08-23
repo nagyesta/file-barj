@@ -82,8 +82,7 @@ public class CliICommonBackupFileParser<T> extends GenericCliParser<T> {
                         .desc("Defines the prefix of the backup files inside the backup directory.").build());
     }
 
-    @Nullable
-    protected static KeyStoreProperties parseKeyProperties(final Console console, final CommandLine commandLine) {
+    protected static @Nullable KeyStoreProperties parseKeyProperties(final Console console, final CommandLine commandLine) {
         KeyStoreProperties keyProperties = null;
         if (commandLine.hasOption(KEY_STORE)) {
             final var keyStore = Path.of(commandLine.getOptionValue(KEY_STORE)).toAbsolutePath();

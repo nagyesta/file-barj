@@ -37,7 +37,7 @@ public class BarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiverFile
      * @throws IOException If we cannot create the folder or write to it.
      */
     public BarjCargoArchiverFileOutputStream(
-            @NotNull final BarjCargoOutputStreamConfiguration config) throws IOException {
+            final @NotNull BarjCargoOutputStreamConfiguration config) throws IOException {
         super(config);
         this.indexFile = doCreateFile(toIndexFileName(config.getPrefix()));
         this.indexStream = new FileOutputStream(indexFile.toFile());
@@ -86,7 +86,7 @@ public class BarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiverFile
         }
     }
 
-    private void writeEntityToIndex(@NotNull final BarjCargoEntityIndex entityIndex) throws IOException {
+    private void writeEntityToIndex(final @NotNull BarjCargoEntityIndex entityIndex) throws IOException {
         try {
             final var prefix = entryIndexPrefix(entryCount());
             this.indexStreamWriter.write(entityIndex.toProperties(prefix));

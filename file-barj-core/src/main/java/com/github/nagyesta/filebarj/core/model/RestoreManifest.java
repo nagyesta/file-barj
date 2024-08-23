@@ -24,8 +24,7 @@ public class RestoreManifest extends EncryptionKeyStore {
     /**
      * The version number of the app that generated the manifest.
      */
-    @NonNull
-    private final AppVersion maximumAppVersion;
+    private final @NonNull AppVersion maximumAppVersion;
     /**
      * The time when the backup process was started in UTC epoch
      * seconds.
@@ -35,25 +34,20 @@ public class RestoreManifest extends EncryptionKeyStore {
      * The file name prefix used by the backup archives as keys, mapped to the versions belonging to
      * that prefix.
      */
-    @NonNull
-    private final SortedMap<String, SortedSet<Integer>> fileNamePrefixes;
+    private final @NonNull SortedMap<String, SortedSet<Integer>> fileNamePrefixes;
     /**
      * The snapshot of the backup configuration at the time of backup.
      */
-    @NonNull
-    private final BackupJobConfiguration configuration;
-    @NonNull
-    private final OperatingSystem operatingSystem;
+    private final @NonNull BackupJobConfiguration configuration;
+    private final @NonNull OperatingSystem operatingSystem;
     /**
      * The map of matching files identified during backup keyed by filename and Id.
      */
-    @NonNull
-    private final Map<String, Map<UUID, FileMetadata>> files;
+    private final @NonNull Map<String, Map<UUID, FileMetadata>> files;
     /**
      * The map of archive entries saved during backup keyed by filename and Id.
      */
-    @NonNull
-    private final Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries;
+    private final @NonNull Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries;
 
     /**
      * Returns the data decryption key for the given file name prefix using the private key for
@@ -63,7 +57,7 @@ public class RestoreManifest extends EncryptionKeyStore {
      * @param kekPrivateKey  the private key
      * @return the data decryption key
      */
-    public @NotNull SecretKey dataIndexDecryptionKey(@NotNull final String fileNamePrefix, @NotNull final PrivateKey kekPrivateKey) {
+    public @NotNull SecretKey dataIndexDecryptionKey(final @NotNull String fileNamePrefix, final @NotNull PrivateKey kekPrivateKey) {
         return dataIndexDecryptionKey(kekPrivateKey, fileNamePrefixes.get(fileNamePrefix).first());
     }
 

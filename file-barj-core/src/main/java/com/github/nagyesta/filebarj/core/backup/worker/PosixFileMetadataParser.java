@@ -34,10 +34,9 @@ public class PosixFileMetadataParser implements FileMetadataParser {
      */
     public static final String DEFAULT_OWNER = "-";
 
-    @NotNull
     @Override
-    public FileMetadata parse(
-            @NonNull final File file, @NonNull final BackupJobConfiguration configuration) {
+    public @NotNull FileMetadata parse(
+            final @NonNull File file, final @NonNull BackupJobConfiguration configuration) {
         if (!Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
             return FileMetadata.builder()
                     .id(UUID.randomUUID())

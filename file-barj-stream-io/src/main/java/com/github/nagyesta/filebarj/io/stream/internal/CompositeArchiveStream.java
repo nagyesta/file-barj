@@ -31,8 +31,8 @@ public class CompositeArchiveStream extends DoOnCloseOutputStream {
      * @param digestAlgorithm   The algorithm we should use for digest calculation.
      * @throws IOException When the stream cannot be decorated.
      */
-    public CompositeArchiveStream(@NotNull final OutputStream destinationStream,
-                                  @Nullable final String digestAlgorithm) throws IOException {
+    public CompositeArchiveStream(final @NotNull OutputStream destinationStream,
+                                  final @Nullable String digestAlgorithm) throws IOException {
         this(destinationStream, digestAlgorithm, IoFunction.IDENTITY_OUTPUT_STREAM);
     }
 
@@ -46,9 +46,9 @@ public class CompositeArchiveStream extends DoOnCloseOutputStream {
      *                          it to the destination.
      * @throws IOException When the stream cannot be decorated.
      */
-    public CompositeArchiveStream(@NonNull final OutputStream destinationStream,
-                                  @Nullable final String digestAlgorithm,
-                                  @NonNull final IoFunction<OutputStream, OutputStream> transformation) throws IOException {
+    public CompositeArchiveStream(final @NonNull OutputStream destinationStream,
+                                  final @Nullable String digestAlgorithm,
+                                  final @NonNull IoFunction<OutputStream, OutputStream> transformation) throws IOException {
         OptionalDigestOutputStream dos = null;
         CountingOutputStream cos = null;
         OutputStream ts = null;
@@ -86,15 +86,13 @@ public class CompositeArchiveStream extends DoOnCloseOutputStream {
      * @return The digest value. null if called with the null algorithm.
      * @throws IllegalStateException When the stream is not closed yet.
      */
-    @Nullable
-    public String getDigestValue() throws IllegalStateException {
+    public @Nullable String getDigestValue() throws IllegalStateException {
         assertClosed();
         return digestValue;
     }
 
-    @NotNull
     @Override
-    protected OutputStream getOutputStream() {
+    protected @NotNull OutputStream getOutputStream() {
         return transformationStream;
     }
 

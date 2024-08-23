@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 public class LogUtil {
     private static final String RESET = "\033[0;0m";
     private static final String RED = "\033[0;31m";
-    private static final int FOUR = 4;
 
     /**
      * Makes the message more prominent by applying a red colour.
@@ -36,8 +35,8 @@ public class LogUtil {
      * @param loggingConsumer the consumer
      */
     public static void logStatistics(
-            @NotNull final Collection<FileMetadata> ofFiles,
-            @NotNull final BiConsumer<FileType, Long> loggingConsumer) {
+            final @NotNull Collection<FileMetadata> ofFiles,
+            final @NotNull BiConsumer<FileType, Long> loggingConsumer) {
         countsByType(ofFiles).forEach(loggingConsumer);
     }
 
@@ -47,29 +46,9 @@ public class LogUtil {
      * @param ofFiles the files
      * @return the counts of each file type
      */
-    @NotNull
-    public static TreeMap<FileType, Long> countsByType(
-            @NotNull final Collection<FileMetadata> ofFiles) {
+    public static @NotNull TreeMap<FileType, Long> countsByType(
+            final @NotNull Collection<FileMetadata> ofFiles) {
         return new TreeMap<>(ofFiles.stream()
                 .collect(Collectors.groupingBy(FileMetadata::getFileType, Collectors.counting())));
-    }
-
-    /**
-     * Log if any of the 25, 50, 75, 100% thresholds are reached.
-     *
-     * @param done            The number of done items
-     * @param total           The total number of items
-     * @param loggingConsumer The consumer
-     */
-    public static void logIfThresholdReached(
-            final int done,
-            final int total,
-            @NotNull final BiConsumer<Integer, Integer> loggingConsumer) {
-        final var quarter = total / FOUR;
-        final var half = quarter + quarter;
-        final var threeQuarters = half + quarter;
-        if (done == quarter || done == half || done == threeQuarters || done == total) {
-            loggingConsumer.accept(done, total);
-        }
     }
 }

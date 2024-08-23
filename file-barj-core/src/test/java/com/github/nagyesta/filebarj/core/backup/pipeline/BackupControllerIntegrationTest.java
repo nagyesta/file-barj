@@ -57,7 +57,11 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
 
         final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_EACH);
-        final var underTest = new BackupController(job, false);
+        final var parameters = BackupParameters.builder()
+                .job(job)
+                .forceFull(false)
+                .build();
+        final var underTest = new BackupController(parameters);
 
         //when
         underTest.execute(threads);
@@ -135,7 +139,11 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
 
         final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_ONE_PER_BACKUP);
-        final var underTest = new BackupController(job, false);
+        final var parameters = BackupParameters.builder()
+                .job(job)
+                .forceFull(false)
+                .build();
+        final var underTest = new BackupController(parameters);
 
         //when
         underTest.execute(threads);
@@ -207,7 +215,11 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
         final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_EACH);
-        final var underTest = new BackupController(job, false);
+        final var parameters = BackupParameters.builder()
+                .job(job)
+                .forceFull(false)
+                .build();
+        final var underTest = new BackupController(parameters);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.execute(threads));
@@ -226,7 +238,11 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(imageLink.toPath(), exampleFile.toPath());
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
         final var job = getConfiguration(BackupType.FULL, keyPair, sourceDirectory, KEEP_EACH);
-        final var underTest = new BackupController(job, false);
+        final var parameters = BackupParameters.builder()
+                .job(job)
+                .forceFull(false)
+                .build();
+        final var underTest = new BackupController(parameters);
 
         //when
         underTest.execute(1);
@@ -241,9 +257,13 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
         final var sourceDirectory = Path.of(testDataRoot.toString(), "source");
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
         final var job = getConfiguration(BackupType.INCREMENTAL, keyPair, sourceDirectory, KEEP_EACH);
+        final var parameters = BackupParameters.builder()
+                .job(job)
+                .forceFull(false)
+                .build();
 
         //when
-        final var underTest = new BackupController(job, false);
+        final var underTest = new BackupController(parameters);
         final var actual = underTest.getManifest().getBackupType();
 
         //then

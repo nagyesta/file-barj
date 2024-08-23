@@ -24,8 +24,7 @@ public final class TimerUtil {
      * @param totalBackupSizeBytes Total backup size in bytes
      * @return Process summary
      */
-    @NotNull
-    public static String toProcessSummary(final long durationMillis, final long totalBackupSizeBytes) {
+    public static @NotNull String toProcessSummary(final long durationMillis, final long totalBackupSizeBytes) {
         final var elapsedSeconds = toElapsedSeconds(durationMillis);
         final var elapsedMinutes = toElapsedMinutes(elapsedSeconds);
         final var remainingSeconds = getRemainderSecondsOfIncompleteMinutes(elapsedSeconds);
@@ -39,13 +38,11 @@ public final class TimerUtil {
      * @param durationMillis Duration in milliseconds
      * @return Process summary
      */
-    @NotNull
-    public static String toProcessSummary(final long durationMillis) {
+    public static @NotNull String toProcessSummary(final long durationMillis) {
         return toProcessSummary(durationMillis, 0L);
     }
 
-    @NotNull
-    private static String rateToString(final long totalBackupSizeBytes, final BigDecimal elapsedMinutes) {
+    private static @NotNull String rateToString(final long totalBackupSizeBytes, final BigDecimal elapsedMinutes) {
         if (totalBackupSizeBytes == 0 || isZero(elapsedMinutes)) {
             return "";
         }
@@ -53,13 +50,11 @@ public final class TimerUtil {
         return " (speed: " + rate.toPlainString() + " MiB/min)";
     }
 
-    @NotNull
-    private static String secondsToString(final BigDecimal remainingSeconds) {
+    private static @NotNull String secondsToString(final BigDecimal remainingSeconds) {
         return remainingSeconds.toPlainString() + " seconds";
     }
 
-    @NotNull
-    private static String minutesToString(final BigDecimal elapsedMinutes) {
+    private static @NotNull String minutesToString(final BigDecimal elapsedMinutes) {
         if (isZero(elapsedMinutes)) {
             return "";
         }
@@ -70,20 +65,17 @@ public final class TimerUtil {
         return elapsedMinutes.setScale(0, RoundingMode.DOWN).compareTo(BigDecimal.ZERO) == 0;
     }
 
-    @NotNull
-    private static BigDecimal getRemainderSecondsOfIncompleteMinutes(
+    private static @NotNull BigDecimal getRemainderSecondsOfIncompleteMinutes(
             final BigDecimal elapsedSeconds) {
         return elapsedSeconds.remainder(MINUTES);
     }
 
-    @NotNull
-    private static BigDecimal toElapsedMinutes(
+    private static @NotNull BigDecimal toElapsedMinutes(
             final BigDecimal elapsedSeconds) {
         return elapsedSeconds.divide(MINUTES, RoundingMode.HALF_UP);
     }
 
-    @NotNull
-    private static BigDecimal toElapsedSeconds(
+    private static @NotNull BigDecimal toElapsedSeconds(
             final long durationMillis) {
         return new BigDecimal(durationMillis).setScale(2, RoundingMode.HALF_UP)
                 .divide(SECONDS, 2, RoundingMode.HALF_UP);

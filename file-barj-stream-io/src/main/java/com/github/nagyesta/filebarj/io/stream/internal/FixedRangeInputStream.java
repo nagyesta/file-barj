@@ -25,7 +25,7 @@ public class FixedRangeInputStream extends BoundedInputStream {
      */
     @SuppressWarnings("deprecation")
     public FixedRangeInputStream(
-            @NonNull final InputStream source, final long startInclusive, final long length)
+            final @NonNull InputStream source, final long startInclusive, final long length)
             throws IOException {
         super(source);
         if (length < 0) {

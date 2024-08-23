@@ -44,15 +44,15 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
      * @param permissionStrategy the permission comparison strategy
      */
     public PosixFileMetadataSetter(
-            @NonNull final RestoreTargets restoreTargets,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+            final @NonNull RestoreTargets restoreTargets,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         this.restoreTargets = restoreTargets;
         this.permissionComparisonStrategy = Optional.ofNullable(permissionStrategy)
                 .orElse(PermissionComparisonStrategy.STRICT);
     }
 
     @Override
-    public void setMetadata(@NonNull final FileMetadata metadata) {
+    public void setMetadata(final @NonNull FileMetadata metadata) {
         setInitialPermissions(metadata);
         setHiddenStatus(metadata);
         setTimestamps(metadata);
@@ -61,7 +61,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
     }
 
     @Override
-    public void setInitialPermissions(@NonNull final FileMetadata metadata) {
+    public void setInitialPermissions(final @NonNull FileMetadata metadata) {
         if (!permissionComparisonStrategy.isPermissionImportant()) {
             return;
         }
@@ -74,7 +74,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
     }
 
     @Override
-    public void setPermissions(@NonNull final FileMetadata metadata) {
+    public void setPermissions(final @NonNull FileMetadata metadata) {
         if (!permissionComparisonStrategy.isPermissionImportant()) {
             return;
         }
@@ -87,7 +87,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
     }
 
     @Override
-    public void setTimestamps(@NonNull final FileMetadata metadata) {
+    public void setTimestamps(final @NonNull FileMetadata metadata) {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
@@ -103,7 +103,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
     }
 
     @Override
-    public void setOwnerAndGroup(@NonNull final FileMetadata metadata) {
+    public void setOwnerAndGroup(final @NonNull FileMetadata metadata) {
         if (!permissionComparisonStrategy.isOwnerImportant()) {
             return;
         }
@@ -139,8 +139,8 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
      * @param posixFilePermissions the permissions
      */
     protected void doSetPermissions(
-            @NotNull final Path filePath,
-            @NotNull final Set<PosixFilePermission> posixFilePermissions) {
+            final @NotNull Path filePath,
+            final @NotNull Set<PosixFilePermission> posixFilePermissions) {
         performIoTaskAndHandleException(() -> {
             final var attributeView = getPosixFileAttributeView(filePath);
             final var currentPermissions = attributeView.readAttributes().permissions();
@@ -172,8 +172,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
         }
     }
 
-    @NonNull
-    private PosixFileAttributeView getPosixFileAttributeView(final Path filePath) {
+    private @NonNull PosixFileAttributeView getPosixFileAttributeView(final Path filePath) {
         final var attributeView = Files.getFileAttributeView(filePath, PosixFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
         if (attributeView == null) {
             throw new UnsupportedOperationException("POSIX is not supported on the current FS/OS");
@@ -181,8 +180,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
         return attributeView;
     }
 
-    @NonNull
-    private static FileTime fromEpochSeconds(final Long time) {
+    private static @NonNull FileTime fromEpochSeconds(final Long time) {
         return FileTime.from(Instant.ofEpochSecond(time));
     }
 }

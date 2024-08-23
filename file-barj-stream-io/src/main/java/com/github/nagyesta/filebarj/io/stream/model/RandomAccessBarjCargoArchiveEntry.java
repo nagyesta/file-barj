@@ -24,10 +24,8 @@ import java.nio.charset.StandardCharsets;
 @ToString
 public class RandomAccessBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
 
-    @NonNull
-    private final BarjCargoArchiveFileInputStreamSource source;
-    @NonNull
-    private final BarjCargoEntityIndex entityIndex;
+    private final @NonNull BarjCargoArchiveFileInputStreamSource source;
+    private final @NonNull BarjCargoEntityIndex entityIndex;
 
     @Override
     public String getPath() {
@@ -40,8 +38,7 @@ public class RandomAccessBarjCargoArchiveEntry implements BarjCargoArchiveEntry 
     }
 
     @Override
-    @NotNull
-    public InputStream getFileContent(@Nullable final SecretKey key) throws IOException {
+    public @NotNull InputStream getFileContent(final @Nullable SecretKey key) throws IOException {
         if (getFileType() != FileType.REGULAR_FILE) {
             throw new IllegalArgumentException("Must be called with a regular file!");
         }
@@ -49,8 +46,7 @@ public class RandomAccessBarjCargoArchiveEntry implements BarjCargoArchiveEntry 
     }
 
     @Override
-    @NotNull
-    public String getLinkTarget(@Nullable final SecretKey key) throws IOException {
+    public @NotNull String getLinkTarget(final @Nullable SecretKey key) throws IOException {
         if (getFileType() != FileType.SYMBOLIC_LINK) {
             throw new IllegalArgumentException("Must be called with a symbolic link!");
         }
@@ -60,8 +56,7 @@ public class RandomAccessBarjCargoArchiveEntry implements BarjCargoArchiveEntry 
     }
 
     @Override
-    @Nullable
-    public String getMetadata(@Nullable final SecretKey key) throws IOException {
+    public @Nullable String getMetadata(final @Nullable SecretKey key) throws IOException {
         if (entityIndex.getMetadata().getOriginalSizeBytes() == 0) {
             return null;
         }
@@ -71,8 +66,7 @@ public class RandomAccessBarjCargoArchiveEntry implements BarjCargoArchiveEntry 
     }
 
     @Override
-    @NotNull
-    public InputStream getRawContentAndMetadata() throws IOException {
+    public @NotNull InputStream getRawContentAndMetadata() throws IOException {
         final var start = entityIndex.getContentOrElseMetadata().getAbsoluteStartIndexInclusive();
         final var length = entityIndex.getMetadata().getAbsoluteEndIndexExclusive() - start;
         return new FixedRangeInputStream(source.openStreamForSequentialAccess(), start, length);

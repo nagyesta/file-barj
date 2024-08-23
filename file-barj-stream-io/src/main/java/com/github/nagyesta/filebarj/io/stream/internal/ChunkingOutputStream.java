@@ -93,8 +93,7 @@ public abstract class ChunkingOutputStream extends OutputStream {
      * @return the next stream
      * @throws IOException if we cannot open the next stream
      */
-    @NotNull
-    protected final OutputStream openNextStream() throws IOException {
+    protected final @NotNull OutputStream openNextStream() throws IOException {
         final var byteCount = currentByteCount;
         byteCountOffset = byteCountOffset + byteCount;
         currentByteCount = 0L;
@@ -108,8 +107,7 @@ public abstract class ChunkingOutputStream extends OutputStream {
      * @return the next stream
      * @throws IOException if we cannot open the next stream
      */
-    @NotNull
-    protected abstract OutputStream doOpenNextStream() throws IOException;
+    protected abstract @NotNull OutputStream doOpenNextStream() throws IOException;
 
     private void doWrite(final byte @NotNull [] b, final int off, final int len) throws IOException {
         if (len <= 0) {

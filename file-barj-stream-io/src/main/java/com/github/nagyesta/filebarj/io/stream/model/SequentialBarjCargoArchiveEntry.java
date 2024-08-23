@@ -25,12 +25,10 @@ import java.nio.charset.StandardCharsets;
 @ToString
 public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
 
-    @NonNull
-    private final BarjCargoArchiveFileInputStreamSource source;
+    private final @NonNull BarjCargoArchiveFileInputStreamSource source;
     private final BarjCargoArchiveEntryIterator iterator;
     @Getter
-    @NonNull
-    private final BarjCargoEntityIndex entityIndex;
+    private final @NonNull BarjCargoEntityIndex entityIndex;
 
     /**
      * Creates an instance and prepares it for iteration.
@@ -39,9 +37,9 @@ public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
      * @param iterator    The iterator
      * @param entityIndex The index describing the entry's location in the archive
      */
-    public SequentialBarjCargoArchiveEntry(@NonNull final BarjCargoArchiveFileInputStreamSource source,
-                                           @NonNull final BarjCargoArchiveEntryIterator iterator,
-                                           @NonNull final BarjCargoEntityIndex entityIndex) {
+    public SequentialBarjCargoArchiveEntry(final @NonNull BarjCargoArchiveFileInputStreamSource source,
+                                           final @NonNull BarjCargoArchiveEntryIterator iterator,
+                                           final @NonNull BarjCargoEntityIndex entityIndex) {
         this.source = source;
         this.iterator = iterator;
         this.entityIndex = entityIndex;
@@ -58,8 +56,7 @@ public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
     }
 
     @Override
-    @NotNull
-    public InputStream getFileContent(@Nullable final SecretKey key) throws IOException {
+    public @NotNull InputStream getFileContent(final @Nullable SecretKey key) throws IOException {
         if (getFileType() != FileType.REGULAR_FILE) {
             throw new IllegalArgumentException("Must be called with a regular file!");
         }
@@ -67,8 +64,7 @@ public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
     }
 
     @Override
-    @NotNull
-    public String getLinkTarget(@Nullable final SecretKey key) throws IOException {
+    public @NotNull String getLinkTarget(final @Nullable SecretKey key) throws IOException {
         if (getFileType() != FileType.SYMBOLIC_LINK) {
             throw new IllegalArgumentException("Must be called with a symbolic link!");
         }
@@ -78,8 +74,7 @@ public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
     }
 
     @Override
-    @Nullable
-    public String getMetadata(@Nullable final SecretKey key) throws IOException {
+    public @Nullable String getMetadata(final @Nullable SecretKey key) throws IOException {
         final var metadata = entityIndex.getMetadata();
         if (metadata.getArchivedSizeBytes() == 0) {
             return null;
@@ -94,8 +89,7 @@ public class SequentialBarjCargoArchiveEntry implements BarjCargoArchiveEntry {
     }
 
     @Override
-    @NotNull
-    public InputStream getRawContentAndMetadata() throws IOException {
+    public @NotNull InputStream getRawContentAndMetadata() throws IOException {
         final var start = entityIndex.getContentOrElseMetadata().getAbsoluteStartIndexInclusive();
         final var length = entityIndex.getMetadata().getAbsoluteEndIndexExclusive() - start;
         return CloseShieldInputStream.wrap(new FixedRangeInputStream(iterator.getStream(), 0, length));

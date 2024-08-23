@@ -12,7 +12,6 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 public class DeleteIncrementsProperties extends BackupFileProperties {
-    @Positive
-    private final long afterEpochSeconds;
+    private final @Positive long afterEpochSeconds;
 }
 

@@ -5,15 +5,18 @@ import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
+import com.github.nagyesta.filebarj.core.progress.ProgressStep;
+import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
 import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoInputStreamConfiguration;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoOutputStreamConfiguration;
+import com.github.nagyesta.filebarj.io.stream.enums.FileType;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -22,11 +25,14 @@ import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import static com.github.nagyesta.filebarj.core.progress.ProgressStep.*;
+
 /**
  * Controller implementation for the merge process.
  */
 @Slf4j
 public class MergeController {
+    private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, MERGE, DELETE_OBSOLETE_FILES);
     private final ManifestManager manifestManager;
     private final RestoreManifest mergedManifest;
     private final SortedMap<Long, BackupIncrementManifest> selectedManifests;
@@ -34,33 +40,25 @@ public class MergeController {
     private final PrivateKey kek;
     private final Path backupDirectory;
     private final ReentrantLock executionLock = new ReentrantLock();
+    private final ProgressTracker progressTracker;
 
     /**
      * Creates a new instance and initializes it for the merge.
      *
-     * @param backupDirectory        the directory where the backup files are located
-     * @param fileNamePrefix         the prefix of the backup file names
-     * @param kek                    The key encryption key we want to use to decrypt and encrypt
-     *                               the files (optional).
-     * @param rangeStartEpochSeconds the start of the range to merge (inclusive)
-     * @param rangeEndEpochSeconds   the end of the range to merge (inclusive)
+     * @param mergeParameters The parameters.
      */
     public MergeController(
-            @NonNull final Path backupDirectory,
-            @NonNull final String fileNamePrefix,
-            @Nullable final PrivateKey kek,
-            final long rangeStartEpochSeconds,
-            final long rangeEndEpochSeconds) {
-        if (rangeEndEpochSeconds <= rangeStartEpochSeconds) {
-            throw new IllegalArgumentException(
-                    "Invalid range selected for merge! start=" + rangeEndEpochSeconds + ", end=" + rangeStartEpochSeconds);
-        }
-        this.kek = kek;
-        this.backupDirectory = backupDirectory;
-        manifestManager = new ManifestManagerImpl();
+            final @NonNull MergeParameters mergeParameters) {
+        mergeParameters.assertValid();
+        this.kek = mergeParameters.getKek();
+        this.backupDirectory = mergeParameters.getBackupDirectory();
+        this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
+        progressTracker.registerListener(mergeParameters.getProgressListener());
+        manifestManager = new ManifestManagerImpl(progressTracker);
         log.info("Loading backup manifests for merge from: {}", backupDirectory);
-        final var manifests = manifestManager.loadAll(this.backupDirectory, fileNamePrefix, kek);
-        selectedManifests = filterToSelection(manifests, rangeStartEpochSeconds, rangeEndEpochSeconds);
+        final var manifests = manifestManager.loadAll(this.backupDirectory, mergeParameters.getFileNamePrefix(), kek);
+        selectedManifests = filterToSelection(manifests,
+                mergeParameters.getRangeStartEpochSeconds(), mergeParameters.getRangeEndEpochSeconds());
         log.info("Selected {} manifests", selectedManifests.size());
         manifestsToMerge = keepManifestsSinceLastFullBackupOfTheSelection(selectedManifests);
         mergedManifest = manifestManager.mergeForRestore(manifestsToMerge);
@@ -79,12 +77,19 @@ public class MergeController {
     public BackupIncrementManifest execute(final boolean deleteObsoleteFiles) {
         executionLock.lock();
         try {
+            progressTracker.reset();
+            progressTracker.skipStep(LOAD_MANIFESTS);
+            if (!deleteObsoleteFiles) {
+                progressTracker.skipStep(DELETE_OBSOLETE_FILES);
+            }
             final var result = mergeBackupContent();
             manifestManager.persist(result, backupDirectory);
             if (deleteObsoleteFiles) {
                 log.info("Deleting obsolete files from backup directory: {}", backupDirectory);
+                progressTracker.estimateStepSubtotal(DELETE_OBSOLETE_FILES, selectedManifests.size());
                 selectedManifests.values().forEach(manifest -> {
                     manifestManager.deleteIncrement(backupDirectory, manifest);
+                    progressTracker.recordProgressInSubSteps(DELETE_OBSOLETE_FILES);
                 });
             }
             return result;
@@ -93,8 +98,7 @@ public class MergeController {
         }
     }
 
-    @NotNull
-    private BackupIncrementManifest mergeBackupContent() {
+    private @NotNull BackupIncrementManifest mergeBackupContent() {
         final var lastManifest = manifestsToMerge.get(manifestsToMerge.lastKey());
         final var firstManifest = manifestsToMerge.get(manifestsToMerge.firstKey());
         final var result = BackupIncrementManifest.builder()
@@ -111,6 +115,8 @@ public class MergeController {
                 .files(mergedManifest.getFilesOfLastManifest())
                 .archivedEntries(mergedManifest.getArchivedEntriesOfLastManifest())
                 .build();
+        final var totalEntries = (long) result.getArchivedEntries().values().size();
+        progressTracker.estimateStepSubtotal(MERGE, totalEntries);
         final var outputStreamConfiguration = BarjCargoOutputStreamConfiguration.builder()
                 .compressionFunction(result.getConfiguration().getCompression()::decorateOutputStream)
                 .prefix(result.getFileNamePrefix())
@@ -128,6 +134,7 @@ public class MergeController {
                 mergeContentEntriesFromManifest(currentManifest, result, output);
             }
             output.close();
+            progressTracker.completeStep(MERGE);
             result.setIndexFileName(output.getIndexFileWritten().getFileName().toString());
             result.setDataFileNames(output.getDataFilesWritten().stream().map(Path::getFileName).map(Path::toString).toList());
         } catch (final IOException e) {
@@ -136,9 +143,8 @@ public class MergeController {
         return result;
     }
 
-    @NotNull
-    private SortedMap<Long, BackupIncrementManifest> filterToSelection(
-            @NotNull final SortedMap<Long, BackupIncrementManifest> manifests,
+    private @NotNull SortedMap<Long, BackupIncrementManifest> filterToSelection(
+            final @NotNull SortedMap<Long, BackupIncrementManifest> manifests,
             final long rangeStartEpochSeconds,
             final long rangeEndEpochSeconds) {
         if (!manifests.containsKey(rangeStartEpochSeconds)) {
@@ -150,9 +156,8 @@ public class MergeController {
         return manifests.headMap(rangeEndEpochSeconds + 1).tailMap(rangeStartEpochSeconds);
     }
 
-    @NotNull
-    private SortedMap<Integer, BackupIncrementManifest> keepManifestsSinceLastFullBackupOfTheSelection(
-            @NotNull final SortedMap<Long, BackupIncrementManifest> selected) {
+    private @NotNull SortedMap<Integer, BackupIncrementManifest> keepManifestsSinceLastFullBackupOfTheSelection(
+            final @NotNull SortedMap<Long, BackupIncrementManifest> selected) {
         final SortedMap<Integer, BackupIncrementManifest> result = new TreeMap<>();
         final var inReverseOrder = selected.values().stream()
                 .sorted(Comparator.comparingLong(BackupIncrementManifest::getStartTimeUtcEpochSeconds).reversed())
@@ -191,6 +196,9 @@ public class MergeController {
                 final var currentEntry = iterator.next();
                 if (relevantEntries.contains(currentEntry.getPath())) {
                     output.mergeEntity(currentEntry.getEntityIndex(), currentEntry.getRawContentAndMetadata());
+                    if (currentEntry.getFileType() != FileType.DIRECTORY) {
+                        progressTracker.recordProgressInSubSteps(MERGE);
+                    }
                 } else {
                     currentEntry.skipContent();
                     currentEntry.skipMetadata();
@@ -199,8 +207,7 @@ public class MergeController {
         }
     }
 
-    @NonNull
-    private Set<String> filterEntities(
+    private @NonNull Set<String> filterEntities(
             final BackupIncrementManifest currentManifest,
             final BackupIncrementManifest result) {
         return result.getArchivedEntries().values().stream()

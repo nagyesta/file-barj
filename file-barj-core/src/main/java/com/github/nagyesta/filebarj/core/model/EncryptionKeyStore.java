@@ -44,11 +44,10 @@ public class EncryptionKeyStore {
      * by 1. A manifest can contain more numbers if the backup increments were merged (consolidated)
      * into a single archive.
      */
-    @Valid
-    @Size(min = 1)
-    @NonNull
     @JsonProperty("backup_versions")
-    private SortedSet<@PositiveOrZero Integer> versions;
+    private @Valid
+    @Size(min = 1)
+    @NonNull SortedSet<@PositiveOrZero Integer> versions;
     /**
      * The byte arrays containing the data encryption keys (DEK) encrypted with the key encryption
      * key (KEK).
@@ -73,10 +72,9 @@ public class EncryptionKeyStore {
      * @param version       The version of the backup
      * @return The decrypted DEK
      */
-    @NotNull
     @JsonIgnore
-    public SecretKey dataIndexDecryptionKey(
-            @NonNull final PrivateKey kekPrivateKey, final int version) {
+    public @NotNull SecretKey dataIndexDecryptionKey(
+            final @NonNull PrivateKey kekPrivateKey, final int version) {
         return decryptionKeyByIndex(kekPrivateKey, version, 0);
     }
 
@@ -88,11 +86,10 @@ public class EncryptionKeyStore {
      * @param entryLocator  The name of the entry inside the archive
      * @return The decrypted DEK
      */
-    @NotNull
     @JsonIgnore
-    public SecretKey dataDecryptionKey(
-            @NonNull final PrivateKey kekPrivateKey,
-            @NonNull final ArchiveEntryLocator entryLocator) {
+    public @NotNull SecretKey dataDecryptionKey(
+            final @NonNull PrivateKey kekPrivateKey,
+            final @NonNull ArchiveEntryLocator entryLocator) {
         final var index = selectKeyIndex(entryLocator.getEntryName());
         return decryptionKeyByIndex(kekPrivateKey, entryLocator.getBackupIncrement(), index);
     }
@@ -104,9 +101,8 @@ public class EncryptionKeyStore {
      * @param kekPublicKey The KEK we will use for encrypting the DEKs.
      * @return The generated DEKs.
      */
-    @NotNull
     @JsonIgnore
-    public Map<Integer, SecretKey> generateDataEncryptionKeys(@NonNull final PublicKey kekPublicKey) {
+    public @NotNull Map<Integer, SecretKey> generateDataEncryptionKeys(final @NonNull PublicKey kekPublicKey) {
         final Map<Integer, SecretKey> keys = new HashMap<>();
         final Map<Integer, String> encodedKeys = new HashMap<>();
         for (var i = 0; i < DEK_COUNT; i++) {
@@ -131,9 +127,8 @@ public class EncryptionKeyStore {
      *
      * @return The optional key
      */
-    @Nullable
     @JsonIgnore
-    public SecretKey dataIndexEncryptionKey() {
+    public @Nullable SecretKey dataIndexEncryptionKey() {
         return Optional.ofNullable(rawEncryptionKeys)
                 .map(map -> map.get(versions.first()))
                 .map(map -> map.get(0))
@@ -146,9 +141,8 @@ public class EncryptionKeyStore {
      * @param archiveEntryName The name of the entry inside the archive
      * @return The optional key
      */
-    @Nullable
     @JsonIgnore
-    public SecretKey dataEncryptionKey(@NonNull final ArchiveEntryLocator archiveEntryName) {
+    public @Nullable SecretKey dataEncryptionKey(final @NonNull ArchiveEntryLocator archiveEntryName) {
         final var index = selectKeyIndex(archiveEntryName.getEntryName());
         return Optional.ofNullable(rawEncryptionKeys)
                 .map(map -> map.get(archiveEntryName.getBackupIncrement()))
@@ -156,7 +150,7 @@ public class EncryptionKeyStore {
                 .orElse(null);
     }
 
-    private SecretKey decryptionKeyByIndex(@NotNull final PrivateKey kekPrivateKey, final int version, final int index) {
+    private SecretKey decryptionKeyByIndex(final @NotNull PrivateKey kekPrivateKey, final int version, final int index) {
         if (rawEncryptionKeys == null) {
             rawEncryptionKeys = new ConcurrentHashMap<>();
         }

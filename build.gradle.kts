@@ -146,6 +146,7 @@ subprojects {
                 excludes = mutableListOf(
                         "com.github.nagyesta.filebarj.core.backup.FileParseException",
                         "com.github.nagyesta.filebarj.core.backup.worker.WindowsFileMetadataParser",
+                        "com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker",
                         "com.github.nagyesta.filebarj.core.restore.worker.WindowsFileMetadataSetter",
                         "com.github.nagyesta.filebarj.job.Main",
                         "com.github.nagyesta.filebarj.job.Controller"
@@ -220,10 +221,8 @@ subprojects {
         setOutputFormat("json")
         //noinspection UnnecessaryQualifiedReference
         val attachmentText = org.cyclonedx.model.AttachmentText()
-        attachmentText.setText(
-                Base64.getEncoder().encodeToString(
-                        file("${project.rootProject.projectDir}/LICENSE").readBytes()
-                )
+        attachmentText.text = Base64.getEncoder().encodeToString(
+            file("${project.rootProject.projectDir}/LICENSE").readBytes()
         )
         attachmentText.encoding = "base64"
         attachmentText.contentType = "text/plain"

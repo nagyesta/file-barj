@@ -21,15 +21,15 @@ public class HashingFileMetadataChangeDetector extends BaseFileMetadataChangeDet
      * @param permissionStrategy The permission comparison strategy
      */
     protected HashingFileMetadataChangeDetector(
-            @NotNull final Map<String, Map<UUID, FileMetadata>> filesFromManifests,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+            final @NotNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         super(filesFromManifests, permissionStrategy);
     }
 
     @Override
     public boolean hasContentChanged(
-            @NonNull final FileMetadata previousMetadata,
-            @NonNull final FileMetadata currentMetadata) {
+            final @NonNull FileMetadata previousMetadata,
+            final @NonNull FileMetadata currentMetadata) {
         final var isContentSource = previousMetadata.getFileType().isContentSource() || currentMetadata.getFileType().isContentSource();
         final var hasContentChanged = !Objects.equals(previousMetadata.getFileType(), currentMetadata.getFileType())
                 || !Objects.equals(previousMetadata.getOriginalHash(), currentMetadata.getOriginalHash())
@@ -38,7 +38,7 @@ public class HashingFileMetadataChangeDetector extends BaseFileMetadataChangeDet
     }
 
     @Override
-    protected String getPrimaryContentCriteria(@NotNull final FileMetadata metadata) {
+    protected String getPrimaryContentCriteria(final @NotNull FileMetadata metadata) {
         return metadata.getOriginalHash();
     }
 }

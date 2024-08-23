@@ -42,8 +42,8 @@ public class ChunkingFileOutputStream extends ChunkingOutputStream {
      * @throws IOException If we cannot create the folder or write to it.
      */
     public ChunkingFileOutputStream(
-            @NonNull final Path folder,
-            @NonNull final String prefix,
+            final @NonNull Path folder,
+            final @NonNull String prefix,
             final int maxFileSizeMebibyte)
             throws IOException {
         super(maxFileSizeMebibyte);
@@ -60,8 +60,7 @@ public class ChunkingFileOutputStream extends ChunkingOutputStream {
      *
      * @return files written
      */
-    @NotNull
-    public List<Path> getDataFilesWritten() {
+    public @NotNull List<Path> getDataFilesWritten() {
         return Collections.unmodifiableList(dataFilesWritten);
     }
 
@@ -73,8 +72,7 @@ public class ChunkingFileOutputStream extends ChunkingOutputStream {
      * @return the path of the file
      * @throws IOException When the file cannot be created due ot an I/O exception
      */
-    @NotNull
-    protected Path createDataFile(final String fileName) throws IOException {
+    protected @NotNull Path createDataFile(final String fileName) throws IOException {
         final var path = doCreateFile(fileName);
         this.dataFilesWritten.add(path);
         return path;
@@ -87,8 +85,7 @@ public class ChunkingFileOutputStream extends ChunkingOutputStream {
      * @return the path of the file
      * @throws IOException When the file cannot be created due ot an I/O exception
      */
-    @NotNull
-    protected Path doCreateFile(final String fileName) throws IOException {
+    protected @NotNull Path doCreateFile(final String fileName) throws IOException {
         final var folderName = folder.toAbsolutePath().toString();
         final var path = Path.of(folderName, fileName);
         final var file = path.toFile();

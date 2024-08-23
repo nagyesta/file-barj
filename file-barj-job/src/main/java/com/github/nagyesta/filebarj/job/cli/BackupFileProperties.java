@@ -14,11 +14,8 @@ import java.nio.file.Path;
 @Data
 @SuperBuilder
 public class BackupFileProperties {
-    @NonNull
-    private final Path backupSource;
-    @Valid
-    private final KeyStoreProperties keyProperties;
+    private final @NonNull Path backupSource;
+    private final @Valid KeyStoreProperties keyProperties;
     @FileNamePrefix
-    @NonNull
-    private final String prefix;
+    private final @NonNull String prefix;
 }

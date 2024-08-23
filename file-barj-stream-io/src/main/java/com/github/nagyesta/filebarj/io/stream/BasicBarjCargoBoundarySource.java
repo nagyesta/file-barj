@@ -10,12 +10,9 @@ import lombok.NonNull;
 @Data
 public class BasicBarjCargoBoundarySource implements BarjCargoBoundarySource {
 
-    @NonNull
-    private final String path;
-    @NonNull
-    private final FileType fileType;
+    private final @NonNull String path;
+    private final @NonNull FileType fileType;
     private final boolean encrypted;
     private final BarjCargoEntryBoundaries contentBoundary;
-    @NonNull
-    private final BarjCargoEntryBoundaries metadataBoundary;
+    private final @NonNull BarjCargoEntryBoundaries metadataBoundary;
 }

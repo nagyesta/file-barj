@@ -5,12 +5,14 @@ import com.github.nagyesta.filebarj.core.backup.worker.DefaultBackupScopePartiti
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.common.*;
-import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
+import com.github.nagyesta.filebarj.core.progress.ProgressStep;
+import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
 import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import lombok.Getter;
@@ -22,10 +24,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import static com.github.nagyesta.filebarj.core.progress.ProgressStep.*;
 import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
 import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutputStream.MEBIBYTE;
 
@@ -36,8 +38,9 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutput
 @Slf4j
 public class BackupController {
     private static final int BATCH_SIZE = 250000;
+    private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, SCAN_FILES, PARSE_METADATA, BACKUP);
     private final FileMetadataParser metadataParser = FileMetadataParserFactory.newInstance();
-    private final ManifestManager manifestManager = new ManifestManagerImpl();
+    private final ManifestManager manifestManager;
     @Getter
     private final BackupIncrementManifest manifest;
     private final SortedMap<Integer, BackupIncrementManifest> previousManifests;
@@ -47,21 +50,30 @@ public class BackupController {
     private final ReentrantLock executionLock = new ReentrantLock();
     private FileMetadataChangeDetector changeDetector;
     private ForkJoinPool threadPool;
+    private final ProgressTracker progressTracker;
 
     /**
      * Creates a new instance and initializes it for the specified job.
      *
-     * @param job       the job configuration
-     * @param forceFull whether to force a full backup (overriding the configuration)
+     * @param parameters The parameters
      */
-    public BackupController(@NonNull final BackupJobConfiguration job, final boolean forceFull) {
+    public BackupController(final @NonNull BackupParameters parameters) {
+        this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
+        progressTracker.registerListener(parameters.getProgressListener());
+        this.manifestManager = new ManifestManagerImpl(progressTracker);
+
+        final var job = parameters.getJob();
         var backupType = job.getBackupType();
         this.previousManifests = new TreeMap<>();
+        final var forceFull = parameters.isForceFull();
         if (!forceFull && backupType != BackupType.FULL) {
             this.previousManifests.putAll(manifestManager.loadPreviousManifestsForBackup(job));
             if (previousManifests.isEmpty()) {
                 backupType = BackupType.FULL;
             }
+        }
+        if (forceFull) {
+            backupType = BackupType.FULL;
         }
         this.manifest = manifestManager.generateManifest(job, backupType, previousManifests.size());
     }
@@ -107,19 +119,20 @@ public class BackupController {
         if (uniquePaths.isEmpty()) {
             throw new IllegalStateException("No files found in backup sources!");
         }
+        progressTracker.completeStep(SCAN_FILES);
         detectCaseInsensitivityIssues(uniquePaths);
         log.info("Found {} unique paths in backup sources. Parsing metadata...", uniquePaths.size());
-        final var doneCount = new AtomicInteger(0);
+        progressTracker.estimateStepSubtotal(PARSE_METADATA, uniquePaths.size());
         this.filesFound = threadPool.submit(() -> uniquePaths.parallelStream()
                 .map(path -> {
                     final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
-                    LogUtil.logIfThresholdReached(doneCount.incrementAndGet(), uniquePaths.size(),
-                            (done, total) -> log.info("Parsed {} of {} unique paths.", done, total));
+                    progressTracker.recordProgressInSubSteps(PARSE_METADATA);
                     return fileMetadata;
                 })
                 .collect(Collectors.toList())).join();
         LogUtil.logStatistics(filesFound,
                 (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
+        progressTracker.completeStep(PARSE_METADATA);
     }
 
     private void detectCaseInsensitivityIssues(final SortedSet<Path> uniquePaths) {
@@ -182,6 +195,7 @@ public class BackupController {
         final var totalBackupSize = backupFileSet.values().stream()
                 .mapToLong(FileMetadata::getOriginalSizeBytes)
                 .sum();
+        progressTracker.estimateStepSubtotal(BACKUP, totalBackupSize);
         final var totalSize = totalBackupSize / MEBIBYTE;
         log.info("Backing up delta for {} files ({} MiB)", backupFileSet.size(), totalSize);
         try (var pipeline = getPipeline(threads)) {
@@ -215,13 +229,14 @@ public class BackupController {
             manifest.setIndexFileName(pipeline.getIndexFileWritten().getFileName().toString());
             final var endTimeMillis = System.currentTimeMillis();
             final var durationMillis = endTimeMillis - startTimeMillis;
+            progressTracker.completeStep(BACKUP);
             log.info("Archive write completed. Archive write took: {}", toProcessSummary(durationMillis, totalBackupSize));
         } catch (final Exception e) {
             throw new ArchivalException("Archival process failed.", e);
         }
     }
 
-    private void findPreviousVersionToReuseOrAddToBackupFileSet(@NotNull final FileMetadata file) {
+    private void findPreviousVersionToReuseOrAddToBackupFileSet(final @NotNull FileMetadata file) {
         if (file.getFileType() == FileType.DIRECTORY) {
             updateDirectoryChangeStatus(file);
             manifest.getFiles().put(file.getId(), file);
@@ -239,7 +254,7 @@ public class BackupController {
         backupFileSet.put(file.getAbsolutePath(), file);
     }
 
-    private void updateDirectoryChangeStatus(@NotNull final FileMetadata file) {
+    private void updateDirectoryChangeStatus(final @NotNull FileMetadata file) {
         final var previousVersion = changeDetector.findPreviousVersionByAbsolutePath(file.getAbsolutePath());
         if (previousVersion != null) {
             final var change = changeDetector.classifyChange(previousVersion, file);
@@ -247,17 +262,20 @@ public class BackupController {
         }
     }
 
-    @NotNull
-    private BaseBackupPipeline<? extends BarjCargoArchiverFileOutputStream> getPipeline(
+    private @NotNull BaseBackupPipeline<? extends BarjCargoArchiverFileOutputStream> getPipeline(
             final int threads) throws IOException {
+        final BaseBackupPipeline<? extends BarjCargoArchiverFileOutputStream> pipeline;
         if (threads == 1) {
-            return new BackupPipeline(manifest);
+            pipeline = new BackupPipeline(manifest);
         } else {
-            return new ParallelBackupPipeline(manifest, threads);
+            pipeline = new ParallelBackupPipeline(manifest, threads);
         }
+        pipeline.setProgressTracker(progressTracker);
+        return pipeline;
     }
 
     private void saveManifest() {
         manifestManager.persist(manifest);
     }
+
 }

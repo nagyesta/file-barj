@@ -27,7 +27,7 @@ public class MergingFileInputStream extends MergingInputStream {
      * @throws IOException If we cannot create the folder or write to it.
      */
     public MergingFileInputStream(
-            @NotNull final Path folder, @NotNull final String prefix, @NotNull final String extension)
+            final @NotNull Path folder, final @NotNull String prefix, final @NotNull String extension)
             throws IOException {
         //noinspection resource
         this(Files.list(folder)
@@ -44,7 +44,7 @@ public class MergingFileInputStream extends MergingInputStream {
      * @throws IOException If the streams cannot be open.
      */
     public MergingFileInputStream(
-            @NotNull final List<Path> allFiles) throws IOException {
+            final @NotNull List<Path> allFiles) throws IOException {
         super(allFiles.stream()
                         .sorted(Comparator.comparing(Path::toAbsolutePath))
                         .map(path -> (IoSupplier<InputStream>) () -> new FileInputStream(path.toFile()))

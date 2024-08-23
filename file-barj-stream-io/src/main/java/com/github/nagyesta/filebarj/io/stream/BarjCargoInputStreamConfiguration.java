@@ -17,18 +17,15 @@ public class BarjCargoInputStreamConfiguration {
     /**
      * The folder where the archive's parts are stored.
      */
-    @NonNull
-    private final Path folder;
+    private final @NonNull Path folder;
     /**
      * The prefix of the archive's parts.
      */
-    @NonNull
-    private final String prefix;
+    private final @NonNull String prefix;
     /**
      * The function used to compress the archived data.
      */
-    @NonNull
-    private final IoFunction<InputStream, InputStream> compressionFunction;
+    private final @NonNull IoFunction<InputStream, InputStream> compressionFunction;
     /**
      * The algorithm used to hash the entries.
      */

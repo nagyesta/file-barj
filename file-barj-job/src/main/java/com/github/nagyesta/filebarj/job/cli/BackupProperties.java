@@ -13,9 +13,7 @@ import java.nio.file.Path;
 @Data
 @Builder
 public class BackupProperties {
-    @NonNull
-    private final Path config;
-    @Positive
-    private final int threads;
+    private final @NonNull Path config;
+    private final @Positive int threads;
     private final boolean forceFullBackup;
 }

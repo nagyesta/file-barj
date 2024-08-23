@@ -12,6 +12,7 @@ import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import jakarta.validation.ValidationException;
 import org.junit.jupiter.api.Assertions;
@@ -42,7 +43,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testGenerateManifestShouldAllowOverridingTheBackupTypeWhenCalledWithFullBackupOfIncrementalConfiguration() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         final var actual = underTest.generateManifest(configuration, BackupType.FULL, 0);
@@ -57,7 +58,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testGenerateManifestShouldThrowExceptionWhenCalledWithNullConfiguration() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -70,7 +71,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testGenerateManifestShouldThrowExceptionWhenCalledWithNullBackupType() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -82,7 +83,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testLoadShouldReadPreviouslyPersistedManifestWhenUsingEncryption() throws IOException {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
@@ -117,7 +118,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testLoadShouldReadPreviouslyPersistedManifestWhenNotUsingEncryption() throws IOException {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -151,7 +152,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     void testLoadShouldFilterOutManifestsAfterThresholdWhenATimeStampIsProvided()
             throws IOException, InterruptedException {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -191,7 +192,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     void testLoadShouldFilterOutManifestsBeforeLatestFullBackupWhenMultipleFullBackupsAreEligible()
             throws IOException, InterruptedException {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -228,7 +229,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testLoadShouldThrowExceptionWhenAPreviousVersionIsMissing() throws InterruptedException {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -259,7 +260,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testPersistShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null));
@@ -271,7 +272,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testPersistShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null, Path.of("destination")));
@@ -283,7 +284,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testPersistShouldThrowExceptionWhenCalledWithNullDestination() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -296,7 +297,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testLoadShouldThrowExceptionWhenCalledWithNullDirectory() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -323,7 +324,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testLoadShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -350,7 +351,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testValidateShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -363,7 +364,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testValidateShouldThrowExceptionWhenCalledWithNullRules() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -387,7 +388,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testValidateShouldThrowExceptionWhenCalledWithInvalidData() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var config = BackupJobConfiguration.builder()
                 .fileNamePrefix("prefix")
@@ -412,7 +413,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testMergeForRestoreShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -425,7 +426,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.deleteIncrement(Path.of("destination"), null));
@@ -437,7 +438,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullDestination() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
@@ -450,11 +451,22 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testLoadPreviousManifestsForBackupShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = new ManifestManagerImpl();
+        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> underTest.loadPreviousManifestsForBackup(null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testConstructorShouldThrowExceptionWhenCalledWithNull() {
+        //given
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new ManifestManagerImpl(null));
 
         //then + exception
     }

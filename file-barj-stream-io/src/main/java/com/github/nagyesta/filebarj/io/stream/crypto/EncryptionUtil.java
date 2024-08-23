@@ -61,7 +61,7 @@ public class EncryptionUtil {
      * @return the cipher
      */
     public static Cipher createCipher(
-            @NonNull final SecretKey secretKey, final byte[] ivBytes, final int mode) {
+            final @NonNull SecretKey secretKey, final byte[] ivBytes, final int mode) {
         try {
             final var iv = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, ivBytes);
             final var cipher = Cipher.getInstance(AES_GCM, BOUNCY_CASTLE_PROVIDER);
@@ -79,7 +79,7 @@ public class EncryptionUtil {
      * @param encrypted  the byte array to be decrypted
      * @return the decrypted byte array
      */
-    public byte[] decryptBytes(@NonNull final PrivateKey privateKey, final byte[] encrypted) {
+    public byte[] decryptBytes(final @NonNull PrivateKey privateKey, final byte[] encrypted) {
         try {
             final var cipher = Cipher.getInstance(RSA_ALG, BOUNCY_CASTLE_PROVIDER);
             final var oaepParam = new OAEPParameterSpec(SHA_256, MGF_1, SHA256, DEFAULT);
@@ -97,7 +97,7 @@ public class EncryptionUtil {
      * @param bytes     the byte array to be encrypted
      * @return the encrypted byte array
      */
-    public byte[] encryptBytes(@NonNull final PublicKey publicKey, final byte[] bytes) {
+    public byte[] encryptBytes(final @NonNull PublicKey publicKey, final byte[] bytes) {
         try {
             final var cipher = Cipher.getInstance(RSA_ALG, BOUNCY_CASTLE_PROVIDER);
             final var oaepParam = new OAEPParameterSpec(SHA_256, MGF_1, SHA256, DEFAULT);
@@ -135,7 +135,7 @@ public class EncryptionUtil {
      *
      * @param key the key
      */
-    public static void verifyKeyIsAes256(@NonNull final SecretKey key) {
+    public static void verifyKeyIsAes256(final @NonNull SecretKey key) {
         if (key.getEncoded().length < KEY_SIZE_BYTES) {
             throw new CryptoException("Key must be AES-256.");
         }

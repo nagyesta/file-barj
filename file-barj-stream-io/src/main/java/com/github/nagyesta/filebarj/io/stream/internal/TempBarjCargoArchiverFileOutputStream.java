@@ -23,7 +23,7 @@ public class TempBarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiver
      * @throws IOException If we cannot create the folder or write to it.
      */
     public TempBarjCargoArchiverFileOutputStream(
-            @NotNull final BarjCargoOutputStreamConfiguration config, final String fileName)
+            final @NotNull BarjCargoOutputStreamConfiguration config, final String fileName)
             throws IOException {
         super(BarjCargoOutputStreamConfiguration.builder()
                 .folder(config.getFolder())
@@ -42,7 +42,7 @@ public class TempBarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiver
      * @throws IOException If the input stream cannot be created
      */
     public InputStream getStream(
-            @NonNull final BarjCargoEntryBoundaries content, @NonNull final BarjCargoEntryBoundaries metadata) throws IOException {
+            final @NonNull BarjCargoEntryBoundaries content, final @NonNull BarjCargoEntryBoundaries metadata) throws IOException {
         final var start = content.getAbsoluteStartIndexInclusive();
         final var length = metadata.getAbsoluteEndIndexExclusive() - start;
         return new FixedRangeInputStream(new MergingFileInputStream(getDataFilesWritten()), start, length);

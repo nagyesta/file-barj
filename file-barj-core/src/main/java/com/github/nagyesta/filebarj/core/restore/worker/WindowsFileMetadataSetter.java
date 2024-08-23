@@ -24,21 +24,21 @@ public class WindowsFileMetadataSetter extends PosixFileMetadataSetter {
      * @param permissionStrategy the permission comparison strategy
      */
     public WindowsFileMetadataSetter(
-            @NotNull final RestoreTargets restoreTargets,
-            @Nullable final PermissionComparisonStrategy permissionStrategy) {
+            final @NotNull RestoreTargets restoreTargets,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         super(restoreTargets, permissionStrategy);
     }
 
     @Override
-    public void setOwnerAndGroup(@NotNull final FileMetadata metadata) {
+    public void setOwnerAndGroup(final @NotNull FileMetadata metadata) {
         //no-op
     }
 
     @Override
     @SuppressWarnings("ResultOfMethodCallIgnored")
     protected void doSetPermissions(
-            @NotNull final Path filePath,
-            @NotNull final Set<PosixFilePermission> posixFilePermissions) {
+            final @NotNull Path filePath,
+            final @NotNull Set<PosixFilePermission> posixFilePermissions) {
         performIoTaskAndHandleException(() -> {
             final var file = filePath.toFile();
             file.setExecutable(posixFilePermissions.contains(PosixFilePermission.OWNER_EXECUTE));
@@ -49,7 +49,7 @@ public class WindowsFileMetadataSetter extends PosixFileMetadataSetter {
     }
 
     @Override
-    public void setHiddenStatus(@NonNull final FileMetadata metadata) {
+    public void setHiddenStatus(final @NonNull FileMetadata metadata) {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }

@@ -17,7 +17,7 @@ public enum IndexVersion {
      */
     V1("1") {
         @Override
-        ReadOnlyArchiveIndex createIndex(@NotNull final Properties properties) {
+        ReadOnlyArchiveIndex createIndex(final @NotNull Properties properties) {
             return new ArchiveIndexV1(properties);
         }
     },
@@ -26,7 +26,7 @@ public enum IndexVersion {
      */
     V2("2") {
         @Override
-        ReadOnlyArchiveIndex createIndex(@NotNull final Properties properties) {
+        ReadOnlyArchiveIndex createIndex(final @NotNull Properties properties) {
             return new ArchiveIndexV2(properties);
         }
     };
