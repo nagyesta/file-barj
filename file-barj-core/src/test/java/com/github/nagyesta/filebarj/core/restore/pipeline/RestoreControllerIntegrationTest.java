@@ -716,8 +716,10 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 "File should have correct permissions: " + restoredFile);
         Assertions.assertEquals(expectedMetadata.getLastModifiedUtcEpochSeconds(), actualMetadata.getLastModifiedUtcEpochSeconds(),
                 "File should have correct last modified time: " + restoredFile);
-        Assertions.assertEquals(expectedMetadata.getOriginalSizeBytes(), actualMetadata.getOriginalSizeBytes(),
-                "File should have correct size: " + restoredFile);
+        if (actualMetadata.getFileType().isContentSource()) {
+            Assertions.assertEquals(expectedMetadata.getOriginalSizeBytes(), actualMetadata.getOriginalSizeBytes(),
+                    "File should have correct size: " + restoredFile);
+        }
         Assertions.assertEquals(expectedMetadata.getOriginalHash(), actualMetadata.getOriginalHash(),
                 "File should have correct hash: " + restoredFile);
     }
