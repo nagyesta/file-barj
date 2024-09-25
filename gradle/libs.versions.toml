@@ -18,7 +18,7 @@ checkstyle = "10.12.2"
 jacoco = "0.8.10"
 jacksonBom = { strictly = "2.17.2" }
 jackson = { strictly = "2.17.2" }
-jetbrainsAnnotations = "24.1.0"
+jetbrainsAnnotations = "25.0.0"
 
 abortMissionPlugin = "5.0.73"
 indexScanPlugin = "2.8.3"
