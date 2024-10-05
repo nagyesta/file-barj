@@ -22,7 +22,7 @@ jetbrainsAnnotations = "25.0.0"
 
 abortMissionPlugin = "5.0.73"
 indexScanPlugin = "2.8.3"
-lombokPlugin = "8.10"
+lombokPlugin = "8.10.2"
 shadowPlugin = "8.1.1"
 gitVersionerPlugin = "1.6.7"
 owaspPlugin = "10.0.4"
