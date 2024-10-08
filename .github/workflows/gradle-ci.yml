@@ -62,7 +62,7 @@ jobs:
         run: ./gradlew printVersion build -x :file-barj-core:jacocoTestCoverageVerification -Pci
       - name: Upload Test reports - Core
         if: always()
-        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4.4.1
+        uses: actions/upload-artifact@84480863f228bb9747b473957fcc9e309aa96097 # v4.4.2
         with:
           name: test-report-file-barj-core-${{ matrix.os }}
           path: |
@@ -71,7 +71,7 @@ jobs:
           retention-days: 5
       - name: Upload Test reports - Job
         if: always()
-        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4.4.1
+        uses: actions/upload-artifact@84480863f228bb9747b473957fcc9e309aa96097 # v4.4.2
         with:
           name: test-report-file-barj-job-${{ matrix.os }}
           path: |
@@ -80,7 +80,7 @@ jobs:
           retention-days: 5
       - name: Upload Test reports - Stream IO
         if: always()
-        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9 # v4.4.1
+        uses: actions/upload-artifact@84480863f228bb9747b473957fcc9e309aa96097 # v4.4.2
         with:
           name: test-report-file-barj-stream-io-${{ matrix.os }}
           path: |
