@@ -23,7 +23,7 @@ jetbrainsAnnotations = "26.0.1"
 abortMissionPlugin = "5.0.83"
 indexScanPlugin = "2.8.3"
 lombokPlugin = "8.10.2"
-shadowPlugin = "8.1.1"
+shadowPlugin = "8.3.5"
 gitVersionerPlugin = "1.6.7"
 owaspPlugin = "11.1.0"
 cycloneDxBomPlugin = "1.10.0"
@@ -69,7 +69,7 @@ validation = ["jakarta-el-api", "jakarta-validation-api", "hibernate-validator",
 jackson = ["jackson-core", "jackson-annotations", "jackson-databind", "jackson-dataformat-xml"]
 
 [plugins]
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadowPlugin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadowPlugin" }
 lombok = { id = "io.freefair.lombok", version.ref = "lombokPlugin" }
 abort-mission = { id = "com.github.nagyesta.abort-mission-gradle-plugin", version.ref = "abortMissionPlugin" }
 versioner = { id = "io.toolebox.git-versioner", version.ref = "gitVersionerPlugin" }
