@@ -5,9 +5,11 @@ import com.github.nagyesta.filebarj.core.backup.worker.DefaultBackupScopePartiti
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.common.*;
+import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
+import com.github.nagyesta.filebarj.core.model.ManifestId;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
@@ -41,9 +43,10 @@ public class BackupController {
     private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, SCAN_FILES, PARSE_METADATA, BACKUP);
     private final FileMetadataParser metadataParser = FileMetadataParserFactory.newInstance();
     private final ManifestManager manifestManager;
+    private final ManifestId manifest;
+    private final BackupJobConfiguration configuration;
     @Getter
-    private final BackupIncrementManifest manifest;
-    private final SortedMap<Integer, BackupIncrementManifest> previousManifests;
+    private final ManifestDatabase manifestDatabase;
     private final Map<BackupPath, FileMetadata> backupFileSet = new TreeMap<>();
     private List<FileMetadata> filesFound;
     private boolean readyToUse = true;
@@ -64,18 +67,23 @@ public class BackupController {
 
         final var job = parameters.getJob();
         var backupType = job.getBackupType();
-        this.previousManifests = new TreeMap<>();
+        this.manifestDatabase = ManifestDatabase.newInstance();
         final var forceFull = parameters.isForceFull();
         if (!forceFull && backupType != BackupType.FULL) {
-            this.previousManifests.putAll(manifestManager.loadPreviousManifestsForBackup(job));
-            if (previousManifests.isEmpty()) {
+            final var previous = manifestManager.loadPreviousManifestsForBackup(job);
+            previous.forEach((inc, loadedManifest) -> {
+                manifestDatabase.persistIncrement(loadedManifest);
+            });
+            if (manifestDatabase.isEmpty()) {
                 backupType = BackupType.FULL;
             }
         }
         if (forceFull) {
             backupType = BackupType.FULL;
         }
-        this.manifest = manifestManager.generateManifest(job, backupType, previousManifests.size());
+        final var backupIncrementManifest = manifestManager.generateManifest(job, backupType, manifestDatabase.nextIncrement());
+        this.manifest = manifestDatabase.persistIncrement(backupIncrementManifest);
+        this.configuration = manifestDatabase.getLatestConfiguration();
     }
 
     /**
@@ -109,8 +117,8 @@ public class BackupController {
     }
 
     private void listAffectedFilesFromBackupSources() {
-        log.info("Listing affected files from {} backup sources", manifest.getConfiguration().getSources().size());
-        final SortedSet<Path> uniquePaths = manifest.getConfiguration().getSources().stream()
+        log.info("Listing affected files from {} backup sources", configuration.getSources().size());
+        final SortedSet<Path> uniquePaths = configuration.getSources().stream()
                 .flatMap(source -> {
                     log.info("Listing files from backup source: {}", source);
                     return source.listMatchingFilePaths().stream();
@@ -125,7 +133,7 @@ public class BackupController {
         progressTracker.estimateStepSubtotal(PARSE_METADATA, uniquePaths.size());
         this.filesFound = threadPool.submit(() -> uniquePaths.parallelStream()
                 .map(path -> {
-                    final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
+                    final var fileMetadata = metadataParser.parse(path.toFile(), configuration);
                     progressTracker.recordProgressInSubSteps(PARSE_METADATA);
                     return fileMetadata;
                 })
@@ -148,20 +156,19 @@ public class BackupController {
     }
 
     private void calculateBackupDelta() {
-        log.info("Calculating backup delta using {} previous backup increments", previousManifests.size());
-        final var previousFiles = new TreeMap<String, Map<UUID, FileMetadata>>();
-        previousManifests.forEach((key, value) -> previousFiles.put(value.getFileNamePrefix(), value.getFiles()));
-        if (!previousManifests.isEmpty()) {
+        log.info("Calculating backup delta using {} previous backup increments", manifestDatabase.size());
+        if (!manifestDatabase.isEmpty()) {
             changeDetector = FileMetadataChangeDetectorFactory
-                    .create(manifest.getConfiguration(), previousFiles, PermissionComparisonStrategy.STRICT);
+                    .create(manifestDatabase, PermissionComparisonStrategy.STRICT);
             log.info("Trying to find unchanged files in previous backup increments");
             threadPool.submit(() -> this.filesFound.parallelStream()
                     .forEach(this::findPreviousVersionToReuseOrAddToBackupFileSet)).join();
         } else {
             this.filesFound.forEach(file -> backupFileSet.put(file.getAbsolutePath(), file));
         }
-        if (!manifest.getFiles().isEmpty()) {
-            LogUtil.logStatistics(manifest.getFiles().values(),
+        final var statistics = manifestDatabase.getFileStatistics(manifest);
+        if (!statistics.isEmpty()) {
+            statistics.forEach(
                     (type, count) -> log.info("Found {} matching {} items in previous backup increments.", count, type));
         }
         final var changeStats = filesFound.stream()
@@ -171,23 +178,13 @@ public class BackupController {
     }
 
     private void usePreviousVersionInCurrentIncrement(final FileMetadata previousVersion, final FileMetadata file) {
-        final var archiveMetadataId = previousVersion.getArchiveMetadataId();
-        previousManifests.values().stream()
-                .sorted(Comparator.comparing(BackupIncrementManifest::getStartTimeUtcEpochSeconds).reversed())
-                .map(previousManifest -> Optional.of(previousManifest.getArchivedEntries())
-                        .filter(entries -> entries.containsKey(archiveMetadataId))
-                        .map(entries -> entries.get(archiveMetadataId))
-                        .filter(entry -> entry.getFiles().contains(previousVersion.getId()))
-                        .orElse(null))
-                .filter(Objects::nonNull)
-                .findFirst()
+        manifestDatabase.retrieveLatestArchiveMetadataByFileMetadataId(previousVersion.getId())
                 .ifPresent(archiveEntry -> {
                     final var copied = archiveEntry.copyArchiveDetails();
                     copied.getFiles().add(file.getId());
-                    manifest.getArchivedEntries().put(copied.getId(), copied);
-                    file.setArchiveMetadataId(copied.getId());
+                    manifestDatabase.persistArchiveMetadata(manifest, copied);
                 });
-        manifest.getFiles().put(file.getId(), file);
+        manifestDatabase.persistFileMetadata(manifest, file);
     }
 
     private void executeBackup(final int threads) {
@@ -202,21 +199,20 @@ public class BackupController {
             this.backupFileSet.values().stream()
                     .filter(metadata -> metadata.getStatus().isStoreContent())
                     .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
-                    .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
-            final var config = manifest.getConfiguration();
-            final var duplicateStrategy = config.getDuplicateStrategy();
-            final var hashAlgorithm = config.getHashAlgorithm();
+                    .forEach(metadata -> manifestDatabase.persistFileMetadata(manifest, metadata));
+            final var duplicateStrategy = configuration.getDuplicateStrategy();
+            final var hashAlgorithm = configuration.getHashAlgorithm();
             final var scope = new DefaultBackupScopePartitioner(BATCH_SIZE, duplicateStrategy, hashAlgorithm)
                     .partitionBackupScope(backupFileSet.values());
             try {
-                for (final var batch : scope) {
-                    final var archived = pipeline.storeEntries(batch);
-                    archived.forEach(entry -> manifest.getArchivedEntries().put(entry.getId(), entry));
-                }
                 scope.stream()
                         .flatMap(Collection::stream)
                         .flatMap(Collection::stream)
-                        .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
+                        .forEach(metadata -> manifestDatabase.persistFileMetadata(manifest, metadata));
+                for (final var batch : scope) {
+                    final var archived = pipeline.storeEntries(batch);
+                    archived.forEach(entry -> manifestDatabase.persistArchiveMetadata(manifest, entry));
+                }
             } catch (final Exception e) {
                 throw new ArchivalException("Failed to store files: " + e.getMessage(), e);
             }
@@ -225,8 +221,8 @@ public class BackupController {
                     .map(Path::getFileName)
                     .map(Path::toString)
                     .toList();
-            manifest.setDataFileNames(dataFiles);
-            manifest.setIndexFileName(pipeline.getIndexFileWritten().getFileName().toString());
+            manifestDatabase.setDataFileNames(manifest, dataFiles);
+            manifestDatabase.setIndexFileName(manifest, pipeline.getIndexFileWritten().getFileName().toString());
             final var endTimeMillis = System.currentTimeMillis();
             final var durationMillis = endTimeMillis - startTimeMillis;
             progressTracker.completeStep(BACKUP);
@@ -239,7 +235,7 @@ public class BackupController {
     private void findPreviousVersionToReuseOrAddToBackupFileSet(final @NotNull FileMetadata file) {
         if (file.getFileType() == FileType.DIRECTORY) {
             updateDirectoryChangeStatus(file);
-            manifest.getFiles().put(file.getId(), file);
+            manifestDatabase.persistFileMetadata(manifest, file);
             return;
         }
         final var previousVersion = changeDetector.findMostRelevantPreviousVersion(file);
@@ -266,16 +262,20 @@ public class BackupController {
             final int threads) throws IOException {
         final BaseBackupPipeline<? extends BarjCargoArchiverFileOutputStream> pipeline;
         if (threads == 1) {
-            pipeline = new BackupPipeline(manifest);
+            pipeline = new BackupPipeline(manifestDatabase);
         } else {
-            pipeline = new ParallelBackupPipeline(manifest, threads);
+            pipeline = new ParallelBackupPipeline(manifestDatabase, threads);
         }
         pipeline.setProgressTracker(progressTracker);
         return pipeline;
     }
 
     private void saveManifest() {
-        manifestManager.persist(manifest);
+        manifestManager.persist(manifestDatabase.get(manifest));
     }
 
+    @Deprecated //TODO: remove
+    public BackupIncrementManifest getManifest() {
+        return manifestDatabase.get(manifest);
+    }
 }

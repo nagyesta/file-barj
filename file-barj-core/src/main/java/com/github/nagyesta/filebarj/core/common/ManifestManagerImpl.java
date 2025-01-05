@@ -308,10 +308,10 @@ public class ManifestManagerImpl implements ManifestManager {
             final var notWanted = new TreeSet<>(manifests.keySet());
             notWanted.removeAll(expectedVersions);
             if (!notFound.isEmpty()) {
-                log.error("Expected manifest version but not found: " + notFound);
+                log.error("Expected manifest version but not found: {}", notFound);
             }
             if (!notWanted.isEmpty()) {
-                log.error("Found manifest version but not expected: " + notWanted);
+                log.error("Found manifest version but not expected: {}", notWanted);
             }
             throw new ArchivalException("The manifest versions do not match the expected versions.");
         }

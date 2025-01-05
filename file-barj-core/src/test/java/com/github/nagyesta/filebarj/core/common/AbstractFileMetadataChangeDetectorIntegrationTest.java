@@ -4,9 +4,13 @@ import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
+import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.AppVersion;
+import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
@@ -19,8 +23,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFileAwareTest {
@@ -134,11 +140,11 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
     }
 
     protected SimpleFileMetadataChangeDetector getDefaultSimpleFileMetadataChangeDetector(final FileMetadata prev) {
-        return new SimpleFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)), null);
+        return new SimpleFileMetadataChangeDetector(getDatabaseWithSingleFile(prev, HashAlgorithm.NONE), null);
     }
 
     protected HashingFileMetadataChangeDetector getDefaultHashingFileMetadataChangeDetector(final FileMetadata prev) {
-        return new HashingFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)), null);
+        return new HashingFileMetadataChangeDetector(getDatabaseWithSingleFile(prev, HashAlgorithm.SHA256), null);
     }
 
     protected FileMetadata createMetadata(
@@ -201,5 +207,54 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
 
     protected static void waitASecond() throws InterruptedException {
         Thread.sleep(ONE_SECOND);
+    }
+
+    protected static InMemoryManifestDatabase getDatabaseWithSingleFile(
+            final Map<Integer, FileMetadata> fileMetadataMap, final HashAlgorithm hashAlgorithm) {
+        final var database = new InMemoryManifestDatabase();
+        fileMetadataMap.forEach((increment, fileMetadata) -> {
+            final var manifestId = database.persistIncrement(getManifest(increment, hashAlgorithm));
+            database.persistFileMetadata(manifestId, fileMetadata);
+        });
+        return database;
+    }
+
+    private static InMemoryManifestDatabase getDatabaseWithSingleFile(
+            final FileMetadata fileMetadata, final HashAlgorithm hashAlgorithm) {
+        final var database = new InMemoryManifestDatabase();
+        final var manifestId = database.persistIncrement(getManifest(0, hashAlgorithm));
+        database.persistFileMetadata(manifestId, fileMetadata);
+        return database;
+    }
+
+    private static BackupIncrementManifest getManifest(final int version, final HashAlgorithm hashAlgorithm) {
+        final var tmp = Path.of(System.getProperty("java.io.tmpdir"));
+        final BackupType backupType;
+        if (version == 0) {
+            backupType = BackupType.FULL;
+        } else {
+            backupType = BackupType.INCREMENTAL;
+        }
+        return BackupIncrementManifest.builder()
+                .startTimeUtcEpochSeconds(1L)
+                .appVersion(new AppVersion(AppVersion.DEFAULT_VERSION))
+                .fileNamePrefix("test-" + version + "-")
+                .backupType(backupType)
+                .versions(new TreeSet<>(Set.of(version)))
+                .configuration(BackupJobConfiguration.builder()
+                        .backupType(BackupType.FULL)
+                        .chunkSizeMebibyte(1)
+                        .compression(CompressionAlgorithm.NONE)
+                        .destinationDirectory(tmp.resolve("backup"))
+                        .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                        .sources(Set.of(BackupSource.builder()
+                                .path(BackupPath.of(tmp.resolve("source")))
+                                .build()))
+                        .hashAlgorithm(hashAlgorithm)
+                        .fileNamePrefix("test-")
+                        .build())
+                .files(new HashMap<>())
+                .archivedEntries(new HashMap<>())
+                .build();
     }
 }

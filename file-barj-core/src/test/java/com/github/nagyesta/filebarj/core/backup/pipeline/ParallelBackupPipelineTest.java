@@ -1,12 +1,12 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
-import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
@@ -32,7 +32,7 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
         //then + exception
     }
 
-    @SuppressWarnings({"resource", "DataFlowIssue"})
+    @SuppressWarnings({"DataFlowIssue"})
     @Test
     void testStoreEntriesShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
@@ -45,7 +45,6 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
         //then + exception
     }
 
-    @SuppressWarnings({"resource"})
     @Test
     void testStoreEntriesShouldThrowExceptionWhenCalledWithANullEntryInTheList() throws IOException {
         //given
@@ -60,7 +59,6 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
         //then + exception
     }
 
-    @SuppressWarnings({"resource"})
     @Test
     void testStoreEntriesShouldThrowExceptionWhenCalledWithAnEmptyListEntryInTheList() throws IOException {
         //given
@@ -75,7 +73,7 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
         //then + exception
     }
 
-    private BackupIncrementManifest getManifest() {
+    private ManifestDatabase getManifest() {
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
         final var backupSource = BackupSource.builder()
                 .path(BackupPath.of(testDataRoot, "test"))
@@ -95,6 +93,6 @@ class ParallelBackupPipelineTest extends TempFileAwareTest {
                 .forceFull(false)
                 .build();
         final var backupController = new BackupController(parameters);
-        return backupController.getManifest();
+        return backupController.getManifestDatabase();
     }
 }
