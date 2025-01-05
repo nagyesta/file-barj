@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
@@ -152,8 +153,8 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
                 .build();
     }
 
-    private static BackupIncrementManifest getManifest(final BackupJobConfiguration config) {
-        return BackupIncrementManifest.builder()
+    private static ManifestDatabase getManifest(final BackupJobConfiguration config) {
+        final var manifest = BackupIncrementManifest.builder()
                 .appVersion(APP_VERSION)
                 .versions(new TreeSet<>(Set.of(0)))
                 .startTimeUtcEpochSeconds(START_TIME_UTC_EPOCH_SECONDS)
@@ -161,6 +162,9 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
                 .configuration(config)
                 .fileNamePrefix("pipeline-prefix-12345")
                 .build();
+        final var manifestDatabase = ManifestDatabase.newInstance();
+        manifestDatabase.persistIncrement(manifest);
+        return manifestDatabase;
     }
 
     private FileMetadata getSymbolicLinkMetadata(final BackupJobConfiguration config) throws IOException {

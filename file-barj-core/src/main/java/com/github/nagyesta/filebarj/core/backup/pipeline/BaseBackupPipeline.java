@@ -1,9 +1,9 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.model.ArchiveEntryLocator;
 import com.github.nagyesta.filebarj.core.model.ArchivedFileMetadata;
-import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
@@ -30,23 +30,25 @@ import java.util.*;
 @Slf4j
 public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> implements AutoCloseable {
 
-    private final BackupIncrementManifest manifest;
+    private final ManifestDatabase manifestDatabase;
     private final T outputStream;
     @Setter
     private @NonNull ProgressTracker progressTracker = new NoOpProgressTracker();
+    private final int currentIncrement;
 
     /**
      * Creates a new instance for the manifest that must be used for the backup.
      *
-     * @param manifest     The manifest
+     * @param manifestDatabase     The manifest database
      * @param outputStream The stream to write to
      */
     protected BaseBackupPipeline(
-            final @NotNull BackupIncrementManifest manifest,
+            final @NotNull ManifestDatabase manifestDatabase,
             final @NotNull T outputStream) {
-        this.manifest = manifest;
+        this.manifestDatabase = manifestDatabase;
+        this.currentIncrement = manifestDatabase.getAllVersionIncrements().last();
         this.outputStream = outputStream;
-        manifest.getVersions().forEach(version -> {
+        manifestDatabase.getAllVersionIncrements().forEach(version -> {
             try {
                 outputStream.addDirectoryEntity("/" + version, null);
             } catch (final IOException e) {
@@ -120,12 +122,12 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
     }
 
     /**
-     * Returns the manifest used for the backup.
+     * Returns the manifest database used for the backup.
      *
-     * @return the manifest
+     * @return the manifest database
      */
-    protected BackupIncrementManifest manifest() {
-        return manifest;
+    protected ManifestDatabase manifestDatabase() {
+        return manifestDatabase;
     }
 
     /**
@@ -156,7 +158,7 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
             final FileMetadata fileMetadata,
             final ArchivedFileMetadata archivedFileMetadata) throws IOException {
         final var entryName = archivedFileMetadata.getArchiveLocation().asEntryPath();
-        final var encryptionKey = manifest.dataEncryptionKey(archivedFileMetadata.getArchiveLocation());
+        final var encryptionKey = manifestDatabase.getDataEncryptionKey(archivedFileMetadata.getArchiveLocation());
         final BarjCargoBoundarySource source;
         if (fileMetadata.getFileType() == FileType.REGULAR_FILE) {
             source = outputStream.addFileEntity(entryName, fileMetadata.streamContent(), encryptionKey);
@@ -196,7 +198,7 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
     private ArchiveEntryLocator createArchiveEntryLocator(final UUID archiveId) {
         return ArchiveEntryLocator.builder()
                 .entryName(archiveId)
-                .backupIncrement(manifest.getVersions().last())
+                .backupIncrement(currentIncrement)
                 .build();
     }
 }

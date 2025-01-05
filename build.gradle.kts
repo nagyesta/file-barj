@@ -159,7 +159,9 @@ subprojects {
     }
 
     tasks.test {
-        outputs.upToDateWhen { false }
+        if (rootProject.hasProperty("ci")) {
+            outputs.upToDateWhen { false }
+        }
         useJUnitPlatform()
         systemProperties["ci"] = rootProject.hasProperty("ci").toString()
         finalizedBy(tasks.getByName("jacocoTestReport"))

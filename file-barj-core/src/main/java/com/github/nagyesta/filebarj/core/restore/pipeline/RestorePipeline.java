@@ -77,6 +77,7 @@ public class RestorePipeline {
      * @param kek                the key encryption key we would like to use to decrypt files
      * @param permissionStrategy the permission comparison strategy
      */
+    @SuppressWarnings("checkstyle:TodoComment")
     public RestorePipeline(final @NonNull RestoreManifest manifest,
                            final @NonNull Path backupDirectory,
                            final @NonNull RestoreTargets restoreTargets,
@@ -86,7 +87,8 @@ public class RestorePipeline {
             throw new IllegalArgumentException("Manifests were saved with a newer version of the application");
         }
         this.changeDetector = FileMetadataChangeDetectorFactory
-                .create(manifest.getConfiguration(), manifest.getFiles(), permissionStrategy);
+                //TODO: null was manifest.getFiles()
+                .create(null, permissionStrategy);
         this.manifest = manifest;
         this.backupDirectory = backupDirectory;
         this.restoreTargets = restoreTargets;

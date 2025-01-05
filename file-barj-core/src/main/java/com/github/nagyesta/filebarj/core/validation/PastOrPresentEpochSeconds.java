@@ -6,7 +6,7 @@ import jakarta.validation.Payload;
 import java.lang.annotation.*;
 
 @Documented
-@Target({ElementType.FIELD})
+@Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = PastOrPresentEpochSecondsValidator.class)
 public @interface PastOrPresentEpochSeconds {

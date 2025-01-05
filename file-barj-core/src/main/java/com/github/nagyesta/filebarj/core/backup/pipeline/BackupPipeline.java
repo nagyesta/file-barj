@@ -1,6 +1,6 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
-import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoOutputStreamConfiguration;
 import lombok.NonNull;
@@ -18,23 +18,24 @@ public class BackupPipeline extends BaseBackupPipeline<BarjCargoArchiverFileOutp
     /**
      * Creates a new instance for the manifest that must be used for the backup.
      *
-     * @param manifest The manifest
+     * @param manifestDatabase The manifest database
      * @throws IOException When the stream cannot be created due to an I/O error
      */
-    public BackupPipeline(final @NotNull BackupIncrementManifest manifest) throws IOException {
-        super(manifest, convert(manifest));
+    public BackupPipeline(final @NotNull ManifestDatabase manifestDatabase) throws IOException {
+        super(manifestDatabase, convert(manifestDatabase));
     }
 
     private static @NonNull BarjCargoArchiverFileOutputStream convert(
-            final @NonNull BackupIncrementManifest manifest) throws IOException {
+            final @NonNull ManifestDatabase manifestDatabase) throws IOException {
+        final var configuration = manifestDatabase.getLatestConfiguration();
         return new BarjCargoArchiverFileOutputStream(
                 BarjCargoOutputStreamConfiguration.builder()
-                        .folder(manifest.getConfiguration().getDestinationDirectory())
-                        .prefix(manifest.getFileNamePrefix())
-                        .compressionFunction(manifest.getConfiguration().getCompression()::decorateOutputStream)
-                        .indexEncryptionKey(manifest.dataIndexEncryptionKey())
-                        .hashAlgorithm(manifest.getConfiguration().getHashAlgorithm().getAlgorithmName())
-                        .maxFileSizeMebibyte(manifest.getConfiguration().getChunkSizeMebibyte())
+                        .folder(configuration.getDestinationDirectory())
+                        .prefix(manifestDatabase.getLatestFileNamePrefix())
+                        .compressionFunction(configuration.getCompression()::decorateOutputStream)
+                        .indexEncryptionKey(manifestDatabase.getLatestDataIndexEncryptionKey())
+                        .hashAlgorithm(configuration.getHashAlgorithm().getAlgorithmName())
+                        .maxFileSizeMebibyte(configuration.getChunkSizeMebibyte())
                         .build());
     }
 }

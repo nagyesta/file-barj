@@ -27,7 +27,7 @@ import java.util.UUID;
 @EqualsAndHashCode(callSuper = true)
 @SuperBuilder
 @Jacksonized
-public class BackupIncrementManifest extends EncryptionKeyStore {
+public class BackupIncrementManifest extends EncryptionKeyStore implements ManifestId {
     /**
      * The version number of the app that generated the manifest.
      */

@@ -9,37 +9,40 @@ import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.util.Set;
 
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testCreateShouldThrowExceptionWhenCalledWithNullConfiguration() {
+    void testCreateShouldThrowExceptionWhenCalledWithNullDatabase() {
         //given
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> FileMetadataChangeDetectorFactory
-                        .create(null, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT));
+                        .create(null, PermissionComparisonStrategy.STRICT));
 
         //then + exception
     }
 
-    @SuppressWarnings("DataFlowIssue")
     @Test
-    void testCreateShouldThrowExceptionWhenCalledWithNullFiles() {
+    void testCreateShouldThrowExceptionWhenCalledWithEmptyDatabase() {
         //given
+        final var manifestDatabase = mock(InMemoryManifestDatabase.class);
+        when(manifestDatabase.isEmpty()).thenReturn(true);
+        when(manifestDatabase.getLatestConfiguration()).thenReturn(mock(BackupJobConfiguration.class));
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> FileMetadataChangeDetectorFactory
-                        .create(mock(BackupJobConfiguration.class), null, PermissionComparisonStrategy.STRICT));
+                        .create(manifestDatabase, PermissionComparisonStrategy.STRICT));
 
         //then + exception
+        verify(manifestDatabase, atLeastOnce()).isEmpty();
+        verify(manifestDatabase, never()).getLatestConfiguration();
     }
 
     @Test
@@ -55,13 +58,17 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
                 .fileNamePrefix("prefix")
                 .destinationDirectory(testDataRoot)
                 .build();
+        final var manifestDatabase = mock(InMemoryManifestDatabase.class);
+        when(manifestDatabase.isEmpty()).thenReturn(false);
+        when(manifestDatabase.getLatestConfiguration()).thenReturn(config);
 
         //when
         final var actual = FileMetadataChangeDetectorFactory
-                .create(config, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT);
+                .create(manifestDatabase, PermissionComparisonStrategy.STRICT);
 
         //then
         Assertions.assertInstanceOf(SimpleFileMetadataChangeDetector.class, actual);
+        verify(manifestDatabase, atLeastOnce()).isEmpty();
     }
 
     @Test
@@ -77,12 +84,16 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
                 .fileNamePrefix("prefix")
                 .destinationDirectory(testDataRoot)
                 .build();
+        final var manifestDatabase = mock(InMemoryManifestDatabase.class);
+        when(manifestDatabase.isEmpty()).thenReturn(false);
+        when(manifestDatabase.getLatestConfiguration()).thenReturn(config);
 
         //when
         final var actual = FileMetadataChangeDetectorFactory
-                .create(config, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT);
+                .create(manifestDatabase, PermissionComparisonStrategy.STRICT);
 
         //then
         Assertions.assertInstanceOf(HashingFileMetadataChangeDetector.class, actual);
+        verify(manifestDatabase, atLeastOnce()).isEmpty();
     }
 }

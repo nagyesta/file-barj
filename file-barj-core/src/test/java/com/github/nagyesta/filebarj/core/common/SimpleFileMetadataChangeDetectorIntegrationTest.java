@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
+import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
@@ -76,8 +77,8 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(testDataRoot), testDataRoot)));
         FileMetadataSetterFactory.newInstance(restoreTargets, null).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(manifests, null);
+        final var underTest = new SimpleFileMetadataChangeDetector(
+                getDatabaseWithSingleFile(Map.of(0, orig, 1, prev), HashAlgorithm.NONE), null);
 
         //when
         final var relevant = underTest.findMostRelevantPreviousVersion(restored);
@@ -102,8 +103,8 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(manifests, null);
+        final var underTest = new SimpleFileMetadataChangeDetector(
+                getDatabaseWithSingleFile(Map.of(0, orig, 1, prev), HashAlgorithm.NONE), null);
 
         //when
         final var actual = underTest.findMostRelevantPreviousVersion(curr);

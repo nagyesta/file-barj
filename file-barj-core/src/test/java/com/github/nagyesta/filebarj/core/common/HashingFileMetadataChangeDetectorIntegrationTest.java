@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.common;
 
+import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import org.junit.jupiter.api.Assertions;
@@ -67,8 +68,8 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new HashingFileMetadataChangeDetector(manifests, null);
+        final var underTest = new HashingFileMetadataChangeDetector(
+                getDatabaseWithSingleFile(Map.of(0, orig, 1, prev), HashAlgorithm.SHA256), null);
 
         //when
         final var relevant = underTest.findMostRelevantPreviousVersion(curr);
@@ -93,8 +94,8 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new HashingFileMetadataChangeDetector(manifests, null);
+        final var underTest = new HashingFileMetadataChangeDetector(
+                getDatabaseWithSingleFile(Map.of(0, orig, 1, prev), HashAlgorithm.SHA256), null);
 
         //when
         final var actual = underTest.findMostRelevantPreviousVersion(curr);

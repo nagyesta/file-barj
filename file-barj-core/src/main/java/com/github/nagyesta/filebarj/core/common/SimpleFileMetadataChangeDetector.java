@@ -1,13 +1,15 @@
 package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
+import com.github.nagyesta.filebarj.core.model.ManifestId;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
+import java.util.SortedMap;
+import java.util.function.BiFunction;
 
 /**
  * Size based implementation of the {@link FileMetadataChangeDetector}.
@@ -17,13 +19,13 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
     /**
      * Creates a new instance with the previous manifests.
      *
-     * @param filesFromManifests The files found in the previous manifests
+     * @param manifestDatabase   The database containing all files found in the previous manifests
      * @param permissionStrategy The permission comparison strategy
      */
     protected SimpleFileMetadataChangeDetector(
-            final @NotNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @NotNull ManifestDatabase manifestDatabase,
             final @Nullable PermissionComparisonStrategy permissionStrategy) {
-        super(filesFromManifests, permissionStrategy);
+        super(manifestDatabase, permissionStrategy);
     }
 
     @Override
@@ -45,5 +47,11 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
 
     private static @NotNull String getFileName(final @NotNull FileMetadata fileMetadata) {
         return fileMetadata.getAbsolutePath().getFileName();
+    }
+
+    @Override
+    protected BiFunction<ManifestDatabase, FileMetadata, SortedMap<ManifestId, List<FileMetadata>>> retrieveByPrimaryContentCriteria() {
+        return (manifestDatabase, fileMetadata) -> manifestDatabase
+                .retrieveFileMetadataByOriginalSizeBytes(fileMetadata.getOriginalSizeBytes());
     }
 }

@@ -1,8 +1,8 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.model.ArchivedFileMetadata;
-import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoBoundarySource;
@@ -29,25 +29,26 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
     /**
      * Creates a new instance for the manifest that must be used for the backup.
      *
-     * @param manifest    The manifest
-     * @param threadCount The number of threads
+     * @param manifestDatabase The manifest database
+     * @param threadCount      The number of threads
      * @throws IOException When the stream cannot be created due to an I/O error
      */
-    public ParallelBackupPipeline(final @NotNull BackupIncrementManifest manifest,
+    public ParallelBackupPipeline(final @NotNull ManifestDatabase manifestDatabase,
                                   final int threadCount) throws IOException {
-        super(manifest, convert(manifest, threadCount));
+        super(manifestDatabase, convert(manifestDatabase, threadCount));
     }
 
     private static @NonNull ParallelBarjCargoArchiverFileOutputStream convert(
-            final @NonNull BackupIncrementManifest manifest, final int threadCount) throws IOException {
+            final @NonNull ManifestDatabase manifestDatabase, final int threadCount) throws IOException {
+        final var configuration = manifestDatabase.getLatestConfiguration();
         return new ParallelBarjCargoArchiverFileOutputStream(
                 BarjCargoOutputStreamConfiguration.builder()
-                        .folder(manifest.getConfiguration().getDestinationDirectory())
-                        .prefix(manifest.getFileNamePrefix())
-                        .compressionFunction(manifest.getConfiguration().getCompression()::decorateOutputStream)
-                        .indexEncryptionKey(manifest.dataIndexEncryptionKey())
-                        .hashAlgorithm(manifest.getConfiguration().getHashAlgorithm().getAlgorithmName())
-                        .maxFileSizeMebibyte(manifest.getConfiguration().getChunkSizeMebibyte())
+                        .folder(configuration.getDestinationDirectory())
+                        .prefix(manifestDatabase.getLatestFileNamePrefix())
+                        .compressionFunction(configuration.getCompression()::decorateOutputStream)
+                        .indexEncryptionKey(manifestDatabase.getLatestDataIndexEncryptionKey())
+                        .hashAlgorithm(configuration.getHashAlgorithm().getAlgorithmName())
+                        .maxFileSizeMebibyte(configuration.getChunkSizeMebibyte())
                         .build(), threadCount);
     }
 
@@ -103,7 +104,8 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
             final FileMetadata fileMetadata,
             final ArchivedFileMetadata archivedFileMetadata) throws IOException {
         final var entryName = archivedFileMetadata.getArchiveLocation().asEntryPath();
-        final var encryptionKey = manifest().dataEncryptionKey(archivedFileMetadata.getArchiveLocation());
+        //noinspection resource
+        final var encryptionKey = manifestDatabase().getDataEncryptionKey(archivedFileMetadata.getArchiveLocation());
         final CompletableFuture<BarjCargoBoundarySource> futureSource;
         if (fileMetadata.getFileType() == FileType.REGULAR_FILE) {
             futureSource = outputStream().addFileEntityAsync(entryName, fileMetadata.streamContent(), encryptionKey);
