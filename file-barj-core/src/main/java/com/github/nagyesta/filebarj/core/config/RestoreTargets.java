@@ -12,7 +12,7 @@ import java.util.Set;
  *
  * @param restoreTargets the restore targets
  */
-public record RestoreTargets(@NonNull Set<RestoreTarget> restoreTargets) {
+public record RestoreTargets(@NonNull Set<RestoreTarget> restoreTargets) implements BackupToOsMapper {
 
     /**
      * Converts the original path to the restore path.
@@ -20,11 +20,17 @@ public record RestoreTargets(@NonNull Set<RestoreTarget> restoreTargets) {
      * @param originalPath the original path
      * @return the restore path
      */
+    @Deprecated
     public @NotNull Path mapToRestorePath(final @NonNull BackupPath originalPath) {
+        return mapToOsPath(originalPath);
+    }
+
+    @Override
+    public @NotNull Path mapToOsPath(final @NonNull BackupPath backupPath) {
         return restoreTargets.stream()
-                .filter(restoreTarget -> restoreTarget.matchesArchivedFile(originalPath))
+                .filter(restoreTarget -> restoreTarget.matchesArchivedFile(backupPath))
                 .findFirst()
-                .map(filePath -> filePath.mapBackupPathToRestorePath(originalPath))
-                .orElse(originalPath.toOsPath());
+                .map(filePath -> filePath.mapBackupPathToRestorePath(backupPath))
+                .orElse(backupPath.toOsPath());
     }
 }

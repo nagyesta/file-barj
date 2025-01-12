@@ -120,48 +120,55 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     @Override
-    public SortedMap<Integer, BackupIncrementManifest> load(
+    public ManifestDatabase load(
             final @NonNull Path destinationDirectory,
             final @NonNull String fileNamePrefix,
             final @Nullable PrivateKey privateKey,
             final long latestBeforeEpochMillis) {
+        //noinspection resource
+        final var manifestDatabase = ManifestDatabase.newInstance();
         try (var pathStream = Files.list(destinationDirectory)) {
             final var manifestFiles = pathStream
                     .filter(path -> path.getFileName().toString().startsWith(fileNamePrefix))
                     .filter(path -> path.getFileName().toString().endsWith(".manifest.cargo"))
                     .sorted(Comparator.comparing(Path::getFileName).reversed())
                     .toList();
-            final var manifests = loadManifests(manifestFiles, privateKey, latestBeforeEpochMillis);
-            verifyThatAllIncrementsAreFound(manifests);
-            return manifests;
+            loadManifests(manifestDatabase, manifestFiles, privateKey, latestBeforeEpochMillis);
+            verifyThatAllIncrementsAreFound(manifestDatabase);
+            return manifestDatabase;
         } catch (final IOException e) {
             throw new ArchivalException("Failed to load manifest files.", e);
         }
     }
 
     @Override
-    public SortedMap<Long, BackupIncrementManifest> loadAll(
+    public ManifestDatabase loadAll(
             final @NonNull Path destinationDirectory,
             final @NonNull String fileNamePrefix,
             final @Nullable PrivateKey privateKey) {
+        //noinspection resource
+        final var manifestDatabase = ManifestDatabase.newInstance();
         try (var pathStream = Files.list(destinationDirectory)) {
             final var manifestFiles = pathStream
                     .filter(path -> path.getFileName().toString().startsWith(fileNamePrefix))
                     .filter(path -> path.getFileName().toString().endsWith(".manifest.cargo"))
                     .sorted(Comparator.comparing(Path::getFileName).reversed())
                     .toList();
-            return loadAllManifests(manifestFiles, privateKey);
+            loadAllManifests(manifestDatabase, manifestFiles, privateKey);
+            return manifestDatabase;
         } catch (final IOException e) {
             throw new ArchivalException("Failed to load manifest files.", e);
         }
     }
 
     @Override
-    public SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(
+    public ManifestDatabase loadPreviousManifestsForBackup(
             final @NonNull BackupJobConfiguration job) {
+        //noinspection resource
+        final var manifestDatabase = ManifestDatabase.newInstance();
         final var historyFolder = job.getDestinationDirectory().resolve(HISTORY_FOLDER);
         if (!Files.exists(historyFolder)) {
-            return Collections.emptySortedMap();
+            return manifestDatabase;
         }
         try (var pathStream = Files.list(historyFolder)) {
             final var manifestFiles = pathStream
@@ -169,32 +176,42 @@ public class ManifestManagerImpl implements ManifestManager {
                     .filter(path -> path.getFileName().toString().endsWith(MANIFEST_JSON_GZ))
                     .sorted(Comparator.comparing(Path::getFileName).reversed())
                     .toList();
-            final var manifests = loadManifests(manifestFiles, null, Long.MAX_VALUE);
-            verifyThatAllIncrementsAreFound(manifests);
-            if (!manifests.isEmpty() && !job.equals(manifests.get(manifests.lastKey()).getConfiguration())) {
+            loadManifests(manifestDatabase, manifestFiles, null, Long.MAX_VALUE);
+            verifyThatAllIncrementsAreFound(manifestDatabase);
+            if (!manifestDatabase.isEmpty() && !job.equals(manifestDatabase.getLatestConfiguration())) {
                 log.warn("The provided job configuration changed since the last backup. Falling back to FULL backup.");
-                manifests.clear();
+                manifestDatabase.clear();
             }
-            return manifests;
+            return manifestDatabase;
         } catch (final IOException e) {
             throw new ArchivalException("Failed to load manifest files.", e);
         }
     }
 
     @Override
-    public RestoreManifest mergeForRestore(
+    public ManifestId mergeForRestore(
             final @NonNull SortedMap<Integer, BackupIncrementManifest> manifests) {
         final var maximumAppVersion = findMaximumAppVersion(manifests);
         final var lastIncrementManifest = manifests.get(manifests.lastKey());
         final var maximumTimeStamp = lastIncrementManifest.getStartTimeUtcEpochSeconds();
         final var keys = mergeEncryptionKeys(manifests);
         final var versions = new TreeSet<>(manifests.keySet());
+        //TODO: find out how we should merge these! Should we merge at all for restore???
+
+        final var mergedManifest = BackupIncrementManifest.builder()
+                .appVersion(maximumAppVersion)
+                .startTimeUtcEpochSeconds(maximumTimeStamp)
+                .encryptionKeys(keys)
+                .versions(versions)
+                .configuration(lastIncrementManifest.getConfiguration())
+                .operatingSystem(lastIncrementManifest.getOperatingSystem())
+                .build();
         final var fileNamePrefixes = findAllFilenamePrefixes(manifests);
         final Map<String, Map<UUID, FileMetadata>> files = new HashMap<>();
         final Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries = new HashMap<>();
         addDirectoriesToFiles(lastIncrementManifest, files);
         final var filesToBeRestored = calculateRemainingFilesAndLinks(lastIncrementManifest);
-        populateFilesAndArchiveEntries(manifests, filesToBeRestored, files, archivedEntries);
+        populateFilesAndArchiveEntries(manifests, filesToBeRestored, manifestDatabase);
         files.forEach((key, value) -> {
             LogUtil.logStatistics(value.values(),
                     (type, count) -> log.info("Increment {} contains {} {} items.", key, count, type));
@@ -230,8 +247,7 @@ public class ManifestManagerImpl implements ManifestManager {
     @Override
     public void deleteIncrement(
             final @NonNull Path backupDirectory,
-            final @NonNull BackupIncrementManifest manifest) {
-        final var fileNamePrefix = manifest.getFileNamePrefix();
+            final @NonNull String fileNamePrefix) {
         deleteManifestFromHistoryIfExists(backupDirectory, fileNamePrefix);
         deleteManifestAndArchiveFilesFromBackupDirectory(backupDirectory, fileNamePrefix);
     }
@@ -242,11 +258,11 @@ public class ManifestManagerImpl implements ManifestManager {
         }
     }
 
-    private @NotNull SortedMap<Integer, BackupIncrementManifest> loadManifests(
+    private void loadManifests(
+            final @NotNull ManifestDatabase manifestDatabase,
             final @NotNull List<Path> manifestFiles,
             final @Nullable PrivateKey privateKey,
             final long latestBeforeEpochMillis) {
-        final SortedMap<Integer, BackupIncrementManifest> manifests = new TreeMap<>();
         progressTracker.estimateStepSubtotal(LOAD_MANIFESTS, manifestFiles.size());
         for (final var path : manifestFiles) {
             try (var fileStream = new FileInputStream(path.toFile());
@@ -260,7 +276,13 @@ public class ManifestManagerImpl implements ManifestManager {
                     continue;
                 }
                 validate(manifest, ValidationRules.Persisted.class);
-                manifest.getVersions().forEach(version -> manifests.put(version, manifest));
+                final var manifestId = manifestDatabase.persistIncrement(manifest);
+                manifest.getFiles().values().forEach(fileMetadata -> {
+                    manifestDatabase.persistFileMetadata(manifestId, fileMetadata);
+                });
+                manifest.getArchivedEntries().values().forEach(archivedEntry -> {
+                    manifestDatabase.persistArchiveMetadata(manifestId, archivedEntry);
+                });
                 if (manifest.getBackupType() == BackupType.FULL) {
                     break;
                 }
@@ -270,10 +292,10 @@ public class ManifestManagerImpl implements ManifestManager {
             progressTracker.recordProgressInSubSteps(LOAD_MANIFESTS);
         }
         progressTracker.completeStep(LOAD_MANIFESTS);
-        return manifests;
     }
 
     private @NotNull SortedMap<Long, BackupIncrementManifest> loadAllManifests(
+            final @NotNull ManifestDatabase manifestDatabase,
             final @NotNull List<Path> manifestFiles,
             final @Nullable PrivateKey privateKey) {
         final SortedMap<Long, BackupIncrementManifest> manifests = new TreeMap<>();
@@ -300,12 +322,14 @@ public class ManifestManagerImpl implements ManifestManager {
         return manifests;
     }
 
-    private void verifyThatAllIncrementsAreFound(final SortedMap<Integer, BackupIncrementManifest> manifests) {
-        final var expectedVersions = IntStream.range(0, manifests.size()).boxed().collect(Collectors.toSet());
-        if (!expectedVersions.equals(manifests.keySet())) {
+    private void verifyThatAllIncrementsAreFound(@NotNull final ManifestDatabase manifestDatabase) {
+        final var expectedVersions = IntStream.range(0, manifestDatabase.nextIncrement())
+                .boxed().collect(Collectors.toSet());
+        final var actualVersions = manifestDatabase.getAllVersionIncrements();
+        if (!expectedVersions.equals(actualVersions)) {
             final var notFound = new TreeSet<>(expectedVersions);
-            notFound.removeAll(manifests.keySet());
-            final var notWanted = new TreeSet<>(manifests.keySet());
+            notFound.removeAll(actualVersions);
+            final var notWanted = new TreeSet<>(actualVersions);
             notWanted.removeAll(expectedVersions);
             if (!notFound.isEmpty()) {
                 log.error("Expected manifest version but not found: {}", notFound);

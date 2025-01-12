@@ -56,6 +56,8 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
                     log.error("Invalid target mappings: \n    {}", String.join("\n    ", invalid));
                     throw new IllegalArgumentException("Invalid target mappings found.");
                 }
+                //TODO: Do we need to check whether there are overlaps between the paths?
+                // It would be ideal to have disjunct sets on both OS and backup side of the mappings
                 Arrays.stream(mappings)
                         .map(s -> s.split("="))
                         .forEach(s -> targets.put(BackupPath.ofPathAsIs(s[0]), Path.of(s[1]).toAbsolutePath()));

@@ -1,18 +1,17 @@
 package com.github.nagyesta.filebarj.core.restore.pipeline;
 
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
 import com.github.nagyesta.filebarj.core.inspect.worker.ManifestToSummaryConverter;
-import com.github.nagyesta.filebarj.core.model.FileMetadata;
-import com.github.nagyesta.filebarj.core.model.RestoreManifest;
+import com.github.nagyesta.filebarj.core.model.ManifestId;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
-import com.github.nagyesta.filebarj.core.util.LogUtil;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -36,7 +35,8 @@ public class RestoreController {
     private static final List<ProgressStep> PROGRESS_STEPS = List.of(
             LOAD_MANIFESTS, RESTORE_DIRECTORIES, PARSE_METADATA, RESTORE_CONTENT,
             VERIFY_CONTENT, RESTORE_METADATA, VERIFY_METADATA, DELETE_OBSOLETE_FILES);
-    private final RestoreManifest manifest;
+    private final ManifestDatabase manifestDatabase;
+    private final ManifestId lastIncrement;
     private final PrivateKey kek;
     private final Path backupDirectory;
     private final ReentrantLock executionLock = new ReentrantLock();
@@ -48,6 +48,7 @@ public class RestoreController {
      *
      * @param restoreParameters the parameters.
      */
+    @SuppressWarnings("checkstyle:TodoComment")
     public RestoreController(
             final @NonNull RestoreParameters restoreParameters) {
         this.kek = restoreParameters.getKek();
@@ -56,14 +57,14 @@ public class RestoreController {
         progressTracker.registerListener(restoreParameters.getProgressListener());
         final ManifestManager manifestManager = new ManifestManagerImpl(progressTracker);
         log.info("Loading backup manifests for restore from: {}", backupDirectory);
-        final var manifests = manifestManager
+        this.manifestDatabase = manifestManager
                 .load(backupDirectory, restoreParameters.getFileNamePrefix(), kek, restoreParameters.getAtPointInTime());
-        final var header = new ManifestToSummaryConverter().convertToSummaryString(manifests.get(manifests.lastKey()));
+        //TODO: eliminate deprecated call
+        this.lastIncrement = manifestDatabase.getAllManifestIds().last();
+        final var header = new ManifestToSummaryConverter().convertToSummaryString(manifestDatabase.get(lastIncrement));
         log.info("Latest backup manifest: {}", header);
-        log.info("Merging {} manifests", manifests.size());
-        this.manifest = manifestManager.mergeForRestore(manifests);
-        final var filesOfLastManifest = manifest.getFilesOfLastManifest();
-        LogUtil.logStatistics(filesOfLastManifest.values(),
+        log.info("Merging {} manifests", manifestDatabase.getAllManifestIds().size());
+        manifestDatabase.getFileStatistics(lastIncrement).forEach(
                 (type, count) -> log.info("Found {} {} items in merged backup", count, type));
     }
 
@@ -85,11 +86,7 @@ public class RestoreController {
             if (!restoreTask.isDeleteFilesNotInBackup()) {
                 progressTracker.skipStep(DELETE_OBSOLETE_FILES);
             }
-            final var allEntries = manifest.getFilesOfLastManifestFilteredBy(restoreTask.getPathFilter()).values().stream().toList();
-            final var contentSources = manifest.getExistingContentSourceFilesOfLastManifestFilteredBy(restoreTask.getPathFilter());
-            final long totalBackupSize = allEntries.stream()
-                    .map(FileMetadata::getOriginalSizeBytes)
-                    .reduce(0L, Long::sum);
+            final var totalBackupSize = manifestDatabase.originalSizeOfFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath());
             restoreTask.getRestoreTargets().restoreTargets()
                     .forEach(target -> log.info("Restoring {} to {}", target.backupPath(), target.restorePath()));
             log.info("Starting restore of {} MiB backup content (delta not known yet)", totalBackupSize / MEBIBYTE);
@@ -97,13 +94,16 @@ public class RestoreController {
             final var pipeline = createRestorePipeline(
                     restoreTask.getRestoreTargets(), restoreTask.isDryRun(), restoreTask.getPermissionComparisonStrategy());
             pipeline.setProgressTracker(progressTracker);
-            pipeline.restoreDirectories(allEntries.stream()
-                    .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
-                    .toList());
-            pipeline.restoreFiles(contentSources, threadPool);
+            final var directories = manifestDatabase
+                    .retrieveFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath(), FileType.DIRECTORY.only());
+            pipeline.restoreDirectories(directories);
+            pipeline.restoreFiles(manifestDatabase
+                    .retrieveFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath(), FileType.contentSources()), threadPool);
             pipeline.deleteLeftOverFiles(restoreTask.getIncludedPath(), restoreTask.isDeleteFilesNotInBackup(), threadPool);
-            pipeline.finalizePermissions(allEntries, threadPool);
-            pipeline.evaluateRestoreSuccess(allEntries, threadPool);
+            pipeline.finalizePermissions(manifestDatabase
+                    .retrieveFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath(), FileType.allTypes()), threadPool);
+            pipeline.evaluateRestoreSuccess(manifestDatabase
+                    .retrieveFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath(), FileType.allTypes()), threadPool);
             final var endTimeMillis = System.currentTimeMillis();
             final var durationMillis = (endTimeMillis - startTimeMillis);
             log.info("Restore completed. File operations took: {}", toProcessSummary(durationMillis));
@@ -122,9 +122,9 @@ public class RestoreController {
             final @Nullable PermissionComparisonStrategy permissionStrategy) {
         final RestorePipeline pipeline;
         if (dryRun) {
-            pipeline = new DryRunRestorePipeline(manifest, backupDirectory, restoreTargets, kek);
+            pipeline = new DryRunRestorePipeline(manifestDatabase, lastIncrement, backupDirectory, restoreTargets, kek);
         } else {
-            pipeline = new RestorePipeline(manifest, backupDirectory, restoreTargets, kek, permissionStrategy);
+            pipeline = new RestorePipeline(manifestDatabase, lastIncrement, backupDirectory, restoreTargets, kek, permissionStrategy);
         }
         return pipeline;
     }

@@ -62,9 +62,9 @@ public interface ManifestManager {
      *                                If null, the manifests will not be decrypted.
      * @param latestBeforeEpochMillis defines the time stamp until which the manifests should be
      *                                considered
-     * @return the map of loaded manifests keyed by their versions
+     * @return the manifest database containing the loaded manifests
      */
-    SortedMap<Integer, BackupIncrementManifest> load(
+    ManifestDatabase load(
             @NonNull Path destinationDirectory,
             @NonNull String fileNamePrefix,
             @Nullable PrivateKey privateKey,
@@ -78,9 +78,9 @@ public interface ManifestManager {
      * @param fileNamePrefix       the prefix of the backup files
      * @param privateKey           the RSA key we want to use to decrypt the manifests (optional).
      *                             If null, the manifests will not be decrypted.
-     * @return the map of loaded manifests keyed by their timestamps
+     * @return the manifest database with the loaded manifests
      */
-    SortedMap<Long, BackupIncrementManifest> loadAll(
+    ManifestDatabase loadAll(
             @NonNull Path destinationDirectory,
             @NonNull String fileNamePrefix,
             @Nullable PrivateKey privateKey);
@@ -108,9 +108,9 @@ public interface ManifestManager {
      * Loads the previously created manifests of the provided job from the .history folder.
      *
      * @param job the job configuration
-     * @return the manifests which can act as previous increments of the provided job
+     * @return the manifest database containing the previous increments of the provided job
      */
-    SortedMap<Integer, BackupIncrementManifest> loadPreviousManifestsForBackup(
+    ManifestDatabase loadPreviousManifestsForBackup(
             @NonNull BackupJobConfiguration job);
 
     /**
@@ -118,9 +118,9 @@ public interface ManifestManager {
      * backup directory.
      *
      * @param backupDirectory the backup directory
-     * @param manifest        the manifest
+     * @param fileNamePrefix        the fileNamePrefix of the manifest
      */
     void deleteIncrement(
             @NonNull Path backupDirectory,
-            @NonNull BackupIncrementManifest manifest);
+            @NonNull String fileNamePrefix);
 }
