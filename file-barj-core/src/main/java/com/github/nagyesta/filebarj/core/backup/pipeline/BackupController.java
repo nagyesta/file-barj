@@ -65,22 +65,20 @@ public class BackupController {
         progressTracker.registerListener(parameters.getProgressListener());
         this.manifestManager = new ManifestManagerImpl(progressTracker);
 
+        var database = ManifestDatabase.newInstance();
         final var job = parameters.getJob();
         var backupType = job.getBackupType();
-        this.manifestDatabase = ManifestDatabase.newInstance();
         final var forceFull = parameters.isForceFull();
         if (!forceFull && backupType != BackupType.FULL) {
-            final var previous = manifestManager.loadPreviousManifestsForBackup(job);
-            previous.forEach((inc, loadedManifest) -> {
-                manifestDatabase.persistIncrement(loadedManifest);
-            });
-            if (manifestDatabase.isEmpty()) {
+            database = manifestManager.loadPreviousManifestsForBackup(job);
+            if (database.isEmpty()) {
                 backupType = BackupType.FULL;
             }
         }
         if (forceFull) {
             backupType = BackupType.FULL;
         }
+        this.manifestDatabase = database;
         final var backupIncrementManifest = manifestManager.generateManifest(job, backupType, manifestDatabase.nextIncrement());
         this.manifest = manifestDatabase.persistIncrement(backupIncrementManifest);
         this.configuration = manifestDatabase.getLatestConfiguration();
@@ -178,7 +176,7 @@ public class BackupController {
     }
 
     private void usePreviousVersionInCurrentIncrement(final FileMetadata previousVersion, final FileMetadata file) {
-        manifestDatabase.retrieveLatestArchiveMetadataByFileMetadataId(previousVersion.getId())
+        Optional.ofNullable(manifestDatabase.retrieveLatestArchiveMetadataByFileMetadataId(previousVersion.getId()))
                 .ifPresent(archiveEntry -> {
                     final var copied = archiveEntry.copyArchiveDetails();
                     copied.getFiles().add(file.getId());

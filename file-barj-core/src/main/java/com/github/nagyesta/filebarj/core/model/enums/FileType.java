@@ -12,6 +12,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -91,5 +93,34 @@ public enum FileType {
      */
     public InputStream streamContent(final Path path) throws IOException {
         throw new UnsupportedOperationException("Content cannot be streamed for " + name());
+    }
+
+    /**
+     * Returns a collection containing only this type.
+     *
+     * @return only this
+     */
+    public Collection<FileType> only() {
+        return Collections.singleton(this);
+    }
+
+    /**
+     * Returns a collection containing all content source types.
+     *
+     * @return content sources
+     */
+    public static Collection<FileType> contentSources() {
+        return Arrays.stream(FileType.values())
+                .filter(FileType::isContentSource)
+                .toList();
+    }
+
+    /**
+     * Returns a collection containing all types.
+     *
+     * @return all types
+     */
+    public static Collection<FileType> allTypes() {
+        return Arrays.asList(FileType.values());
     }
 }

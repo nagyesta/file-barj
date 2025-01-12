@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.model;
 
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import lombok.Data;
@@ -24,16 +25,16 @@ public class RestoreScope {
     /**
      * Creates a new instance and preprocesses the restore scope.
      *
-     * @param allFilesLatestIncrement          All known files from the latest backup increment
-     * @param allArchiveEntriesLatestIncrement All known archive entries from the latest backup
-     *                                         increment
-     * @param fileStatusesLatestIncrement      The change statuses compared the files from the
-     *                                         latest backup increment
-     * @param restoreScope                     The selected file paths we should restore
+     * @param manifestDatabase            The manifest database containing the file and archive metadata
+     * @param selectedIncrement           The increment we want to restore
+     *                                    increment
+     * @param fileStatusesLatestIncrement The change statuses compared the files from the
+     *                                    latest backup increment
+     * @param restoreScope                The selected file paths we should restore
      */
     public RestoreScope(
-            final Map<UUID, FileMetadata> allFilesLatestIncrement,
-            final Map<UUID, ArchivedFileMetadata> allArchiveEntriesLatestIncrement,
+            final ManifestDatabase manifestDatabase,
+            final ManifestId selectedIncrement,
             final Map<BackupPath, Change> fileStatusesLatestIncrement,
             final Set<BackupPath> restoreScope) {
         final var fileIdsInContentRestoreScope = allArchiveEntriesLatestIncrement.values().stream()

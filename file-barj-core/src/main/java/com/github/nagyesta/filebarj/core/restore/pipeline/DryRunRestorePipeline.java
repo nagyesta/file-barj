@@ -1,9 +1,10 @@
 package com.github.nagyesta.filebarj.core.restore.pipeline;
 
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
-import com.github.nagyesta.filebarj.core.model.RestoreManifest;
+import com.github.nagyesta.filebarj.core.model.ManifestId;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,16 +27,18 @@ public class DryRunRestorePipeline extends RestorePipeline {
     /**
      * Creates a new pipeline instance for the specified manifests.
      *
-     * @param manifest        the manifest
+     * @param manifestDatabase        the manifest database
+     * @param selectedIncrement the selected increment we want to restore
      * @param backupDirectory the directory where the backup files are located
      * @param restoreTargets  the mappings of the root paths where we would like to restore
      * @param kek             the key encryption key we would like to use to decrypt files
      */
-    public DryRunRestorePipeline(final @NotNull RestoreManifest manifest,
+    public DryRunRestorePipeline(final @NotNull ManifestDatabase manifestDatabase,
+                                 final @NotNull ManifestId selectedIncrement,
                                  final @NotNull Path backupDirectory,
                                  final @NotNull RestoreTargets restoreTargets,
                                  final @Nullable PrivateKey kek) {
-        super(manifest, backupDirectory, restoreTargets, kek, null);
+        super(manifestDatabase, selectedIncrement, backupDirectory, restoreTargets, kek, null);
     }
 
     @Override

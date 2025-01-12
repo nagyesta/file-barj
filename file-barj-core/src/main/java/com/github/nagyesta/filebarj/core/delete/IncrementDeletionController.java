@@ -1,8 +1,9 @@
 package com.github.nagyesta.filebarj.core.delete;
 
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
-import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.ManifestId;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
@@ -12,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
-import java.util.SortedMap;
 
 import static com.github.nagyesta.filebarj.core.progress.ProgressStep.DELETE_OBSOLETE_FILES;
 import static com.github.nagyesta.filebarj.core.progress.ProgressStep.LOAD_MANIFESTS;
@@ -23,7 +23,7 @@ import static com.github.nagyesta.filebarj.core.progress.ProgressStep.LOAD_MANIF
 @Slf4j
 public class IncrementDeletionController {
 
-    private final SortedMap<Long, BackupIncrementManifest> manifests;
+    private final ManifestDatabase manifestDatabase;
     private final @NonNull Path backupDirectory;
     private final ManifestManager manifestManager;
     private final ProgressTracker progressTracker;
@@ -39,7 +39,7 @@ public class IncrementDeletionController {
         progressTracker.registerListener(parameters.getProgressListener());
         this.manifestManager = new ManifestManagerImpl(progressTracker);
         this.backupDirectory = parameters.getBackupDirectory();
-        this.manifests = this.manifestManager.loadAll(this.backupDirectory, parameters.getFileNamePrefix(), parameters.getKek());
+        this.manifestDatabase = this.manifestManager.loadAll(this.backupDirectory, parameters.getFileNamePrefix(), parameters.getKek());
     }
 
     /**
@@ -49,8 +49,8 @@ public class IncrementDeletionController {
      * @param startingWithEpochSeconds the start time of the first deleted increment
      */
     public void deleteIncrementsUntilNextFullBackupAfter(final long startingWithEpochSeconds) {
-        final var incrementsStartingWithThreshold = this.manifests.values().stream()
-                .sorted(Comparator.comparing(BackupIncrementManifest::getStartTimeUtcEpochSeconds))
+        final var incrementsStartingWithThreshold = this.manifestDatabase.getAllManifestIds().stream()
+                .sorted(Comparator.comparing(ManifestId::getStartTimeUtcEpochSeconds))
                 .filter(manifest -> manifest.getStartTimeUtcEpochSeconds() >= startingWithEpochSeconds)
                 .toList();
         if (incrementsStartingWithThreshold.isEmpty()) {
@@ -64,7 +64,7 @@ public class IncrementDeletionController {
             if (current.getStartTimeUtcEpochSeconds() > startingWithEpochSeconds && current.getBackupType() == BackupType.FULL) {
                 break;
             }
-            manifestManager.deleteIncrement(backupDirectory, current);
+            manifestManager.deleteIncrement(backupDirectory, manifestDatabase.getFileNamePrefix(current));
             progressTracker.recordProgressInSubSteps(DELETE_OBSOLETE_FILES);
         }
         progressTracker.completeStep(DELETE_OBSOLETE_FILES);

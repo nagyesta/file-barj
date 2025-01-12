@@ -4,6 +4,7 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetectorFactory;
+import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
 import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
@@ -63,7 +64,8 @@ public class RestorePipeline {
     private final Path backupDirectory;
     private final RestoreTargets restoreTargets;
     private final PrivateKey kek;
-    private final RestoreManifest manifest;
+    private final ManifestDatabase manifestDatabase;
+    private final ManifestId selectedIncrement;
     private final FileMetadataSetter fileMetadataSetter;
     private final ReentrantLock streamLock = new ReentrantLock();
     private @NonNull ProgressTracker progressTracker = new NoOpProgressTracker();
@@ -71,25 +73,23 @@ public class RestorePipeline {
     /**
      * Creates a new pipeline instance for the specified manifests.
      *
-     * @param manifest           the manifest
+     * @param manifestDatabase   the manifest database
+     * @param selectedIncrement  the selected increment we want to restore
      * @param backupDirectory    the directory where the backup files are located
      * @param restoreTargets     the mappings of the root paths where we would like to restore
      * @param kek                the key encryption key we would like to use to decrypt files
      * @param permissionStrategy the permission comparison strategy
      */
-    @SuppressWarnings("checkstyle:TodoComment")
-    public RestorePipeline(final @NonNull RestoreManifest manifest,
+    public RestorePipeline(final @NonNull ManifestDatabase manifestDatabase,
+                           final @NotNull ManifestId selectedIncrement,
                            final @NonNull Path backupDirectory,
                            final @NonNull RestoreTargets restoreTargets,
                            final @Nullable PrivateKey kek,
                            final @Nullable PermissionComparisonStrategy permissionStrategy) {
-        if (manifest.getMaximumAppVersion().compareTo(new AppVersion()) > 0) {
-            throw new IllegalArgumentException("Manifests were saved with a newer version of the application");
-        }
         this.changeDetector = FileMetadataChangeDetectorFactory
-                //TODO: null was manifest.getFiles()
-                .create(null, permissionStrategy);
-        this.manifest = manifest;
+                .create(manifestDatabase, permissionStrategy);
+        this.manifestDatabase = manifestDatabase;
+        this.selectedIncrement = selectedIncrement;
         this.backupDirectory = backupDirectory;
         this.restoreTargets = restoreTargets;
         this.kek = kek;
@@ -128,13 +128,14 @@ public class RestorePipeline {
         final var pathsToRestore = contentSources.stream()
                 .map(FileMetadata::getAbsolutePath)
                 .collect(Collectors.toSet());
-        final var files = manifest.getFilesOfLastManifest();
-        files.values().stream()
-                .filter(fileMetadata -> fileMetadata.getError() != null)
-                .forEach(fileMetadata -> log.warn("File {} might be corrupted. The following error was saved during backup:\n  {}",
-                        fileMetadata.getAbsolutePath(), fileMetadata.getError()));
-        final var entries = manifest.getArchivedEntriesOfLastManifest();
-        final var restoreScope = new RestoreScope(files, entries, changeStatus, pathsToRestore);
+        manifestDatabase.retrieveFileErrors(selectedIncrement)
+                .forEach((path, error) -> log
+                        .warn("File {} might be corrupted. The following error was saved during backup:\n  {}", path, error));
+
+        //TODO: continue here with the RestoreScope
+        //TODO: will need to rewrite the manifestDatabase because it is doing too many things
+
+        final var restoreScope = new RestoreScope(manifestDatabase, selectedIncrement, changeStatus, pathsToRestore);
         final var filesWithContentChanges = restoreScope.getChangedContentSourcesByPath();
         final var itemsCount = filesWithContentChanges.size();
         final var contentSize = filesWithContentChanges.values().stream()
@@ -197,8 +198,7 @@ public class RestorePipeline {
         log.info("Deleting left-over files (if any){}", Optional.ofNullable(includedPath)
                 .map(path -> " limited to path: " + path)
                 .orElse(""));
-        final var files = manifest.getFilesOfLastManifest().values();
-        final var modifiedSources = manifest.getConfiguration().getSources().stream()
+        final var modifiedSources = manifestDatabase.getConfiguration(selectedIncrement).getSources().stream()
                 .map(source -> BackupSource.builder()
                         .path(BackupPath.of(restoreTargets.mapToRestorePath(source.getPath())))
                         .includePatterns(source.getIncludePatterns())
@@ -210,8 +210,8 @@ public class RestorePipeline {
                 .flatMap(Collection::stream)
                 .filter(pathRestriction)
                 .collect(Collectors.toSet());
-        final var pathsInBackup = threadPool.submit(() -> files.parallelStream()
-                .map(FileMetadata::getAbsolutePath)
+        final var backupPaths = manifestDatabase.retrieveAllPaths(selectedIncrement);
+        final var pathsInBackup = threadPool.submit(() -> backupPaths.parallelStream()
                 .map(restoreTargets::mapToRestorePath)
                 .collect(Collectors.toSet())).join();
         final var counter = new AtomicInteger(0);
@@ -379,7 +379,7 @@ public class RestorePipeline {
             final ForkJoinPool threadPool,
             final @NotNull RestoreScope restoreScope,
             final int totalFiles) {
-        final var changedContentSourcesByPath = restoreScope.getChangedContentSourcesByPath();
+        //final var changedContentSourcesByPath = restoreScope.getChangedContentSourcesByPath();
         final var size = changedContentSourcesByPath.size();
         final var restoreSize = changedContentSourcesByPath.values().stream()
                 .map(FileMetadata::getOriginalSizeBytes)
@@ -389,45 +389,46 @@ public class RestorePipeline {
         log.info("Restoring {} entries with content changes ({} MiB).", size, restoreSize);
         final var linkPaths = new ConcurrentHashMap<FileMetadata, Path>();
         final var contentSourcesInScopeByLocator = restoreScope.getContentSourcesInScopeByLocator();
-        final var scopePerManifest = manifest.getFileNamePrefixes().keySet().stream()
+        final var scopePerManifest = manifestDatabase.getAllManifestIds().stream()
                 .collect(Collectors.toMap(Function.identity(),
-                        prefix -> new ConcurrentHashMap<ArchiveEntryLocator, SortedSet<FileMetadata>>()));
-        threadPool.submit(() -> manifest.getFileNamePrefixes()
-                .entrySet()
+                        manifestId -> new ConcurrentHashMap<ArchiveEntryLocator, SortedSet<FileMetadata>>()));
+        threadPool.submit(() -> manifestDatabase.getAllManifestIds()
                 .parallelStream()
-                .forEach(prefixEntry -> {
-                    final var prefix = prefixEntry.getKey();
-                    final var versions = prefixEntry.getValue();
+                .forEach(manifestId -> {
+                    final var versions = manifestId.getVersions();
+                    manifestDatabase.retrieveContentRestoreScopeForArchive(selectedIncrement, manifestId);
                     contentSourcesInScopeByLocator.entrySet().stream()
                             //keep only those entries that have the same version as the archive
                             .filter(entry -> versions.contains(entry.getKey().getBackupIncrement()))
                             //assign the files from the scope to the archive prefix
-                            .forEach(entry -> scopePerManifest.get(prefix).put(entry.getKey(), entry.getValue()));
+                            .forEach(entry -> scopePerManifest.get(manifestId).put(entry.getKey(), entry.getValue()));
                 })).join();
         log.info("Found {} manifests.", scopePerManifest.size());
-        scopePerManifest.forEach((key, value) -> {
+        scopePerManifest.forEach((manifestId, value) -> {
             final var entryCount = value.size();
             final var fileCount = value.values().stream().mapToLong(Collection::size).sum();
-            log.info("Manifest {} has {} archive entries ({} files) in scope.", key, entryCount, fileCount);
+            final var prefix = manifestDatabase.getFileNamePrefix(manifestId);
+            log.info("Manifest {} has {} archive entries ({} files) in scope.", prefix, entryCount, fileCount);
         });
-        final var partitions = new ArrayList<Map.Entry<String, Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>>();
-        scopePerManifest.forEach((prefix, scope) -> {
+        final var partitions = new ArrayList<Map.Entry<ManifestId, Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>>();
+        scopePerManifest.forEach((manifestId, scope) -> {
             final var archiveEntryPathsInScope = threadPool.submit(() -> scope.keySet().parallelStream()
                     .map(ArchiveEntryLocator::asEntryPath)
                     .collect(Collectors.toSet())).join();
+            final var prefix = manifestDatabase.getFileNamePrefix(manifestId);
             log.info("Found {} archive entries in scope for prefix: {}.", archiveEntryPathsInScope.size(), prefix);
             if (archiveEntryPathsInScope.isEmpty()) {
                 return;
             }
             try {
-                final var matchingEntriesInOrderOfOccurrence = getStreamSource(manifest, prefix)
+                final var matchingEntriesInOrderOfOccurrence = getStreamSource(manifestId)
                         .getMatchingEntriesInOrderOfOccurrence(archiveEntryPathsInScope);
                 log.info("Found {} entries in archive with prefix: {}.", matchingEntriesInOrderOfOccurrence.size(), prefix);
                 partition(matchingEntriesInOrderOfOccurrence, scope, threadPool.getParallelism()).stream()
                         .filter(chunk -> !chunk.isEmpty())
                         .forEach(chunk -> {
                             log.info("Adding a partition with {} entries for prefix: {}", chunk.size(), prefix);
-                            partitions.add(new AbstractMap.SimpleEntry<>(prefix, chunk));
+                            partitions.add(new AbstractMap.SimpleEntry<>(manifestId, chunk));
                         });
             } catch (final IOException e) {
                 throw new ArchivalException("Failed to filter archive entries.", e);
@@ -435,9 +436,9 @@ public class RestorePipeline {
         });
         log.info("Formed {} partitions", partitions.size());
         threadPool.submit(() -> partitions.parallelStream().forEach(entry -> {
-            final var prefix = entry.getKey();
+            final var manifestId = entry.getKey();
             final var scope = entry.getValue();
-            final var resolvedLinks = restoreMatchingEntriesOfManifest(manifest, restoreScope, prefix, scope);
+            final var resolvedLinks = restoreMatchingEntriesOfManifest(manifestId, restoreScope, scope);
             linkPaths.putAll(resolvedLinks);
         })).join();
         createSymbolicLinks(linkPaths, threadPool);
@@ -469,18 +470,17 @@ public class RestorePipeline {
     }
 
     private Map<FileMetadata, Path> restoreMatchingEntriesOfManifest(
-            final @NotNull RestoreManifest manifest,
+            final @NotNull ManifestId manifestId,
             final @NotNull RestoreScope restoreScope,
-            final @NotNull String prefix,
             final @NotNull Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator) {
         final var remaining = contentSourcesInScopeByLocator
                 .keySet().stream()
-                .filter(locator -> manifest.getFileNamePrefixes().get(prefix).contains(locator.getBackupIncrement()))
+                .filter(locator -> manifestId.getVersions().contains(locator.getBackupIncrement()))
                 .collect(Collectors.toSet());
-        log.info("Found {} entries in manifest with prefix: {}", remaining.size(), prefix);
+        log.info("Found {} entries in manifest with prefix: {}", remaining.size(), manifestDatabase.getFileNamePrefix(manifestId));
         final var linkPaths = new HashMap<FileMetadata, Path>();
         try {
-            final var streamSource = getStreamSource(manifest, prefix);
+            final var streamSource = getStreamSource(manifestId);
             final var it = streamSource.getIteratorForScope(remaining.stream()
                     .map(ArchiveEntryLocator::asEntryPath)
                     .collect(Collectors.toSet()));
@@ -497,7 +497,7 @@ public class RestorePipeline {
                 if (locator == null) {
                     throw new ArchivalException("Failed to parse entry locator for " + archiveEntry.getPath());
                 }
-                final var key = getDecryptionKey(manifest, locator);
+                final var key = getDecryptionKey(manifestId, locator);
                 if (skipIfNotInScope(contentSourcesInScopeByLocator.keySet(), archiveEntry)) {
                     continue;
                 }
@@ -517,10 +517,10 @@ public class RestorePipeline {
                     skipMetadata(archiveEntry);
                 }
             }
-            log.info("Processed manifest with versions: {}", manifest.getVersions());
+            log.info("Processed manifest with versions: {}", manifestId.getVersions());
             return linkPaths;
         } catch (final IOException e) {
-            throw new ArchivalException("Failed to read source for manifest with versions: " + manifest.getVersions(), e);
+            throw new ArchivalException("Failed to read source for manifest with versions: " + manifestId.getVersions(), e);
         }
     }
 
@@ -539,7 +539,7 @@ public class RestorePipeline {
                         throw new IllegalStateException("Previous version not found for " + file.getAbsolutePath());
                     }
                     final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
-                    final var current = parser.parse(restorePath.toFile(), manifest.getConfiguration());
+                    final var current = parser.parse(restorePath.toFile(), manifestDatabase.getConfiguration(selectedIncrement));
                     final var change = changeDetector.classifyChange(previous, current);
                     progressTracker.recordProgressInSubSteps(step);
                     changeStatuses.put(file.getAbsolutePath(), change);
@@ -685,16 +685,16 @@ public class RestorePipeline {
     }
 
     private @Nullable SecretKey getDecryptionKey(
-            final @NotNull RestoreManifest relevantManifest,
+            final @NotNull ManifestId manifestId,
             final @NotNull ArchiveEntryLocator entryName) {
         return Optional.ofNullable(kek)
-                .map(k -> relevantManifest.dataDecryptionKey(k, entryName))
+                .map(k -> manifestDatabase.getDataDecryptionKey(k, entryName, manifestId))
                 .orElse(null);
     }
 
     private @NotNull BarjCargoArchiveFileInputStreamSource getStreamSource(
-            final @NotNull RestoreManifest manifest,
-            final @NotNull String fileNamePrefix) throws IOException {
+            final @NotNull ManifestId manifestId) throws IOException {
+        final var fileNamePrefix = manifestDatabase.getFileNamePrefix(manifestId);
         if (cache.containsKey(fileNamePrefix)) {
             return cache.get(fileNamePrefix);
         }
@@ -703,13 +703,14 @@ public class RestorePipeline {
             if (cache.containsKey(fileNamePrefix)) {
                 return cache.get(fileNamePrefix);
             }
+            final var configuration = manifestDatabase.getConfiguration(manifestId);
             final var builder = BarjCargoInputStreamConfiguration.builder()
                     .folder(backupDirectory)
                     .prefix(fileNamePrefix)
-                    .hashAlgorithm(manifest.getConfiguration().getHashAlgorithm().getAlgorithmName())
-                    .compressionFunction(manifest.getConfiguration().getCompression()::decorateInputStream);
+                    .hashAlgorithm(configuration.getHashAlgorithm().getAlgorithmName())
+                    .compressionFunction(configuration.getCompression()::decorateInputStream);
             Optional.ofNullable(kek)
-                    .map(key -> manifest.dataIndexDecryptionKey(fileNamePrefix, key))
+                    .map(key -> manifestDatabase.getDataIndexDecryptionKey(key, manifestId))
                     .ifPresent(builder::indexDecryptionKey);
             final var streamSource = new BarjCargoArchiveFileInputStreamSource(builder.build());
             cache.put(fileNamePrefix, streamSource);

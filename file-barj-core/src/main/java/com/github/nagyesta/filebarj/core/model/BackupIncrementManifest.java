@@ -13,9 +13,8 @@ import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.jackson.Jacksonized;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Models the root of the backup increment metadata.
@@ -91,4 +90,72 @@ public class BackupIncrementManifest extends EncryptionKeyStore implements Manif
     private @Null(groups = ValidationRules.Created.class)
     @NotNull(groups = ValidationRules.Persisted.class)
     @Size(min = 1, groups = ValidationRules.Persisted.class) List<String> dataFileNames;
+
+    public static BackupIncrementManifest copyOfBaseProperties(
+            @NonNull final BackupIncrementManifest manifest) {
+        return BackupIncrementManifest.builder()
+                .appVersion(manifest.getAppVersion())
+                .startTimeUtcEpochSeconds(manifest.getStartTimeUtcEpochSeconds())
+                .versions(manifest.getVersions())
+                .backupType(manifest.getBackupType())
+                .operatingSystem(manifest.getOperatingSystem())
+                .configuration(manifest.getConfiguration())
+                .fileNamePrefix(manifest.getFileNamePrefix())
+                .dataFileNames(manifest.getDataFileNames())
+                .indexFileName(manifest.getIndexFileName())
+                .encryptionKeys(manifest.getEncryptionKeys())
+                .files(new HashMap<>())
+                .archivedEntries(new HashMap<>())
+                .build();
+    }
+
+    public static BackupIncrementManifest mergeBaseProperties(
+            @NonNull final SortedSet<BackupIncrementManifest> manifests) {
+        final var config = manifests.last().getConfiguration();
+        return BackupIncrementManifest.builder()
+                .appVersion(findMaxAppVersion(manifests))
+                .startTimeUtcEpochSeconds(manifests.last().getStartTimeUtcEpochSeconds())
+                .versions(mergeVersions(manifests))
+                .backupType(manifests.first().getBackupType())
+                .operatingSystem(manifests.last().getOperatingSystem())
+                .configuration(config)
+                .fileNamePrefix(getNewPrefix(manifests, config))
+                .encryptionKeys(mergeEncryptionKeys(manifests))
+                .files(new HashMap<>())
+                .archivedEntries(new HashMap<>())
+                .build();
+    }
+
+    private static String getNewPrefix(
+            final SortedSet<BackupIncrementManifest> manifests,
+            final BackupJobConfiguration config) {
+        return config.getFileNamePrefix()
+                + "-" + manifests.first().getStartTimeUtcEpochSeconds()
+                + "-" + manifests.last().getStartTimeUtcEpochSeconds();
+    }
+
+    private static SortedSet<Integer> mergeVersions(
+            final SortedSet<BackupIncrementManifest> manifests) {
+        return manifests.stream()
+                .map(BackupIncrementManifest::getVersions)
+                .flatMap(Set::stream)
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    private static AppVersion findMaxAppVersion(final SortedSet<BackupIncrementManifest> manifests) {
+        return manifests.stream()
+                .map(BackupIncrementManifest::getAppVersion)
+                .max(AppVersion::compareTo)
+                .orElse(new AppVersion());
+    }
+
+    private static SortedMap<Integer, Map<Integer, String>> mergeEncryptionKeys(
+            final SortedSet<BackupIncrementManifest> manifests) {
+        final var keys = new TreeMap<Integer, Map<Integer, String>>();
+        manifests.stream()
+                .map(BackupIncrementManifest::getEncryptionKeys)
+                .filter(k -> k != null && !k.isEmpty())
+                .forEach(keys::putAll);
+        return keys;
+    }
 }
