@@ -1,7 +1,7 @@
 [versions]
 slf4j = "2.0.16"
 logback = "1.5.16"
-jakartaValidationApi = "3.1.0"
+jakartaValidationApi = "3.1.1"
 jakartaElApi = "6.0.1"
 hibernateValidator = "8.0.2.Final"
 expressly = "5.0.0"
