@@ -1,5 +1,5 @@
 [versions]
-slf4j = "2.0.16"
+slf4j = "2.0.17"
 logback = "1.5.16"
 jakartaValidationApi = "3.1.1"
 jakartaElApi = "6.0.1"
