@@ -145,4 +145,20 @@ public class FileMetadata implements Comparable<FileMetadata> {
     public int compareTo(final @NonNull FileMetadata o) {
         return getAbsolutePath().compareTo(o.getAbsolutePath());
     }
+
+    public static int compareByOriginalHash(
+            final @NonNull FileMetadata a,
+            final @NonNull FileMetadata b) {
+        final var aHash = a.getOriginalHash();
+        final var bHash = b.getOriginalHash();
+        if (aHash == null) {
+            return -1;
+        }
+        if (bHash == null) {
+            return 1;
+        }
+        return aHash.compareTo(bHash);
+    }
+
+
 }

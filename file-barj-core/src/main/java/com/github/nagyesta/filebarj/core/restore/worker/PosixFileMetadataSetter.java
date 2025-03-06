@@ -68,7 +68,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
-        final var filePath = restoreTargets.mapToRestorePath(metadata.getAbsolutePath());
+        final var filePath = restoreTargets.mapToOsPath(metadata.getAbsolutePath());
         final var posixFilePermissions = PosixFilePermissions.fromString(FULL_ACCESS);
         doSetPermissions(filePath, posixFilePermissions);
     }
@@ -81,7 +81,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
-        final var filePath = restoreTargets.mapToRestorePath(metadata.getAbsolutePath());
+        final var filePath = restoreTargets.mapToOsPath(metadata.getAbsolutePath());
         final var posixFilePermissions = PosixFilePermissions.fromString(metadata.getPosixPermissions());
         doSetPermissions(filePath, posixFilePermissions);
     }
@@ -91,7 +91,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
-        final var filePath = restoreTargets.mapToRestorePath(metadata.getAbsolutePath());
+        final var filePath = restoreTargets.mapToOsPath(metadata.getAbsolutePath());
         performIoTaskAndHandleException(() -> {
             final var view = Files.getFileAttributeView(filePath, BasicFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
             view.setTimes(
@@ -110,7 +110,7 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
-        final var filePath = restoreTargets.mapToRestorePath(metadata.getAbsolutePath());
+        final var filePath = restoreTargets.mapToOsPath(metadata.getAbsolutePath());
         try {
             if (!metadata.getOwner().equals(DEFAULT_OWNER) || !metadata.getGroup().equals(DEFAULT_OWNER)) {
                 final var attributeView = getPosixFileAttributeView(filePath);

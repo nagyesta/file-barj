@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.common.ManifestDatabase;
+import com.github.nagyesta.filebarj.core.common.database.FileSetId;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.ManifestId;
@@ -15,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ForkJoinPool;
 
 /**
@@ -42,13 +44,13 @@ public class DryRunRestorePipeline extends RestorePipeline {
     }
 
     @Override
-    public void evaluateRestoreSuccess(final @NotNull List<FileMetadata> files, final @NotNull ForkJoinPool threadPool) {
+    public void evaluateRestoreSuccess(final @NotNull FileSetId files, final @NotNull ForkJoinPool threadPool) {
         //no-op
     }
 
     @Override
     protected void setFileProperties(final @NotNull FileMetadata fileMetadata) {
-        log.info("> Set file properties for {}", getRestoreTargets().mapToRestorePath(fileMetadata.getAbsolutePath()));
+        log.info("> Set file properties for {}", getRestoreTargets().mapToOsPath(fileMetadata.getAbsolutePath()));
     }
 
     @Override
@@ -62,11 +64,11 @@ public class DryRunRestorePipeline extends RestorePipeline {
     protected void copyRestoredFileToRemainingLocations(
             final @NotNull FileMetadata original,
             final @NotNull List<FileMetadata> remainingCopies) {
-        final var unpackedPath = getRestoreTargets().mapToRestorePath(original.getAbsolutePath());
+        final var unpackedPath = getRestoreTargets().mapToOsPath(original.getAbsolutePath());
         remainingCopies.forEach(file -> {
-            final var copy = getRestoreTargets().mapToRestorePath(file.getAbsolutePath());
+            final var copy = getRestoreTargets().mapToOsPath(file.getAbsolutePath());
             deleteIfExists(copy);
-            if (file.getFileSystemKey().equals(original.getFileSystemKey())) {
+            if (Objects.equals(file.getFileSystemKey(), original.getFileSystemKey())) {
                 log.info("+ Create hard link {} -> {}", copy, unpackedPath);
             } else {
                 log.info("+ Create file {} copied from {}", copy, unpackedPath);

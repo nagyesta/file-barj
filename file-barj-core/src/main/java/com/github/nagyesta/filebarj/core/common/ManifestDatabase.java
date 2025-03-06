@@ -1,10 +1,16 @@
 package com.github.nagyesta.filebarj.core.common;
 
+import com.github.nagyesta.filebarj.core.common.database.ArchiveSetId;
+import com.github.nagyesta.filebarj.core.common.database.ChangeSetId;
+import com.github.nagyesta.filebarj.core.common.database.FileSetId;
+import com.github.nagyesta.filebarj.core.common.database.InMemoryManifestDatabase;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupToOsMapper;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import lombok.NonNull;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNullByDefault;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,6 +18,7 @@ import javax.crypto.SecretKey;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Defines how data should be stored/accessed to/from manifests.
@@ -83,7 +90,7 @@ public interface ManifestDatabase extends AutoCloseable {
     //INCREMENTAL BACKUP OR BACKUP MERGE END
 
     //BACKUP READ START
-    ArchivedFileMetadata retrieveArchiveMetadata(int increment, UUID archiveId);
+    ArchivedFileMetadata retrieveArchiveMetadata(ArchiveEntryLocator archiveEntryLocator);
 
     SortedMap<FileType, Long> getFileStatistics(ManifestId manifest);
 
@@ -94,37 +101,194 @@ public interface ManifestDatabase extends AutoCloseable {
 
     Set<String> retrieveArchiveEntityPathsFor(ManifestId merged, ManifestId storageSource);
 
-    List<FileMetadata> retrieveFilesFilteredBy(ManifestId manifestId, BackupPath includedPath, Collection<FileType> allowedTypes);
+    FileSetId retrieveFilesFilteredBy(ManifestId manifestId, BackupPath includedPath, Collection<FileType> allowedTypes);
 
     long originalSizeOfFilesFilteredBy(ManifestId manifestId, BackupPath includedPath);
 
     Map<BackupPath, String> retrieveFileErrors(ManifestId manifestId);
 
+    @Deprecated
     Set<BackupPath> retrieveAllPaths(ManifestId selectedIncrement);
 
+    boolean backupContainsPath(ManifestId manifestId, String linkTargetPath);
+
+    boolean backupContainsPath(ManifestId manifestId, Path osPath, BackupToOsMapper backupToOsMapper);
+
     //FILE SET START
-    UUID createFileSet();
+    FileSetId createFileSet();
 
-    void persistFileSetItems(UUID fileSetId, Collection<Path> paths, BackupToOsMapper mapper);
+    default void doForEachPageOfPathsOrderedByPath(
+            final FileSetId fileSetId,
+            final int pageSize,
+            final Consumer<List<BackupPath>> operation) {
+        doForEachPageOfPathsOrderedByPath(fileSetId, pageSize, operation, dontClose -> {
+        });
+    }
 
-    long countFileSetItems(UUID fileSetId);
+    default void doForEachPageOfPathsOrderedByPath(
+            final @NonNull FileSetId fileSetId,
+            final int pageSize,
+            final @NonNull Consumer<List<BackupPath>> operation,
+            final @NonNull Consumer<FileSetId> closeOperation) {
+        try {
+            final var itemCount = countFileSetItems(fileSetId);
+            for (var i = 0; i < itemCount; i += pageSize) {
+                operation.accept(getNextPageOfFileSetItemBackupPaths(fileSetId, i, pageSize));
+            }
+        } finally {
+            closeOperation.accept(fileSetId);
+        }
+    }
 
-    List<Path> retrieveFileWithCaseSensitivityIssues(UUID fileSetId);
+    default void doForEachPageOfFilesOrderedByPathAndCloseQuietly(
+            final FileSetId fileSetId,
+            final int pageSize,
+            final Consumer<List<FileMetadata>> operation) {
+        doForEachPageOfFilesOrderedByPath(fileSetId, pageSize, operation, IOUtils::closeQuietly);
+    }
 
-    Map<FileType, Long> parseFileMetadataForFileSet(UUID fileSetId);
+    default void doForEachPageOfFilesOrderedByPath(
+            final FileSetId fileSetId,
+            final int pageSize,
+            final Consumer<List<FileMetadata>> operation) {
+        doForEachPageOfFilesOrderedByPath(fileSetId, pageSize, operation, dontClose -> {
+        });
+    }
+
+    default void doForEachPageOfFilesOrderedByPath(
+            final @NonNull FileSetId fileSetId,
+            final int pageSize,
+            final @NonNull Consumer<List<FileMetadata>> operation,
+            final @NonNull Consumer<FileSetId> closeOperation) {
+        try {
+            final var itemCount = countFileSetItems(fileSetId);
+            for (var i = 0; i < itemCount; i += pageSize) {
+                operation.accept(getNextPageOfFileMetadataSetItemsOrderByPath(fileSetId, i, pageSize));
+            }
+        } finally {
+            closeOperation.accept(fileSetId);
+        }
+    }
+
+    default void doForEachPageOfFilesReverseOrderedByPathAndCloseQuietly(
+            final FileSetId fileSetId,
+            final int pageSize,
+            final Consumer<List<FileMetadata>> operation) {
+        doForEachPageOfFilesReverseOrderedByPath(fileSetId, pageSize, operation, IOUtils::closeQuietly);
+    }
+
+    default void doForEachPageOfFilesReverseOrderedByPath(
+            final @NonNull FileSetId fileSetId,
+            final int pageSize,
+            final @NonNull Consumer<List<FileMetadata>> operation,
+            final @NonNull Consumer<FileSetId> closeOperation) {
+        try {
+            final var itemCount = countFileSetItems(fileSetId);
+            for (var i = 0; i < itemCount; i += pageSize) {
+                operation.accept(getNextPageOfFileMetadataSetItemsReverseOrderByPath(fileSetId, i, pageSize));
+            }
+        } finally {
+            closeOperation.accept(fileSetId);
+        }
+    }
+
+    default void doForEachPageOfFilesOrderedByHashAndCloseQuietly(
+            final @NonNull FileSetId fileSetId,
+            final int approxPageSize,
+            final @NonNull Consumer<List<FileMetadata>> operation) {
+        try {
+            final var itemCount = countFileSetItems(fileSetId);
+            var i = 0;
+            while (i < itemCount) {
+                final var approxList = getNextPageOfFileMetadataSetItemsOrderByHash(fileSetId, i, approxPageSize);
+                if (approxList.isEmpty()) {
+                    return;
+                }
+                final var allHashesAreTheSameOrMissing = approxList.stream()
+                        .map(FileMetadata::getOriginalHash)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .count() > 1;
+                final List<FileMetadata> page;
+                if (allHashesAreTheSameOrMissing || approxList.size() <= approxPageSize) {
+                    page = approxList.stream().limit(approxPageSize).toList();
+                } else {
+                    final var lastHash = approxList.get(approxList.size() - 1).getOriginalHash();
+                    page = approxList.stream()
+                            .filter(file -> !Objects.equals(lastHash, file.getOriginalHash()))
+                            .limit(approxPageSize)
+                            .toList();
+                }
+                operation.accept(page);
+                i += page.size();
+            }
+        } finally {
+            IOUtils.closeQuietly(fileSetId);
+        }
+    }
+
+    void persistFileSetItems(FileSetId fileSetId, Collection<Path> paths);
+
+    void persistFileSetItems(FileSetId fileSetId, Collection<BackupPath> paths, BackupToOsMapper mapper);
+
+    void persistParsedFileMetadataItemsForFileSet(FileSetId fileSetId, Collection<FileMetadata> fileMetadata);
+
+    boolean isFileSetEmpty(FileSetId fileSetId);
+
+    long countFileSetItems(FileSetId fileSetId);
+
+    long sumContentSize(ManifestId manifestId, FileSetId fileSetId);
+
+    long sumContentSize(FileSetId fileSetId);
+
+    List<FileMetadata> getNextPageOfFileMetadataSetItemsOrderByPath(FileSetId fileSetId, int offset, int pageSize);
+
+    List<FileMetadata> getNextPageOfFileMetadataSetItemsReverseOrderByPath(FileSetId fileSetId, int offset, int pageSize);
+
+    List<FileMetadata> getNextPageOfFileMetadataSetItemsOrderByHash(FileSetId fileSetId, int offset, int pageSize);
+
+    List<BackupPath> getNextPageOfFileSetItemBackupPaths(FileSetId fileSetId, int offset, int pageSize);
+
+    List<Path> retrieveFileWithCaseSensitivityIssues(FileSetId fileSetId);
+
+    void deleteFileSet(FileSetId fileSetId);
     //FILE SET END
 
     //FILES + RESTORE
-    Set<Path> findFilesMissingFromBackupIncrement(ManifestId manifestId, UUID fileSetId);
+    FileSetId retrieveFilesWithContentChanges(ChangeSetId changeSetId, FileSetId contentSourcesSetId);
+
+    FileSetId retrieveFilesWithMetadataChanges(ChangeSetId changeSetId, FileSetId contentSourcesSetId);
+
+    Map<ManifestId, ArchiveSetId> createRelevantRestoreScopeFor(ManifestId selectedIncrement, FileSetId filesWithContentChanges);
+
+    long countArchiveSetItems(ArchiveSetId archiveSetId);
+
+    long countArchiveSetFileItems(ArchiveSetId archiveSetId);
+
+    Set<ArchiveEntryLocator> retrieveAllArchiveEntryLocators(ArchiveSetId archiveSetId);
+
+    SortedSet<FileMetadata> retrieveFileMetadataInArchiveSetByLocator(
+            ManifestId manifestId, ArchiveSetId archiveSetId, ArchiveEntryLocator locator);
+
+    ArchiveSetId saveRestorePartition(
+            ManifestId manifestId, ArchiveSetId archiveSetId, List<ArchiveEntryLocator> chunk);
+
+    void deleteArchiveSet(ArchiveSetId archiveSetId);
     //FILES + RESTORE
 
     //CHANGE DETECTION START
-    UUID detectChanges(ManifestId comparedToManifestId, UUID fileSetId, BackupToOsMapper pathMapper);
+    ChangeSetId createChangeSet();
 
-    SortedMap<Change, Long> getChangeStats(UUID changeSetId);
+    void persistChangeStatuses(ChangeSetId changeSetId, Map<BackupPath, Change> changeStatuses);
+
+    Map<FileType, Long> getFileMetadataStatsForFileSet(FileSetId fileSetId);
+
+    SortedMap<Change, Long> getChangeStats(ChangeSetId changeSetId);
 
     boolean existsInLastIncrement(FileMetadata fileMetadata);
-    //CHANGE DETECTION END
 
-    Map<ArchiveEntryLocator, SortedSet<FileMetadata>> retrieveContentRestoreScopeForArchive(ManifestId restoredIncrement, ManifestId archiveManifestId, UUID changeSetId);
+    void deleteChangeSet(ChangeSetId changeSetId);
+
+    Optional<Change> retrieveChange(ChangeSetId changeSetId, BackupPath fileAbsolutePath);
+    //CHANGE DETECTION END
 }

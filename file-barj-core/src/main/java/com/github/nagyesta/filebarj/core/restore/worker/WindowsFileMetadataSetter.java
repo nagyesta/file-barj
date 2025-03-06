@@ -53,7 +53,7 @@ public class WindowsFileMetadataSetter extends PosixFileMetadataSetter {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
-        final var absolutePath = getRestoreTargets().mapToRestorePath(metadata.getAbsolutePath());
+        final var absolutePath = getRestoreTargets().mapToOsPath(metadata.getAbsolutePath());
         performIoTaskAndHandleException(() -> {
             if (metadata.getHidden()) {
                 Runtime.getRuntime().exec(new String[]{"attrib", "+H", absolutePath.toString()}).waitFor();

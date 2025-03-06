@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.common;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
+import com.github.nagyesta.filebarj.core.common.database.InMemoryManifestDatabase;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;

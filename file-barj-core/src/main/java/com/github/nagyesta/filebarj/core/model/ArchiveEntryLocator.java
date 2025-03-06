@@ -10,6 +10,7 @@ import lombok.NonNull;
 import lombok.extern.jackson.Jacksonized;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Comparator;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -20,11 +21,12 @@ import java.util.regex.Pattern;
 @Builder
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public final class ArchiveEntryLocator {
+public final class ArchiveEntryLocator implements Comparable<ArchiveEntryLocator> {
     private static final String INCREMENT = "increment";
     private static final String NAME = "name";
     private static final Pattern PATH_REGEX = Pattern.compile(
             "^/(?<increment>\\d+)/(?<name>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$");
+    private static final Comparator<ArchiveEntryLocator> COMPARATOR = Comparator.comparing(ArchiveEntryLocator::asEntryPath);
     /**
      * The backup increment containing the entry.
      */
@@ -64,4 +66,8 @@ public final class ArchiveEntryLocator {
         }
     }
 
+    @Override
+    public int compareTo(@NonNull final ArchiveEntryLocator o) {
+        return COMPARATOR.compare(this, o);
+    }
 }

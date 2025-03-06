@@ -2,7 +2,6 @@ package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
-import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import lombok.NonNull;
@@ -10,7 +9,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 import java.security.PrivateKey;
-import java.util.SortedMap;
 
 /**
  * Responsible for loading and merging manifests of the same backup.
@@ -84,15 +82,6 @@ public interface ManifestManager {
             @NonNull Path destinationDirectory,
             @NonNull String fileNamePrefix,
             @Nullable PrivateKey privateKey);
-
-    /**
-     * Merges the provided manifests for a restore process.
-     *
-     * @param manifests the manifests to merge
-     * @return the merged manifest
-     */
-    RestoreManifest mergeForRestore(
-            @NonNull SortedMap<Integer, BackupIncrementManifest> manifests);
 
     /**
      * Validates the provided manifest using the provided validation rules.

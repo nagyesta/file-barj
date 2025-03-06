@@ -19,6 +19,7 @@ public record RestoreTargets(@NonNull Set<RestoreTarget> restoreTargets) impleme
      *
      * @param originalPath the original path
      * @return the restore path
+     * @deprecated Use {@link #mapToOsPath(BackupPath)}
      */
     @Deprecated
     public @NotNull Path mapToRestorePath(final @NonNull BackupPath originalPath) {

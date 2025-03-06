@@ -18,5 +18,5 @@ public interface BackupScopePartitioner {
      * @return the partitioned scope
      */
     @NotNull
-    List<List<List<FileMetadata>>> partitionBackupScope(@NotNull Collection<FileMetadata> scope);
+    List<List<FileMetadata>> partitionBackupScope(@NotNull Collection<FileMetadata> scope);
 }

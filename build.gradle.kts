@@ -15,7 +15,7 @@ plugins {
 
 group = "com.github.nagyesta.file-barj"
 
-project.apply(from = "config/ossindex/ossIndexAudit.gradle.kts")
+apply("config/ossindex/ossIndexAudit.gradle.kts")
 
 buildscript {
     fun optionalPropertyString(name: String): String {

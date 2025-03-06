@@ -94,9 +94,8 @@ public class RestoreController {
             final var pipeline = createRestorePipeline(
                     restoreTask.getRestoreTargets(), restoreTask.isDryRun(), restoreTask.getPermissionComparisonStrategy());
             pipeline.setProgressTracker(progressTracker);
-            final var directories = manifestDatabase
-                    .retrieveFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath(), FileType.DIRECTORY.only());
-            pipeline.restoreDirectories(directories);
+            pipeline.restoreDirectories(manifestDatabase
+                    .retrieveFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath(), FileType.DIRECTORY.only()));
             pipeline.restoreFiles(manifestDatabase
                     .retrieveFilesFilteredBy(lastIncrement, restoreTask.getIncludedPath(), FileType.contentSources()), threadPool);
             pipeline.deleteLeftOverFiles(restoreTask.getIncludedPath(), restoreTask.isDeleteFilesNotInBackup(), threadPool);

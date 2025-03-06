@@ -85,7 +85,7 @@ public class MergeController {
             if (!deleteObsoleteFiles) {
                 progressTracker.skipStep(DELETE_OBSOLETE_FILES);
             }
-            final var result = mergeBackupContent();
+            final var result = manifestDatabase.get(mergeBackupContent());
             manifestManager.persist(result, backupDirectory);
             if (deleteObsoleteFiles) {
                 log.info("Deleting obsolete files from backup directory: {}", backupDirectory);
@@ -101,7 +101,7 @@ public class MergeController {
         }
     }
 
-    private BackupIncrementManifest mergeBackupContent() {
+    private ManifestId mergeBackupContent() {
         final var lastManifest = manifestsToMerge.last();
         final var totalEntries = manifestDatabase.totalCountOfArchiveEntries(lastManifest);
         final var config = manifestDatabase.getConfiguration(mergedManifest);
@@ -129,7 +129,7 @@ public class MergeController {
         } catch (final IOException e) {
             throw new ArchivalException("Failed to merge backup increments.", e);
         }
-        return manifestDatabase.get(mergedManifest);
+        return mergedManifest;
     }
 
     private SortedSet<ManifestId> filterToSelection(
