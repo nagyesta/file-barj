@@ -59,12 +59,12 @@ tasks.compileJava.get().dependsOn(copyLegalDocs)
 tasks.processResources.get().finalizedBy(copyLegalDocs)
 
 licensee {
-    allow("MIT")
     allow("Apache-2.0")
     allow("LGPL-2.1-only")
     allow("BSD-2-Clause")
     allow("GPL-2.0-with-classpath-exception")
     allowUrl("https://www.bouncycastle.org/licence.html")
+    allowUrl("https://opensource.org/license/mit")
 }
 
 publishing {

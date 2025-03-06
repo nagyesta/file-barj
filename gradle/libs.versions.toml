@@ -1,6 +1,6 @@
 [versions]
-slf4j = "2.0.16"
-logback = "1.5.16"
+slf4j = "2.0.17"
+logback = "1.5.17"
 jakartaValidationApi = "3.1.1"
 jakartaElApi = "6.0.1"
 hibernateValidator = "8.0.2.Final"
@@ -8,16 +8,14 @@ expressly = "5.0.0"
 bouncycastle = "1.80"
 commonsCodec = "1.18.0"
 commonsCompress = "1.27.1"
-commonsCrypto = "1.2.0"
 commonsCli = "1.9.0"
 commonsIo = "2.18.0"
-mockitoCore = "5.16.0"
+mockitoCore = "5.15.2"
 jupiter = "5.12.0"
-abortMission = "5.2.6"
-checkstyle = "10.12.2"
-jacoco = "0.8.10"
-jacksonBom = { strictly = "2.18.3" }
-jackson = { strictly = "2.18.2" }
+abortMission = "5.2.0"
+checkstyle = "10.21.3"
+jacoco = "0.8.12"
+jackson = { strictly = "2.18.3" }
 jetbrainsAnnotations = "26.0.2"
 
 abortMissionPlugin = "5.0.124"
@@ -39,13 +37,12 @@ jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "j
 
 jakarta-el-api = { module = "jakarta.el:jakarta.el-api", version.ref = "jakartaElApi" }
 jakarta-validation-api = { module = "jakarta.validation:jakarta.validation-api", version.ref = "jakartaValidationApi" }
-hibernate-validator = { module = "org.hibernate:hibernate-validator", version.ref = "hibernateValidator" }
+hibernate-validator = { module = "org.hibernate.validator:hibernate-validator ", version.ref = "hibernateValidator" }
 expressly = { module = "org.glassfish.expressly:expressly", version.ref = "expressly" }
 
 bouncycastle-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
 
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
-commons-crypto = { module = "org.apache.commons:commons-crypto", version.ref = "commonsCrypto" }
 commons-codec = { module = "commons-codec:commons-codec", version.ref = "commonsCodec" }
 commons-cli = { module = "commons-cli:commons-cli", version.ref = "commonsCli" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsIo" }
@@ -57,11 +54,15 @@ junit-bom = { module = "org.junit:junit-bom", version.ref = "jupiter" }
 
 abort-mission-jupiter = { module = "com.github.nagyesta.abort-mission.boosters:abort.booster-junit-jupiter", version.ref = "abortMission" }
 
-jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jacksonBom" }
 jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
 jackson-annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson-dataformat-xml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-xml", version.ref = "jackson" }
+
+# used by Renovate
+checkstyle = { module = "com.puppycrawl.tools:checkstyle", version.ref = "checkstyle" }
+# used by Renovate
+jacoco = { module = "org.jacoco:org.jacoco.core", version.ref = "jacoco" }
 
 [bundles]
 logback = ["logback-classic", "logback-core"]

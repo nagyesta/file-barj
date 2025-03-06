@@ -30,6 +30,8 @@ on:
       - 'gradlew'
       - 'gradlew.bat'
       - 'config/ossindex/exclusions.txt'
+      - '.idea/**'
+      - '.gitignore'
 
 permissions: read-all
 
@@ -82,17 +84,23 @@ jobs:
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./file-barj-core/build/reports/jacoco/report.xml
+          files: ./file-barj-core/build/reports/jacoco/report.xml
           flags: core
+          disable_search: true
+          fail_ci_if_error: false
       - name: Upload coverage to Codecov - Job
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./file-barj-job/build/reports/jacoco/report.xml
+          files: ./file-barj-job/build/reports/jacoco/report.xml
           flags: job
+          disable_search: true
+          fail_ci_if_error: false
       - name: Upload coverage to Codecov - Stream IO
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./file-barj-stream-io/build/reports/jacoco/report.xml
+          files: ./file-barj-stream-io/build/reports/jacoco/report.xml
           flags: stream
+          disable_search: true
+          fail_ci_if_error: false

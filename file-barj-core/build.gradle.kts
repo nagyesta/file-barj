@@ -41,11 +41,11 @@ abortMission {
 }
 
 licensee {
-    allow("MIT")
     allow("Apache-2.0")
     allow("BSD-2-Clause")
     allow("GPL-2.0-with-classpath-exception")
     allowUrl("https://www.bouncycastle.org/licence.html")
+    allowUrl("https://opensource.org/license/mit")
 }
 
 val copyLegalDocs = tasks.register<Copy>("copyLegalDocs") {
