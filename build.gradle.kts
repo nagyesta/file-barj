@@ -201,7 +201,7 @@ subprojects {
         isPrintBanner = false
         isColorEnabled = true
         isShowAll = false
-        outputFormat = OutputFormat.DEPENDENCY_GRAPH
+        outputFormat = OutputFormat.DEFAULT
         @Suppress("UNCHECKED_CAST")
         excludeVulnerabilityIds = rootProject.extra.get("ossIndexExclusions") as MutableSet<String>
     }
@@ -243,7 +243,7 @@ ossIndexAudit {
     isPrintBanner = false
     isColorEnabled = true
     isShowAll = false
-    outputFormat = OutputFormat.DEPENDENCY_GRAPH
+    outputFormat = OutputFormat.DEFAULT
     @Suppress("UNCHECKED_CAST")
     excludeVulnerabilityIds = rootProject.extra.get("ossIndexExclusions") as MutableSet<String>
 }

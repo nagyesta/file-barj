@@ -14,11 +14,51 @@
     "pinDigests": true
   },
   "packageRules": [
-    {
-      "matchCategories": [
-        "docker"
-      ],
-      "pinDigests": true
-    }
+      {
+          "groupName": "Github Actions",
+          "matchManagers": [
+              "github-actions"
+          ]
+      },
+      {
+          "groupName": "Jackson dependencies",
+          "matchPackageNames": [
+              "com.fasterxml.jackson.core:{/,}**",
+              "com.fasterxml.jackson.dataformat:{/,}**",
+              "com.fasterxml.jackson.datatype:{/,}**"
+          ]
+      },
+      {
+          "groupName": "Abort Mission dependencies",
+          "matchPackageNames": [
+              "com.github.nagyesta.abort-mission:{/,}**",
+              "com.github.nagyesta.abort-mission.boosters:{/,}**"
+          ]
+      },
+      {
+          "groupName": "Validation dependencies",
+          "matchPackageNames": [
+              "jakarta.el:{/,}**",
+              "jakarta.validation:{/,}**",
+              "org.hibernate.validator:{/,}**",
+              "org.glassfish.expressly:{/,}**"
+          ]
+      },
+      {
+          "groupName": "Apache Commons dependencies",
+          "matchPackageNames": [
+              "org.apache.commons:{/,}**",
+              "commons-codec:{/,}**",
+              "commons-cli:{/,}**",
+              "commons-io:{/,}**"
+          ]
+      },
+      {
+          "groupName": "Logging dependencies",
+          "matchPackageNames": [
+              "org.slf4j:{/,}**",
+              "ch.qos.logback:{/,}**"
+          ]
+      }
   ]
 }
