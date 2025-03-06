@@ -13,7 +13,7 @@ commonsIo = "2.18.0"
 mockitoCore = "5.15.2"
 jupiter = "5.12.0"
 abortMission = "5.2.0"
-checkstyle = "10.21.3"
+checkstyle = "10.21.4"
 jacoco = "0.8.12"
 jackson = { strictly = "2.18.3" }
 jetbrainsAnnotations = "26.0.2"
