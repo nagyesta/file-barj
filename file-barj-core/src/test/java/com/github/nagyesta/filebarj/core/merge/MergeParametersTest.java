@@ -4,16 +4,17 @@ import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class MergeParametersTest extends TempFileAwareTest {
+class MergeParametersTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullDirectory() {
         //given
+        final var builder = MergeParameters.builder();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> MergeParameters.builder().backupDirectory(null));
+                () -> builder.backupDirectory(null));
 
         //then + exception
     }
@@ -22,10 +23,11 @@ public class MergeParametersTest extends TempFileAwareTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
+        final var builder = MergeParameters.builder();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> MergeParameters.builder().fileNamePrefix(null));
+                () -> builder.fileNamePrefix(null));
 
         //then + exception
     }

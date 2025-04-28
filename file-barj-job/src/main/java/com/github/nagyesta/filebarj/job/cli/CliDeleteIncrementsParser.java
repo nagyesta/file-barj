@@ -21,7 +21,9 @@ public class CliDeleteIncrementsParser extends CliICommonBackupFileParser<Delete
      * @param args    the command line arguments
      * @param console the console we should use for password input
      */
-    public CliDeleteIncrementsParser(final String[] args, final Console console) {
+    public CliDeleteIncrementsParser(
+            final String[] args,
+            final Console console) {
         super(Task.DELETE_INCREMENTS,  args, commandLine -> {
             final var prefix = commandLine.getOptionValue(PREFIX);
             final var keyProperties = parseKeyProperties(console, commandLine);

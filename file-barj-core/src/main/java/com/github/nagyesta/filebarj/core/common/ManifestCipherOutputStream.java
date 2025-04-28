@@ -32,7 +32,8 @@ public class ManifestCipherOutputStream extends DoOnCloseOutputStream {
      * @throws IOException if an I/O error occurs
      */
     public ManifestCipherOutputStream(
-            final @NonNull OutputStream destination, final @Nullable PublicKey key) throws IOException {
+            final @NonNull OutputStream destination,
+            final @Nullable PublicKey key) throws IOException {
         this.destination = destination;
         if (key != null) {
             final var secretKey = EncryptionUtil.generateAesKey();

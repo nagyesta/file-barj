@@ -7,8 +7,9 @@
 [![JavaCI](https://img.shields.io/github/actions/workflow/status/nagyesta/file-barj/gradle.yml?logo=github&branch=main)](https://github.com/nagyesta/file-barj/actions/workflows/gradle.yml)
 
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/9260/badge)](https://bestpractices.coreinfrastructure.org/projects/9260)
-[![code-climate-maintainability](https://img.shields.io/codeclimate/maintainability/nagyesta/file-barj?logo=code%20climate)](https://img.shields.io/codeclimate/maintainability/nagyesta/file-barj?logo=code%20climate)
-[![code-climate-tech-debt](https://img.shields.io/codeclimate/tech-debt/nagyesta/file-barj?logo=code%20climate)](https://img.shields.io/codeclimate/tech-debt/nagyesta/file-barj?logo=code%20climate)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=coverage)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
 [![last_commit](https://img.shields.io/github/last-commit/nagyesta/file-barj?logo=git)](https://img.shields.io/github/last-commit/nagyesta/file-barj?logo=git)
 [![badge-abort-mission-armed-green](https://raw.githubusercontent.com/nagyesta/abort-mission/wiki_assets/.github/assets/badge-abort-mission-armed-green.svg)](https://github.com/nagyesta/abort-mission)
 
@@ -17,7 +18,7 @@ that can create secure backups of preconfigured files and folders and can be eas
 
 > [!WARNING]
 > File BaRJ is a free tool that is provided "as is", **without warranty of any kind**. It might be the perfect tool you need, or leave you
-with gigabytes of encrypted hot mess instead of your precious data. By using it, you accept the risk of data loss (among others).
+> with gigabytes of encrypted hot mess instead of your precious data. By using it, you accept the risk of data loss (among others).
 
 ## Features
 
@@ -66,4 +67,4 @@ File BaRJ comes with the following features
 # Limitations
 
 - The file permissions are only captured from the point of view of the current user on Windows or other non-POSIX compliant systems.
-- Cross platform restore can run into file name case issues when restoring a backup using case-sensitive paths on a system where paths are case-insensitive. 
+- Cross platform restore can run into file name case issues when restoring a backup using case-sensitive paths on a system where paths are case-insensitive.

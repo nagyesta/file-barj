@@ -162,12 +162,13 @@ class DoOnCloseInputStreamTest {
     }
 
     @Test
+    @SuppressWarnings("java:S1612")
     void testCloseShouldUseLockToAvoidRaceConditionWhenTheStreamIsClosedFromMultipleThreads() {
         //given
         final var stream = mock(InputStream.class);
-        //noinspection NullableProblems
         final var underTest = new TestDoOnCloseInputStream(stream) {
             @Override
+            @SuppressWarnings("java:S2925")
             protected @NonNull InputStream getInputStream() {
                 Assertions.assertDoesNotThrow(() -> Thread.sleep(WAIT_MILLIS));
                 return super.getInputStream();

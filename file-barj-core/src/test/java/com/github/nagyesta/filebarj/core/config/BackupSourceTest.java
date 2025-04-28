@@ -34,6 +34,7 @@ class BackupSourceTest extends TempFileAwareTest {
             "visible/1.txt", "visible/dir1/1.txt",
             "tmp/1.txt");
 
+    @Override
     @BeforeEach
     protected void setUp() throws IOException {
         super.setUp();

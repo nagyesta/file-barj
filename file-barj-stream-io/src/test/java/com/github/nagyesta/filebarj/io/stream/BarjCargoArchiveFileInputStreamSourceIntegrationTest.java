@@ -15,8 +15,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.*;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -58,8 +58,8 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomLinkContentProvider")
     void testGetStreamForShouldReturnStreamWithOriginalLinkContentWhenCalledWithExistingPathUsingEncryption(
-            final Map<String, String> entries, final boolean addMetadata)
-            throws IOException {
+            final Map<String, String> entries,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -109,8 +109,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetStreamForShouldReturnStreamWithOriginalContentWhenCalledWithExistingPathUsingEncryption(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var contentMap = generateTestData(entries);
@@ -164,8 +165,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetStreamForShouldReturnStreamWithOriginalContentWhenCalledWithExistingPathUsingCompressionAndEncryption(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var contentMap = generateTestData(entries);
@@ -211,8 +213,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetNextStreamForShouldReturnStreamWithOriginalFileContentWhenCalledForTheIterator(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var contentMap = generateTestData(entries);
@@ -277,8 +280,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetLinkTargetShouldThrowExceptionsWhenCalledForRegularFile(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var contentMap = generateTestData(entries);
@@ -322,8 +326,8 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomLinkContentProvider")
     void testGetNextStreamForShouldReturnStreamWithOriginalLinkTargetsWhenCalledForTheIterator(
-            final Map<String, String> entries, final boolean addMetadata)
-            throws IOException {
+            final Map<String, String> entries,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -384,8 +388,8 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomLinkContentProvider")
     void testGetFileContentShouldThrowExceptionsWhenCalledForSymbolicLink(
-            final Map<String, String> entries, final boolean addMetadata)
-            throws IOException {
+            final Map<String, String> entries,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -426,8 +430,8 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomLinkContentProvider")
     void testGetNextStreamForShouldReturnStreamWithDirectoryMetadataWhenCalledForTheIterator(
-            final Map<String, String> entries, final boolean addMetadata)
-            throws IOException {
+            final Map<String, String> entries,
+            final boolean addMetadata) throws IOException {
         //given
         final var secretKey = EncryptionUtil.generateAesKey();
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -486,8 +490,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetStreamForShouldReturnStreamWithOriginalContentWhenCalledWithExistingPathUsingCompression(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var contentMap = generateTestData(entries);
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -532,8 +537,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetStreamForShouldCloseOriginalStreamWhenExceptionIsThrownDuringCreation(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var contentMap = generateTestData(entries);
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -594,8 +600,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testGetNextStreamForShouldThrowExceptionWhenCalledWithNullInputStream()
-            throws IOException {
+    void testGetNextStreamForShouldThrowExceptionWhenCalledWithNullInputStream() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
 
@@ -608,63 +613,65 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testGetNextStreamForShouldThrowExceptionWhenCalledWithNullEntity()
-            throws IOException {
+    void testGetNextStreamForShouldThrowExceptionWhenCalledWithNullEntity() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
+        @SuppressWarnings({"resource"}) //this is a null stream
+        final var inputStream = InputStream.nullInputStream();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.getNextStreamFor(InputStream.nullInputStream(), null, null));
+                () -> underTest.getNextStreamFor(inputStream, null, null));
 
         //then + exception
     }
 
     @Test
-    void testGetNextStreamForShouldThrowExceptionWhenCalledWithInvalidEntity()
-            throws IOException {
+    void testGetNextStreamForShouldThrowExceptionWhenCalledWithInvalidEntity() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
+        @SuppressWarnings({"resource"}) //this is a null stream
+        final var inputStream = InputStream.nullInputStream();
+        final var boundary = mock(BarjCargoEntryBoundaries.class);
 
         //when
         Assertions.assertThrows(IOException.class,
-                () -> underTest.getNextStreamFor(InputStream.nullInputStream(), mock(BarjCargoEntryBoundaries.class), null));
+                () -> underTest.getNextStreamFor(inputStream, boundary, null));
 
         //then + exception
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testOpenStreamForSequentialAccessShouldThrowExceptionWhenCalledWithNullPathList()
-            throws IOException {
+    void testOpenStreamForSequentialAccessShouldThrowExceptionWhenCalledWithNullPathList() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
+        final List<BarjCargoEntityIndex> list = List.of();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.openStreamForSequentialAccess(null, List.of()));
+                () -> underTest.openStreamForSequentialAccess(null, list));
 
         //then + exception
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testOpenStreamForSequentialAccessShouldThrowExceptionWhenCalledWithNullEntityList()
-            throws IOException {
+    void testOpenStreamForSequentialAccessShouldThrowExceptionWhenCalledWithNullEntityList() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
+        final List<Path> list = List.of();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.openStreamForSequentialAccess(List.of(), null));
+                () -> underTest.openStreamForSequentialAccess(list, null));
 
         //then + exception
     }
 
     @Test
     @SuppressWarnings("checkstyle:MagicNumber")
-    void testIteratorShouldPresentEntitiesSequentiallyWhenCalledWithValidScope()
-            throws IOException {
+    void testIteratorShouldPresentEntitiesSequentiallyWhenCalledWithValidScope() throws IOException {
         //given
         final var contentMap = generateTestData(IntStream.range(0, 50)
                 .boxed()
@@ -704,8 +711,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testGetIteratorForScopeShouldThrowExceptionWhenCalledWithNull()
-            throws IOException {
+    void testGetIteratorForScopeShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
 
@@ -718,8 +724,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testGetEntityShouldThrowExceptionWhenCalledWithNull()
-            throws IOException {
+    void testGetEntityShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
 
@@ -732,8 +737,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testGetMatchingEntriesInOrderOfOccurrenceShouldThrowExceptionWhenCalledWithNull()
-            throws IOException {
+    void testGetMatchingEntriesInOrderOfOccurrenceShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
         final var underTest = getStreamSource(generateTestData(Map.of("/key1", 1)));
 
@@ -747,8 +751,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetEntryShouldThrowExceptionWhenEntryIsNotFound(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var contentMap = generateTestData(entries);
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -778,10 +783,11 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
             }));
             testDataWriter.close();
             final var underTest = new BarjCargoArchiveFileInputStreamSource(inConfig);
+            final var uuid = UUID.randomUUID().toString();
 
             //when
             Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> underTest.getEntry(UUID.randomUUID().toString()));
+                    () -> underTest.getEntry(uuid));
 
             //then + exception
         }
@@ -791,8 +797,9 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testGetStreamForShouldThrowExceptionWhenCalledWithNullBoundary(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var contentMap = generateTestData(entries);
         final var outConfig = BarjCargoOutputStreamConfiguration.builder()
@@ -949,7 +956,7 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
 
 
     @Test
-    void testReadingExampleFileShouldReadExpectedInput() throws IOException, URISyntaxException {
+    void testReadingExampleFileShouldReadExpectedInput() throws IOException {
         //given
         final var writeConfig = BarjCargoOutputStreamConfiguration.builder()
                 .hashAlgorithm("SHA-256")
@@ -1052,7 +1059,8 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     }
 
     private BarjCargoOutputStreamConfiguration getBarjCargoOutputStreamConfiguration(
-            final String hashAlgorithm, final IoFunction<OutputStream, OutputStream> compressionFunction) {
+            final String hashAlgorithm,
+            final IoFunction<OutputStream, OutputStream> compressionFunction) {
         return BarjCargoOutputStreamConfiguration.builder()
                 .prefix("prefix")
                 .hashAlgorithm(hashAlgorithm)
@@ -1063,7 +1071,8 @@ class BarjCargoArchiveFileInputStreamSourceIntegrationTest extends TempFileAware
     }
 
     private BarjCargoInputStreamConfiguration getBarjCargoInputStreamConfiguration(
-            final String hashAlgorithm, final IoFunction<InputStream, InputStream> compressionFunction) {
+            final String hashAlgorithm,
+            final IoFunction<InputStream, InputStream> compressionFunction) {
         return BarjCargoInputStreamConfiguration.builder()
                 .prefix("prefix")
                 .hashAlgorithm(hashAlgorithm)

@@ -29,12 +29,16 @@ public abstract class DoOnCloseInputStream extends InputStream {
     }
 
     @Override
-    public int read(final byte @NotNull [] b, final int off, final int len) throws IOException {
+    public int read(
+            final byte @NotNull [] b,
+            final int off,
+            final int len) throws IOException {
         throwExceptionIfClosed();
         return getInputStream().read(b, off, len);
     }
 
     @Override
+    @SuppressWarnings("java:S2583") //the method may be called by multiple threads
     public void close() throws IOException {
         if (closed) {
             return;

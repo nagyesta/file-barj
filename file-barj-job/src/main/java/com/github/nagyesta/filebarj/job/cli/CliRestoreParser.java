@@ -33,7 +33,9 @@ public class CliRestoreParser extends CliICommonBackupFileParser<RestoreProperti
      * @param args    the command line arguments
      * @param console the console we should use for password input
      */
-    public CliRestoreParser(final String[] args, final Console console) {
+    public CliRestoreParser(
+            final String[] args,
+            final Console console) {
         super(Task.RESTORE, args, commandLine -> {
             final var threads = Integer.parseInt(commandLine.getOptionValue(THREADS, "1"));
             final var dryRun = Boolean.parseBoolean(commandLine.getOptionValue(DRY_RUN, "false"));

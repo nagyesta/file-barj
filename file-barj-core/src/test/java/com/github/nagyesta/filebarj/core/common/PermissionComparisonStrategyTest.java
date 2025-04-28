@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.stream.Stream;
 
+import static com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -121,11 +122,13 @@ class PermissionComparisonStrategyTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("strictStrategyDataProvider")
     void testStrictStrategyShouldNotAllowAnyDifferencesWhenCalled(
-            final FileMetadata previousMetadata, final FileMetadata currentMetadata, final boolean expectedResult) {
+            final FileMetadata previousMetadata,
+            final FileMetadata currentMetadata,
+            final boolean expectedResult) {
         //given
 
         //when
-        final var result = PermissionComparisonStrategy.STRICT.matches(previousMetadata, currentMetadata);
+        final var result = STRICT.matches(previousMetadata, currentMetadata);
         //then
         assertEquals(expectedResult, result);
     }
@@ -133,11 +136,13 @@ class PermissionComparisonStrategyTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("permissionOnlyStrategyDataProvider")
     void testPermissionOnlyStrategyShouldAllowDifferencesInOwnerAndGroupNameWhenCalled(
-            final FileMetadata previousMetadata, final FileMetadata currentMetadata, final boolean expectedResult) {
+            final FileMetadata previousMetadata,
+            final FileMetadata currentMetadata,
+            final boolean expectedResult) {
         //given
 
         //when
-        final var result = PermissionComparisonStrategy.PERMISSION_ONLY.matches(previousMetadata, currentMetadata);
+        final var result = PERMISSION_ONLY.matches(previousMetadata, currentMetadata);
         //then
         assertEquals(expectedResult, result);
     }
@@ -145,11 +150,13 @@ class PermissionComparisonStrategyTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("relaxedStrategyDataProvider")
     void testRelaxedStrategyShouldAllowDifferencesInOwnerAndGroupNameWhenCalled(
-            final FileMetadata previousMetadata, final FileMetadata currentMetadata, final boolean expectedResult) {
+            final FileMetadata previousMetadata,
+            final FileMetadata currentMetadata,
+            final boolean expectedResult) {
         //given
 
         //when
-        final var result = PermissionComparisonStrategy.RELAXED.matches(previousMetadata, currentMetadata);
+        final var result = RELAXED.matches(previousMetadata, currentMetadata);
         //then
         assertEquals(expectedResult, result);
     }
@@ -157,16 +164,21 @@ class PermissionComparisonStrategyTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("ignoreStrategyDataProvider")
     void testIgnoreStrategyShouldAllowDifferencesInOwnerAndGroupNameWhenCalled(
-            final FileMetadata previousMetadata, final FileMetadata currentMetadata, final boolean expectedResult) {
+            final FileMetadata previousMetadata,
+            final FileMetadata currentMetadata,
+            final boolean expectedResult) {
         //given
 
         //when
-        final var result = PermissionComparisonStrategy.IGNORE.matches(previousMetadata, currentMetadata);
+        final var result = IGNORE.matches(previousMetadata, currentMetadata);
         //then
         assertEquals(expectedResult, result);
     }
 
-    private FileMetadata createFileMetadata(final String owner, final String group, final String permissions) {
+    private FileMetadata createFileMetadata(
+            final String owner,
+            final String group,
+            final String permissions) {
         final var mock = mock(FileMetadata.class);
         when(mock.getOwner()).thenReturn(owner);
         when(mock.getGroup()).thenReturn(group);

@@ -20,7 +20,9 @@ public class CryptoException extends RuntimeException {
      * @param message the message
      * @param cause   the cause
      */
-    public CryptoException(final String message, final Throwable cause) {
+    public CryptoException(
+            final String message,
+            final Throwable cause) {
         super(message, cause);
     }
 }

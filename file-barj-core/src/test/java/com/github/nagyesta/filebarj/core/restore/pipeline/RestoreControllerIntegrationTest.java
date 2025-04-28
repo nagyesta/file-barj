@@ -27,6 +27,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -35,7 +36,6 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 class RestoreControllerIntegrationTest extends TempFileAwareTest {
-    public static final int A_SECOND = 1000;
 
     @SuppressWarnings({"MagicNumber", "checkstyle:MagicNumber"})
     public static Stream<Arguments> restoreParameterProvider() {
@@ -120,14 +120,15 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .build();
         final var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(backup), restore)));
+        final var restoreTask = RestoreTask.builder()
+                .restoreTargets(restoreTargets)
+                .threads(0)
+                .dryRun(false)
+                .build();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.execute(RestoreTask.builder()
-                        .restoreTargets(restoreTargets)
-                        .threads(0)
-                        .dryRun(false)
-                        .build()));
+                () -> underTest.execute(restoreTask));
 
         //then + exception
     }
@@ -135,8 +136,10 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldRestoreFilesToDestinationWhenExecutedWithValidInput(
-            final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash) throws IOException {
+            final PublicKey encryptionKey,
+            final PrivateKey decryptionKey,
+            final int threads,
+            final HashAlgorithm hash) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -203,8 +206,10 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldRestoreOnlyIncludedFilesToDestinationWhenExecutedWithIncludeFilter(
-            final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash) throws IOException {
+            final PublicKey encryptionKey,
+            final PrivateKey decryptionKey,
+            final int threads,
+            final HashAlgorithm hash) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -292,8 +297,10 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldRestoreFilesToDestinationWhenTargetFilesAlreadyExistWithDifferentContent(
-            final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash) throws IOException {
+            final PublicKey encryptionKey,
+            final PrivateKey decryptionKey,
+            final int threads,
+            final HashAlgorithm hash) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -365,8 +372,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldOnlySimulateRestoreWhenTargetFilesAlreadyExistWithDifferentContentAndDryRunIsUsed(
-            final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash, final boolean deleteLeftOver) throws IOException {
+            final PublicKey encryptionKey,
+            final PrivateKey decryptionKey,
+            final int threads,
+            final HashAlgorithm hash,
+            final boolean deleteLeftOver) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -439,8 +449,10 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldRestoreFilesToDestinationWhenTargetFilesAlreadyExistWithPartiallyMatchingContent(
-            final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash) throws IOException {
+            final PublicKey encryptionKey,
+            final PrivateKey decryptionKey,
+            final int threads,
+            final HashAlgorithm hash) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -508,9 +520,13 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
+    @SuppressWarnings("java:S2925")
     void testExecuteShouldRestoreFilesToDestinationWhenExecutedWithIncrementalBackup(
-            final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash, final boolean deleteLeftOver) throws IOException, InterruptedException {
+            final PublicKey encryptionKey,
+            final PrivateKey decryptionKey,
+            final int threads,
+            final HashAlgorithm hash,
+            final boolean deleteLeftOver) throws IOException, InterruptedException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -564,7 +580,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Files.createSymbolicLink(addedLinkExternal, externalLinkTarget);
 
         final var fullBackupTime = Instant.now().getEpochSecond();
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var parameters2 = BackupParameters.builder()
                 .job(configuration)
                 .forceFull(false)
@@ -626,8 +642,10 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("restoreParameterProvider")
     void testExecuteShouldNotRestoreAnyFilesWhenExecutedWithValidInputUsingDryRun(
-            final PublicKey encryptionKey, final PrivateKey decryptionKey,
-            final int threads, final HashAlgorithm hash) throws IOException {
+            final PublicKey encryptionKey,
+            final PrivateKey decryptionKey,
+            final int threads,
+            final HashAlgorithm hash) throws IOException {
         //given
         final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
@@ -729,7 +747,11 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
     }
 
     private BackupJobConfiguration getBackupJobConfiguration(
-            final BackupType type, final Path source, final Path backup, final PublicKey encryptionKey, final HashAlgorithm hashAlgorithm) {
+            final BackupType type,
+            final Path source,
+            final Path backup,
+            final PublicKey encryptionKey,
+            final HashAlgorithm hashAlgorithm) {
         return BackupJobConfiguration.builder()
                 .backupType(type)
                 .fileNamePrefix("test")

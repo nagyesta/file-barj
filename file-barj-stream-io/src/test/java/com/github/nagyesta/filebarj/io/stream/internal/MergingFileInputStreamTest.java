@@ -36,11 +36,13 @@ class MergingFileInputStreamTest {
     @ParameterizedTest
     @MethodSource("nullProvider")
     void testConstructorShouldThrowExceptionWhenCalledWithNullFileNameTokens(
-            final Path directory, final String prefix, final String extension) {
+            final Path directory,
+            final String prefix,
+            final String extension) {
         //given
 
         //when
-        Assertions.assertThrows(NullPointerException.class, () -> new MergingFileInputStream(directory, prefix, extension));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new MergingFileInputStream(directory, prefix, extension));
 
         //then + exception
     }
@@ -51,7 +53,7 @@ class MergingFileInputStreamTest {
         //given
 
         //when
-        Assertions.assertThrows(NullPointerException.class, () -> new MergingFileInputStream(null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new MergingFileInputStream(null));
 
         //then + exception
     }

@@ -38,7 +38,8 @@ public class FileMetadataSetterFactory {
      * @return a metadata setter
      */
     static @NotNull PosixFileMetadataSetter newInstance(
-            final @NonNull RestoreTargets restoreTargets, final boolean isWindows,
+            final @NonNull RestoreTargets restoreTargets,
+            final boolean isWindows,
             final @Nullable PermissionComparisonStrategy permissionStrategy) {
         if (isWindows) {
             return new WindowsFileMetadataSetter(restoreTargets, permissionStrategy);

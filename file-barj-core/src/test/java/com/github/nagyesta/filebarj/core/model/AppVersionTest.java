@@ -40,7 +40,7 @@ class AppVersionTest {
 
         //then
         Assertions.assertEquals(expected, actual);
-        Assertions.assertNotEquals(AppVersion.DEFAULT_VERSION, "0.0.0");
+        Assertions.assertNotEquals("0.0.0", AppVersion.DEFAULT_VERSION);
     }
 
     @ParameterizedTest
@@ -66,7 +66,7 @@ class AppVersionTest {
     }
 
     @Test
-    void testValidationShouldPassWhenCalledWithValidAppVersion() throws JsonProcessingException {
+    void testValidationShouldPassWhenCalledWithValidAppVersion() {
         //given
 
         //when
@@ -78,7 +78,7 @@ class AppVersionTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testValidationShouldFailWhenCalledWithInvalidMajorVersion() throws JsonProcessingException {
+    void testValidationShouldFailWhenCalledWithInvalidMajorVersion() {
         //given
 
         //when
@@ -94,7 +94,7 @@ class AppVersionTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testValidationShouldFailWhenCalledWithInvalidMinorVersion() throws JsonProcessingException {
+    void testValidationShouldFailWhenCalledWithInvalidMinorVersion() {
         //given
 
         //when
@@ -110,7 +110,7 @@ class AppVersionTest {
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testValidationShouldFailWhenCalledWithInvalidPatchVersion() throws JsonProcessingException {
+    void testValidationShouldFailWhenCalledWithInvalidPatchVersion() {
         //given
 
         //when

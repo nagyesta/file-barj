@@ -27,6 +27,7 @@ public enum FileType {
      * Regular file.
      */
     REGULAR_FILE(BasicFileAttributes::isRegularFile, true) {
+        @Override
         public InputStream streamContent(final Path path) throws IOException {
             return Files.newInputStream(path, StandardOpenOption.READ);
         }
@@ -35,6 +36,7 @@ public enum FileType {
      * Symbolic link.
      */
     SYMBOLIC_LINK(BasicFileAttributes::isSymbolicLink, true) {
+        @Override
         public InputStream streamContent(final Path path) throws IOException {
             final var linkedPathAsString = Files.readSymbolicLink(path).toString();
             return new ByteArrayInputStream(linkedPathAsString.getBytes(StandardCharsets.UTF_8));

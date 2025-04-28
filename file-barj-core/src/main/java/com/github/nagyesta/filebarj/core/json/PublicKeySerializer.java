@@ -14,7 +14,9 @@ import java.util.Base64;
 public class PublicKeySerializer extends JsonSerializer<PublicKey> {
     @Override
     public void serialize(
-            final PublicKey value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
+            final PublicKey value,
+            final JsonGenerator gen,
+            final SerializerProvider serializers) throws IOException {
         gen.writeString(Base64.getEncoder().encodeToString(value.getEncoded()));
     }
 }

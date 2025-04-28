@@ -259,6 +259,7 @@ public class BarjCargoArchiveFileInputStreamSource {
     public InputStream openStreamForSequentialAccess(
             final @NonNull List<Path> relevantFiles,
             final @NonNull List<BarjCargoEntityIndex> list) throws IOException {
+        @SuppressWarnings("java:S2095") //the stream will be wrapped
         final var fileInputStream = new MergingFileInputStream(relevantFiles);
         final var start = list.get(0).getContentOrElseMetadata();
         final var skip = start.getChunkRelativeStartIndexInclusive();
@@ -408,7 +409,9 @@ public class BarjCargoArchiveFileInputStreamSource {
     }
 
     private @NotNull List<IoFunction<InputStream, InputStream>> restoreTransformationSteps(
-            final @Nullable SecretKey key, final long skipBytes, final long length) {
+            final @Nullable SecretKey key,
+            final long skipBytes,
+            final long length) {
         return List.of(input -> new FixedRangeInputStream(input, skipBytes, length),
                 newCipherInputStream(key),
                 decompressionFunction
@@ -421,6 +424,7 @@ public class BarjCargoArchiveFileInputStreamSource {
                 .toList();
     }
 
+    @SuppressWarnings("java:S4087") //the stream should be closed to calculate accurate digest
     private boolean isArchiveHashValid(
             final @NotNull String path,
             final @NotNull BarjCargoEntryBoundaries entry,
@@ -442,7 +446,8 @@ public class BarjCargoArchiveFileInputStreamSource {
 
     private void copyNBytes(
             final @NotNull MergingFileInputStream from,
-            final @NotNull OptionalDigestOutputStream to, final long n) throws IOException {
+            final @NotNull OptionalDigestOutputStream to,
+            final long n) throws IOException {
         for (var i = n; i > 0; i -= MEBIBYTE) {
             final var bufferSize = (int) Math.min(MEBIBYTE, i);
             to.write(from.readNBytes(bufferSize));

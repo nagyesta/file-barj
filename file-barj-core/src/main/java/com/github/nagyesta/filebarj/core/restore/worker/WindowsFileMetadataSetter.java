@@ -35,7 +35,7 @@ public class WindowsFileMetadataSetter extends PosixFileMetadataSetter {
     }
 
     @Override
-    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @SuppressWarnings({"ResultOfMethodCallIgnored", "java:S899"})
     protected void doSetPermissions(
             final @NotNull Path filePath,
             final @NotNull Set<PosixFilePermission> posixFilePermissions) {
@@ -49,13 +49,14 @@ public class WindowsFileMetadataSetter extends PosixFileMetadataSetter {
     }
 
     @Override
+    @SuppressWarnings("java:S4036") //there is no alternative for setting hidden status on Windows
     public void setHiddenStatus(final @NonNull FileMetadata metadata) {
         if (metadata.getFileType() == FileType.SYMBOLIC_LINK) {
             return;
         }
         final var absolutePath = getRestoreTargets().mapToRestorePath(metadata.getAbsolutePath());
         performIoTaskAndHandleException(() -> {
-            if (metadata.getHidden()) {
+            if (Boolean.TRUE == metadata.getHidden()) {
                 Runtime.getRuntime().exec(new String[]{"attrib", "+H", absolutePath.toString()}).waitFor();
             }
             return null;

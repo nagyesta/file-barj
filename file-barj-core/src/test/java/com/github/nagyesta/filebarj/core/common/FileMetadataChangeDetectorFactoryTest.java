@@ -5,12 +5,14 @@ import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.mockito.Mockito.mock;
 
@@ -20,11 +22,12 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
     @Test
     void testCreateShouldThrowExceptionWhenCalledWithNullConfiguration() {
         //given
+        final Map<String, Map<UUID, FileMetadata>> map = Map.of("key", Map.of());
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> FileMetadataChangeDetectorFactory
-                        .create(null, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT));
+                        .create(null, map, PermissionComparisonStrategy.STRICT));
 
         //then + exception
     }

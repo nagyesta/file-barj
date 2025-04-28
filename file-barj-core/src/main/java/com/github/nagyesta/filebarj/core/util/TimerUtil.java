@@ -24,7 +24,9 @@ public final class TimerUtil {
      * @param totalBackupSizeBytes Total backup size in bytes
      * @return Process summary
      */
-    public static @NotNull String toProcessSummary(final long durationMillis, final long totalBackupSizeBytes) {
+    public static @NotNull String toProcessSummary(
+            final long durationMillis,
+            final long totalBackupSizeBytes) {
         final var elapsedSeconds = toElapsedSeconds(durationMillis);
         final var elapsedMinutes = toElapsedMinutes(elapsedSeconds);
         final var remainingSeconds = getRemainderSecondsOfIncompleteMinutes(elapsedSeconds);
@@ -42,7 +44,9 @@ public final class TimerUtil {
         return toProcessSummary(durationMillis, 0L);
     }
 
-    private static @NotNull String rateToString(final long totalBackupSizeBytes, final BigDecimal elapsedMinutes) {
+    private static @NotNull String rateToString(
+            final long totalBackupSizeBytes,
+            final BigDecimal elapsedMinutes) {
         if (totalBackupSizeBytes == 0 || isZero(elapsedMinutes)) {
             return "";
         }
@@ -65,18 +69,15 @@ public final class TimerUtil {
         return elapsedMinutes.setScale(0, RoundingMode.DOWN).compareTo(BigDecimal.ZERO) == 0;
     }
 
-    private static @NotNull BigDecimal getRemainderSecondsOfIncompleteMinutes(
-            final BigDecimal elapsedSeconds) {
+    private static @NotNull BigDecimal getRemainderSecondsOfIncompleteMinutes(final BigDecimal elapsedSeconds) {
         return elapsedSeconds.remainder(MINUTES);
     }
 
-    private static @NotNull BigDecimal toElapsedMinutes(
-            final BigDecimal elapsedSeconds) {
+    private static @NotNull BigDecimal toElapsedMinutes(final BigDecimal elapsedSeconds) {
         return elapsedSeconds.divide(MINUTES, RoundingMode.HALF_UP);
     }
 
-    private static @NotNull BigDecimal toElapsedSeconds(
-            final long durationMillis) {
+    private static @NotNull BigDecimal toElapsedSeconds(final long durationMillis) {
         return new BigDecimal(durationMillis).setScale(2, RoundingMode.HALF_UP)
                 .divide(SECONDS, 2, RoundingMode.HALF_UP);
     }

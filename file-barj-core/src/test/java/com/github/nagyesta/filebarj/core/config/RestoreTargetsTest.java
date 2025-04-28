@@ -26,7 +26,8 @@ class RestoreTargetsTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("pathTraversalProvider")
     void testMapToRestorePathShouldResolvePathWhenTheFileIsDescendantOfTheTarget(
-            final String relative, final boolean expected) {
+            final String relative,
+            final boolean expected) {
         //given
         final var source = testDataRoot.resolve("source-dir" + UUID.randomUUID());
         final var target = testDataRoot.resolve("target-dir" + UUID.randomUUID());

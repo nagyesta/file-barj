@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.NonNull;
 import org.apache.commons.io.file.PathUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +49,9 @@ public abstract class TempFileAwareTest {
         } catch (final FileSystemException ignored) {
             Files.walkFileTree(testDataRoot, new SimpleFileVisitor<>() {
                 @Override
-                public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) {
+                public @NonNull FileVisitResult visitFile(
+                        final @NonNull Path file,
+                        final @NonNull BasicFileAttributes attrs) {
                     if (Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
                         file.toFile().deleteOnExit();
                     }
@@ -66,7 +69,9 @@ public abstract class TempFileAwareTest {
      * @throws IOException If the files cannot be copied
      */
     @SuppressWarnings("DataFlowIssue")
-    protected void prepareBackupFiles(final Set<String> prefixes, final Path backupPath) throws IOException {
+    protected void prepareBackupFiles(
+            final Set<String> prefixes,
+            final Path backupPath) throws IOException {
         for (final var prefix : prefixes) {
             final var backupFiles = Set.of(prefix + ".00001.cargo", prefix + ".index.cargo", prefix + ".manifest.cargo");
             for (final var filename : backupFiles) {

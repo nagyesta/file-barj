@@ -29,7 +29,7 @@ public abstract class ChunkingOutputStream extends OutputStream {
      *
      * @param maxFileSizeMebibyte The maximum chunk size in mebibyte
      */
-    public ChunkingOutputStream(final int maxFileSizeMebibyte) {
+    protected ChunkingOutputStream(final int maxFileSizeMebibyte) {
         this.maxChunkSizeBytes = maxFileSizeMebibyte * MEBIBYTE;
     }
 
@@ -64,7 +64,10 @@ public abstract class ChunkingOutputStream extends OutputStream {
     }
 
     @Override
-    public void write(final byte @NotNull [] b, final int off, final int len) throws IOException {
+    public void write(
+            final byte @NotNull [] b,
+            final int off,
+            final int len) throws IOException {
         for (var i = 0; i < len; i += BUFFER_SIZE) {
             final var bufferedSize = Math.min(BUFFER_SIZE, len - i);
             //write what we can before the threshold
@@ -109,7 +112,10 @@ public abstract class ChunkingOutputStream extends OutputStream {
      */
     protected abstract @NotNull OutputStream doOpenNextStream() throws IOException;
 
-    private void doWrite(final byte @NotNull [] b, final int off, final int len) throws IOException {
+    private void doWrite(
+            final byte @NotNull [] b,
+            final int off,
+            final int len) throws IOException {
         if (len <= 0) {
             return;
         }

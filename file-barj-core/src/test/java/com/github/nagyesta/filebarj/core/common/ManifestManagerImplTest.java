@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -28,7 +29,7 @@ import java.util.Set;
 import static org.mockito.Mockito.mock;
 
 class ManifestManagerImplTest extends TempFileAwareTest {
-    public static final int A_SECOND = 1000;
+
     private final BackupJobConfiguration configuration = BackupJobConfiguration.builder()
             .fileNamePrefix("prefix")
             .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
@@ -149,6 +150,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2925")
     void testLoadShouldFilterOutManifestsAfterThresholdWhenATimeStampIsProvided()
             throws IOException, InterruptedException {
         //given
@@ -167,9 +169,9 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
         simulateThatADirectoryWasArchived(expected);
         underTest.persist(expected);
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var limit = Instant.now().getEpochSecond();
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
         simulateThatADirectoryWasArchived(ignored);
         underTest.persist(ignored);
@@ -189,6 +191,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2925")
     void testLoadShouldFilterOutManifestsBeforeLatestFullBackupWhenMultipleFullBackupsAreEligible()
             throws IOException, InterruptedException {
         //given
@@ -207,7 +210,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
         simulateThatADirectoryWasArchived(ignored);
         underTest.persist(ignored);
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
         simulateThatADirectoryWasArchived(expected);
         underTest.persist(expected);
@@ -227,6 +230,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2925")
     void testLoadShouldThrowExceptionWhenAPreviousVersionIsMissing() throws InterruptedException {
         //given
         final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
@@ -243,7 +247,7 @@ class ManifestManagerImplTest extends TempFileAwareTest {
                 .build();
         final var original = underTest.generateManifest(config, BackupType.FULL, 0);
         simulateThatADirectoryWasArchived(original);
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var secondIncrement = underTest.generateManifest(config, BackupType.INCREMENTAL, 2);
         simulateThatADirectoryWasArchived(secondIncrement);
         underTest.persist(original);
@@ -273,9 +277,10 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     void testPersistShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
         final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        final var destination = Path.of("destination");
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null, Path.of("destination")));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null, destination));
 
         //then + exception
     }
@@ -312,10 +317,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
         simulateThatADirectoryWasArchived(manifest);
         underTest.persist(manifest);
+        final var fileNamePrefix = manifest.getFileNamePrefix();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.load(null, manifest.getFileNamePrefix(), null, Long.MAX_VALUE));
+                () -> underTest.load(null, fileNamePrefix, null, Long.MAX_VALUE));
 
         //then + exception
     }
@@ -427,9 +433,10 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
         final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        final var destination = Path.of("destination");
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.deleteIncrement(Path.of("destination"), null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.deleteIncrement(destination, null));
 
         //then + exception
     }

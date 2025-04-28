@@ -124,12 +124,13 @@ public class BackupController {
         log.info("Found {} unique paths in backup sources. Parsing metadata...", uniquePaths.size());
         progressTracker.estimateStepSubtotal(PARSE_METADATA, uniquePaths.size());
         this.filesFound = threadPool.submit(() -> uniquePaths.parallelStream()
-                .map(path -> {
-                    final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
-                    progressTracker.recordProgressInSubSteps(PARSE_METADATA);
-                    return fileMetadata;
-                })
-                .collect(Collectors.toList())).join();
+                        .map(path -> {
+                            final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
+                            progressTracker.recordProgressInSubSteps(PARSE_METADATA);
+                            return fileMetadata;
+                        })
+                        .toList())
+                .join();
         LogUtil.logStatistics(filesFound,
                 (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
         progressTracker.completeStep(PARSE_METADATA);
@@ -170,7 +171,9 @@ public class BackupController {
         filesFound = null;
     }
 
-    private void usePreviousVersionInCurrentIncrement(final FileMetadata previousVersion, final FileMetadata file) {
+    private void usePreviousVersionInCurrentIncrement(
+            final FileMetadata previousVersion,
+            final FileMetadata file) {
         final var archiveMetadataId = previousVersion.getArchiveMetadataId();
         previousManifests.values().stream()
                 .sorted(Comparator.comparing(BackupIncrementManifest::getStartTimeUtcEpochSeconds).reversed())
@@ -208,19 +211,7 @@ public class BackupController {
             final var hashAlgorithm = config.getHashAlgorithm();
             final var scope = new DefaultBackupScopePartitioner(BATCH_SIZE, duplicateStrategy, hashAlgorithm)
                     .partitionBackupScope(backupFileSet.values());
-            try {
-                for (final var batch : scope) {
-                    final var archived = pipeline.storeEntries(batch);
-                    archived.forEach(entry -> manifest.getArchivedEntries().put(entry.getId(), entry));
-                }
-                scope.stream()
-                        .flatMap(Collection::stream)
-                        .flatMap(Collection::stream)
-                        .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
-            } catch (final Exception e) {
-                throw new ArchivalException("Failed to store files: " + e.getMessage(), e);
-            }
-            pipeline.close();
+            processScope(scope, pipeline);
             final var dataFiles = pipeline.getDataFilesWritten().stream()
                     .map(Path::getFileName)
                     .map(Path::toString)
@@ -233,6 +224,24 @@ public class BackupController {
             log.info("Archive write completed. Archive write took: {}", toProcessSummary(durationMillis, totalBackupSize));
         } catch (final Exception e) {
             throw new ArchivalException("Archival process failed.", e);
+        }
+    }
+
+    private void processScope(
+            final List<List<List<FileMetadata>>> scope,
+            final BaseBackupPipeline<?> pipeline) {
+        try {
+            for (final var batch : scope) {
+                final var archived = pipeline.storeEntries(batch);
+                archived.forEach(entry -> manifest.getArchivedEntries().put(entry.getId(), entry));
+            }
+            scope.stream()
+                    .flatMap(Collection::stream)
+                    .flatMap(Collection::stream)
+                    .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
+            pipeline.close();
+        } catch (final Exception e) {
+            throw new ArchivalException("Failed to store files: " + e.getMessage(), e);
         }
     }
 

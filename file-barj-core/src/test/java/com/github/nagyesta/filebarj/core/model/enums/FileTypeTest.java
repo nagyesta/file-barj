@@ -44,10 +44,11 @@ class FileTypeTest {
     @Test
     void testStreamContentShouldThrowExceptionWhenCalledOnAFileTypeThatHasNoContent() {
         //given
+        final var none = Path.of("none");
 
         //when
         Assertions.assertThrows(UnsupportedOperationException.class, () -> {
-                try (var ignored = DIRECTORY.streamContent(Path.of("none"))) {
+            try (var ignored = DIRECTORY.streamContent(none)) {
                 Assertions.fail("Fail if a stream was opened.");
             }
         });

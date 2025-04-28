@@ -142,8 +142,11 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
     }
 
     protected FileMetadata createMetadata(
-            final String name, final String content, final FileType type, final String permission, final boolean recreate)
-            throws IOException {
+            final String name,
+            final String content,
+            final FileType type,
+            final String permission,
+            final boolean recreate) throws IOException {
         final var path = testDataRoot.resolve(name);
         final var exists = deleteOldVersionIfNecessary(path, type, recreate);
         if (type == FileType.DIRECTORY) {
@@ -173,7 +176,9 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
     }
 
     protected boolean deleteOldVersionIfNecessary(
-            final Path path, final FileType type, final boolean recreate) {
+            final Path path,
+            final FileType type,
+            final boolean recreate) {
         if (recreate) {
             FileUtils.deleteQuietly(path.toFile());
             Assertions.assertFalse(Files.exists(path));
@@ -193,12 +198,15 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
         return exists;
     }
 
-    protected static void setPermissions(final String permission, final Path path) throws IOException {
+    protected static void setPermissions(
+            final String permission,
+            final Path path) throws IOException {
         if (!permission.equals(PosixFilePermissions.toString(Files.getPosixFilePermissions(path)))) {
             Files.setPosixFilePermissions(path, PosixFilePermissions.fromString(permission));
         }
     }
 
+    @SuppressWarnings("java:S2925")
     protected static void waitASecond() throws InterruptedException {
         Thread.sleep(ONE_SECOND);
     }

@@ -39,7 +39,8 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
     }
 
     private static @NonNull ParallelBarjCargoArchiverFileOutputStream convert(
-            final @NonNull BackupIncrementManifest manifest, final int threadCount) throws IOException {
+            final @NonNull BackupIncrementManifest manifest,
+            final int threadCount) throws IOException {
         return new ParallelBarjCargoArchiverFileOutputStream(
                 BarjCargoOutputStreamConfiguration.builder()
                         .folder(manifest.getConfiguration().getDestinationDirectory())
@@ -58,6 +59,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
      * @return the list of archived files
      * @throws ArchivalException When the file cannot be archived due to an I/O error from the stream
      */
+    @Override
     public List<ArchivedFileMetadata> storeEntries(
             final @NonNull List<List<FileMetadata>> groupedFileMetadataList) throws ArchivalException {
         final var fileCount = groupedFileMetadataList.stream().filter(Objects::nonNull).mapToInt(List::size).sum();
@@ -99,6 +101,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
         return result;
     }
 
+    @SuppressWarnings("java:S2177")
     private CompletableFuture<ArchivedFileMetadata> archiveContentAndUpdateMetadata(
             final FileMetadata fileMetadata,
             final ArchivedFileMetadata archivedFileMetadata) throws IOException {
@@ -123,6 +126,7 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
         });
     }
 
+    @SuppressWarnings("java:S1181")
     private static void unwrapArchivalException(final CompletionException ex) throws ArchivalException {
         try {
             throw ex.getCause();

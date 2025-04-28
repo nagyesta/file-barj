@@ -183,7 +183,9 @@ public class RestorePipeline {
      * @param threadPool          The thread pool we can use for parallel processing
      */
     public void deleteLeftOverFiles(
-            final BackupPath includedPath, final boolean deleteLeftOverFiles, final @NonNull ForkJoinPool threadPool) {
+            final BackupPath includedPath,
+            final boolean deleteLeftOverFiles,
+            final @NonNull ForkJoinPool threadPool) {
         if (!deleteLeftOverFiles) {
             log.info("Skipping left-over files deletion...");
             return;
@@ -285,7 +287,8 @@ public class RestorePipeline {
      * @throws IOException if an I/O error occurs
      */
     protected void createSymbolicLink(
-            final @NotNull Path linkTarget, final @NotNull Path symbolicLink) throws IOException {
+            final @NotNull Path linkTarget,
+            final @NotNull Path symbolicLink) throws IOException {
         Files.createSymbolicLink(symbolicLink, linkTarget);
     }
 
@@ -332,7 +335,9 @@ public class RestorePipeline {
      * @param content the content
      * @param target  the target where we need to store the content
      */
-    protected void restoreFileContent(final @NotNull InputStream content, final @NotNull Path target) {
+    protected void restoreFileContent(
+            final @NotNull InputStream content,
+            final @NotNull Path target) {
         createParentDirectoryAsFallbackIfMissing(target);
         try (var outputStream = new FileOutputStream(target.toFile());
              var bufferedStream = new BufferedOutputStream(outputStream);
@@ -466,6 +471,7 @@ public class RestorePipeline {
         return chunks;
     }
 
+    @SuppressWarnings("java:S135")
     private Map<FileMetadata, Path> restoreMatchingEntriesOfManifest(
             final @NotNull RestoreManifest manifest,
             final @NotNull RestoreScope restoreScope,
@@ -549,7 +555,9 @@ public class RestorePipeline {
         return changeStatuses;
     }
 
-    private void createSymbolicLinks(final @NotNull ConcurrentHashMap<FileMetadata, Path> linkPaths, final ForkJoinPool threadPool) {
+    private void createSymbolicLinks(
+            final @NotNull ConcurrentHashMap<FileMetadata, Path> linkPaths,
+            final ForkJoinPool threadPool) {
         threadPool.submit(() -> linkPaths.entrySet().parallelStream().forEach(entry -> {
             final var metadata = entry.getKey();
             final var linkTarget = entry.getValue();
@@ -566,7 +574,9 @@ public class RestorePipeline {
         })).join();
     }
 
-    private boolean shouldCreateNewLink(final Path linkTarget, final Path to) throws IOException {
+    private boolean shouldCreateNewLink(
+            final Path linkTarget,
+            final Path to) throws IOException {
         var linkNeeded = true;
         if (Files.exists(to, LinkOption.NOFOLLOW_LINKS) && Files.isSymbolicLink(to)) {
             final var currentTarget = IOUtils.toString(FileType.SYMBOLIC_LINK.streamContent(to), StandardCharsets.UTF_8);
@@ -682,6 +692,7 @@ public class RestorePipeline {
         restoreFileContent(inputStream, path);
     }
 
+    @SuppressWarnings("java:S2637")
     private @Nullable SecretKey getDecryptionKey(
             final @NotNull RestoreManifest relevantManifest,
             final @NotNull ArchiveEntryLocator entryName) {

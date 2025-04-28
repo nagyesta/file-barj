@@ -12,7 +12,10 @@ import java.util.UUID;
 /**
  * Factory for {@link FileMetadataChangeDetector} instances.
  */
-public class FileMetadataChangeDetectorFactory {
+public final class FileMetadataChangeDetectorFactory {
+
+    private FileMetadataChangeDetectorFactory() {
+    }
 
     /**
      * Creates a new instance with the suitable instance type based on the previous manifests.

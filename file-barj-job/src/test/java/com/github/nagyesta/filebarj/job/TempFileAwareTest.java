@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.job;
 
+import lombok.NonNull;
 import org.apache.commons.io.file.PathUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +42,9 @@ public abstract class TempFileAwareTest {
         } catch (final FileSystemException ignored) {
             Files.walkFileTree(testDataRoot, new SimpleFileVisitor<>() {
                 @Override
-                public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) {
+                public @NonNull FileVisitResult visitFile(
+                        final @NonNull Path file,
+                        final @NonNull BasicFileAttributes attrs) {
                     if (Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
                         file.toFile().deleteOnExit();
                     }

@@ -34,7 +34,8 @@ public final class BarjCargoUtil {
      * @return The chunk file name
      */
     public static String toChunkFileName(
-            final @NonNull String prefix, final int counter) {
+            final @NonNull String prefix,
+            final int counter) {
         if (counter <= 0) {
             throw new IllegalArgumentException("Invalid counter: " + counter);
         }

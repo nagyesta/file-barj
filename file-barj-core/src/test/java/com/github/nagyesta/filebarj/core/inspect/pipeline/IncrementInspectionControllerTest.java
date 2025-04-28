@@ -44,9 +44,10 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullBackupDirectory() {
         //given
+        final var builder = InspectParameters.builder();
 
         //when
-        assertThrows(IllegalArgumentException.class, () -> InspectParameters.builder().backupDirectory(null));
+        assertThrows(IllegalArgumentException.class, () -> builder.backupDirectory(null));
 
         //then + exception
     }
@@ -55,9 +56,10 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
+        final var builder = InspectParameters.builder();
 
         //when
-        assertThrows(IllegalArgumentException.class, () -> InspectParameters.builder().fileNamePrefix(null));
+        assertThrows(IllegalArgumentException.class, () -> builder.fileNamePrefix(null));
 
         //then + exception
     }
@@ -137,6 +139,7 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
     }
 
     @Test
+    @SuppressWarnings("java:S2925")
     void testInspectIncrementsShouldReturnSummariesWhenCalledWithStream() throws IOException, InterruptedException {
         //given
         final var originalDirectory = testDataRoot.resolve("original");

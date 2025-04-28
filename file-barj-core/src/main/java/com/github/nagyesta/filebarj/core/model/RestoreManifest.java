@@ -57,7 +57,9 @@ public class RestoreManifest extends EncryptionKeyStore {
      * @param kekPrivateKey  the private key
      * @return the data decryption key
      */
-    public @NotNull SecretKey dataIndexDecryptionKey(final @NotNull String fileNamePrefix, final @NotNull PrivateKey kekPrivateKey) {
+    public @NotNull SecretKey dataIndexDecryptionKey(
+            final @NotNull String fileNamePrefix,
+            final @NotNull PrivateKey kekPrivateKey) {
         return dataIndexDecryptionKey(kekPrivateKey, fileNamePrefixes.get(fileNamePrefix).first());
     }
 
@@ -132,7 +134,9 @@ public class RestoreManifest extends EncryptionKeyStore {
         return archivedEntries.get(fileNamePrefixes.lastKey());
     }
 
-    private Stream<BackupPath> parents(final Set<BackupPath> directories, final BackupPath path) {
+    private Stream<BackupPath> parents(
+            final Set<BackupPath> directories,
+            final BackupPath path) {
         return Optional.ofNullable(path.getParent())
                 .filter(directories::contains)
                 .map(parent -> Stream.concat(Stream.of(path), parents(directories, parent)))

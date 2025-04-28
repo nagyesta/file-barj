@@ -188,10 +188,11 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
         final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+        final var list = manifest.getFiles().values().stream().toList();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.finalizePermissions(manifest.getFiles().values().stream().toList(), null));
+                () -> underTest.finalizePermissions(list, null));
 
         //then + exception
     }
@@ -283,10 +284,11 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
         final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+        final var list = manifest.getFiles().values().stream().toList();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList(), null));
+                () -> underTest.evaluateRestoreSuccess(list, null));
 
         //then + exception
     }
@@ -312,6 +314,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
             underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList(), threadPool);
 
             //then no exception
+        } catch (final Exception e) {
+            Assertions.fail(e.getMessage());
         } finally {
             threadPool.shutdownNow();
         }
@@ -436,7 +440,9 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
                 .orElse(BackupPath.of(testDataRoot));
     }
 
-    private RestoreTargets getRestoreTargets(final BackupPath sourceDir, final Path restoreDir) {
+    private RestoreTargets getRestoreTargets(
+            final BackupPath sourceDir,
+            final Path restoreDir) {
         return new RestoreTargets(Set.of(new RestoreTarget(sourceDir, restoreDir)));
     }
 
@@ -459,7 +465,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     private BackupJobConfiguration getBackupJobConfiguration(
-            final Path source, final Path backup) {
+            final Path source,
+            final Path backup) {
         return BackupJobConfiguration.builder()
                 .backupType(BackupType.FULL)
                 .fileNamePrefix("test")

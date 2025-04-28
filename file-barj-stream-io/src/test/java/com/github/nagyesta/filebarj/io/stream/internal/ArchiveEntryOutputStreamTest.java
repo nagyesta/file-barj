@@ -106,7 +106,7 @@ class ArchiveEntryOutputStreamTest extends TempFileAwareTest {
 
             //then
             Assertions.assertEquals(expected, actual);
-            Assertions.assertArrayEquals(Files.readAllBytes(cargoStream.getCurrentFilePath()), CONTENT);
+            Assertions.assertArrayEquals(CONTENT, Files.readAllBytes(cargoStream.getCurrentFilePath()));
         }
     }
 
@@ -141,7 +141,7 @@ class ArchiveEntryOutputStreamTest extends TempFileAwareTest {
 
             //then
             Assertions.assertEquals(expected, actual);
-            Assertions.assertArrayEquals(Files.readAllBytes(cargoStream.getCurrentFilePath()), ZIP_CONTENT);
+            Assertions.assertArrayEquals(ZIP_CONTENT, Files.readAllBytes(cargoStream.getCurrentFilePath()));
         }
     }
 
@@ -176,7 +176,7 @@ class ArchiveEntryOutputStreamTest extends TempFileAwareTest {
 
             //then
             Assertions.assertEquals(expected, actual);
-            Assertions.assertArrayEquals(Files.readAllBytes(cargoStream.getCurrentFilePath()), IV_AND_ENCRYPTED_CONTENT);
+            Assertions.assertArrayEquals(IV_AND_ENCRYPTED_CONTENT, Files.readAllBytes(cargoStream.getCurrentFilePath()));
         }
     }
 
@@ -211,7 +211,7 @@ class ArchiveEntryOutputStreamTest extends TempFileAwareTest {
 
             //then
             Assertions.assertEquals(expected, actual);
-            Assertions.assertArrayEquals(Files.readAllBytes(cargoStream.getCurrentFilePath()), IV_AND_ENCRYPTED_ZIP_CONTENT);
+            Assertions.assertArrayEquals(IV_AND_ENCRYPTED_ZIP_CONTENT, Files.readAllBytes(cargoStream.getCurrentFilePath()));
         }
     }
 
@@ -294,7 +294,9 @@ class ArchiveEntryOutputStreamTest extends TempFileAwareTest {
 
     @SuppressWarnings({"LocalCanBeFinal", "SameParameterValue"})
     private static byte[] encryptContent(
-            final byte[] content, final SecretKey key, final byte[] iv) {
+            final byte[] content,
+            final SecretKey key,
+            final byte[] iv) {
         try (var out = new ByteArrayOutputStream();
              var cipher = new CipherOutputStream(out, EncryptionUtil.createCipher(key, iv, Cipher.ENCRYPT_MODE))) {
             cipher.write(content);
@@ -308,7 +310,9 @@ class ArchiveEntryOutputStreamTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("SameParameterValue")
-    private static byte[] join(final byte[] first, final byte[] second) {
+    private static byte[] join(
+            final byte[] first,
+            final byte[] second) {
         final var bytes = new byte[first.length + second.length];
         System.arraycopy(first, 0, bytes, 0, first.length);
         System.arraycopy(second, 0, bytes, first.length, second.length);

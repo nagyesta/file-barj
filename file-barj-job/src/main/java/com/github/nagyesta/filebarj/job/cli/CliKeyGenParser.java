@@ -21,7 +21,9 @@ public class CliKeyGenParser extends GenericCliParser<KeyStoreProperties> {
      * @param args    the command line arguments
      * @param console the console we should use for password input
      */
-    public CliKeyGenParser(final String[] args, final Console console) {
+    public CliKeyGenParser(
+            final String[] args,
+            final Console console) {
         super("java -jar file-barj-job.jar --" + Task.GEN_KEYS.getCommand(), args, commandLine -> {
             final var store = Path.of(commandLine.getOptionValue(KEY_STORE)).toAbsolutePath();
             final var alias = commandLine.getOptionValue(KEY_ALIAS, "default");

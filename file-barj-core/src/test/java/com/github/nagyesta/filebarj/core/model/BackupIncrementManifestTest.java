@@ -167,10 +167,11 @@ class BackupIncrementManifestTest {
         final var config = getConfiguration(keyPair);
         final var dek = Base64.getEncoder().encodeToString(encrypted);
         final var underTest = getUnderTest(dek, config);
+        final var entryLocator = new ArchiveEntryLocator(0, UUIDS.get(0));
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.dataDecryptionKey(null, new ArchiveEntryLocator(0, UUIDS.get(0))));
+                () -> underTest.dataDecryptionKey(null, entryLocator));
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> underTest.dataIndexDecryptionKey(null, 0));
 
@@ -187,10 +188,11 @@ class BackupIncrementManifestTest {
         final var config = getConfiguration(keyPair);
         final var dek = Base64.getEncoder().encodeToString(encrypted);
         final var underTest = getUnderTest(dek, config);
+        final var aPrivate = keyPair.getPrivate();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.dataDecryptionKey(keyPair.getPrivate(), null));
+                () -> underTest.dataDecryptionKey(aPrivate, null));
 
         //then + exception
     }
@@ -260,7 +262,9 @@ class BackupIncrementManifestTest {
                 .build();
     }
 
-    private static BackupIncrementManifest getUnderTest(final String dek, final BackupJobConfiguration config) {
+    private static BackupIncrementManifest getUnderTest(
+            final String dek,
+            final BackupJobConfiguration config) {
         final var builder = BackupIncrementManifest.builder()
                 .appVersion(new AppVersion(0, 0, 1))
                 .versions(new TreeSet<>(Set.of(0)))

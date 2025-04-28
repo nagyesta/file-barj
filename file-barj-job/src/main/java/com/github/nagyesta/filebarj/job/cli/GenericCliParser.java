@@ -23,7 +23,10 @@ public abstract class GenericCliParser<T> {
      * @param args      the command line arguments
      * @param evaluator the evaluation function
      */
-    public GenericCliParser(final String command, final String[] args, final Function<CommandLine, T> evaluator) {
+    protected GenericCliParser(
+            final String command,
+            final String[] args,
+            final Function<CommandLine, T> evaluator) {
         final var parser = new DefaultParser();
         final var options = createOptions();
         try {

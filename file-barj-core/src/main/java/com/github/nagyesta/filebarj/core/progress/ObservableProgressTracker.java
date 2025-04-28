@@ -32,7 +32,9 @@ public class ObservableProgressTracker implements ProgressTracker {
         this(steps, steps.stream().collect(Collectors.toMap(Function.identity(), ProgressStep::getDefaultWeight)));
     }
 
-    public ObservableProgressTracker(final List<ProgressStep> steps, final Map<ProgressStep, Integer> weights) {
+    public ObservableProgressTracker(
+            final List<ProgressStep> steps,
+            final Map<ProgressStep, Integer> weights) {
         this.steps = List.copyOf(steps);
         this.weights = Map.copyOf(weights);
         this.subStepTotals = steps.stream()
@@ -58,13 +60,17 @@ public class ObservableProgressTracker implements ProgressTracker {
     }
 
     @Override
-    public void estimateStepSubtotal(final @NotNull ProgressStep step, final long totalSubSteps) {
+    public void estimateStepSubtotal(
+            final @NotNull ProgressStep step,
+            final long totalSubSteps) {
         assertSupports(step);
         subStepTotals.get(step).set(totalSubSteps);
     }
 
     @Override
-    public void recordProgressInSubSteps(final @NotNull ProgressStep step, final long progress) {
+    public void recordProgressInSubSteps(
+            final @NotNull ProgressStep step,
+            final long progress) {
         assertSupports(step);
         if (progress <= 0) {
             throw new IllegalArgumentException("The progress must be greater than zero.");
@@ -139,11 +145,15 @@ public class ObservableProgressTracker implements ProgressTracker {
         listeners.forEach((id, listener) -> listener.onProgressChanged(totalProcess, subProcessPercentage, step.getDisplayName()));
     }
 
-    private boolean progressIsTooLowSinceLastReport(final @NotNull ProgressStep step, final int subProcessPercentage) {
+    private boolean progressIsTooLowSinceLastReport(
+            final @NotNull ProgressStep step,
+            final int subProcessPercentage) {
         return lastReportedSubStepPercentage.get(step).get() + step.getReportFrequencyPercent() > subProcessPercentage;
     }
 
-    private boolean notOnExactReportFrequency(final @NotNull ProgressStep step, final int subProcessPercentage) {
+    private boolean notOnExactReportFrequency(
+            final @NotNull ProgressStep step,
+            final int subProcessPercentage) {
         return subProcessPercentage % step.getReportFrequencyPercent() > 0;
     }
 
@@ -157,7 +167,9 @@ public class ObservableProgressTracker implements ProgressTracker {
         return calculatePercentage(total, done);
     }
 
-    private int calculatePercentage(final long total, final long done) {
+    private int calculatePercentage(
+            final long total,
+            final long done) {
         final var percentage = (done * HUNDRED_PERCENT_DOUBLE) / total;
         return normalize(percentage);
     }

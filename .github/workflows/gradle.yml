@@ -5,33 +5,33 @@ name: JavaCI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths-ignore:
-      - 'README.md'
-      - '**/README.md'
-      - 'CODE_OF_CONDUCT.md'
-      - 'CONTRIBUTING.md'
-      - 'pull_request_template.md'
-      - '.lift/.toml'
-      - '**/.lift/.toml'
-      - 'SECURITY.md'
-      - 'LICENSE'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/assets/**'
-      - '.github/workflows/**'
-      - '.github/pr-labeler.yml'
-      - 'renovate.json'
-      - '.whitesource'
-      - 'gradle/libs.versions.toml'
-      - 'gradle/verification-metadata.xml'
-      - 'gradle/verification-metadata-clean.xml'
-      - 'gradle/wrapper/gradle-wrapper.properties'
-      - 'gradle/wrapper/gradle-wrapper.jar'
-      - 'gradlew'
-      - 'gradlew.bat'
-      - 'config/ossindex/exclusions.txt'
-      - '.idea/**'
-      - '.gitignore'
+      - "README.md"
+      - "**/README.md"
+      - "CODE_OF_CONDUCT.md"
+      - "CONTRIBUTING.md"
+      - "pull_request_template.md"
+      - ".lift/.toml"
+      - "**/.lift/.toml"
+      - "SECURITY.md"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/assets/**"
+      - ".github/workflows/**"
+      - ".github/pr-labeler.yml"
+      - "renovate.json"
+      - ".whitesource"
+      - "gradle/libs.versions.toml"
+      - "gradle/verification-metadata.xml"
+      - "gradle/verification-metadata-clean.xml"
+      - "gradle/wrapper/gradle-wrapper.properties"
+      - "gradle/wrapper/gradle-wrapper.jar"
+      - "gradlew"
+      - "gradlew.bat"
+      - "config/ossindex/exclusions.txt"
+      - ".idea/**"
+      - ".gitignore"
 
 permissions: read-all
 
@@ -66,8 +66,10 @@ jobs:
           mkdir -p ${{ runner.temp }}/.gnupg/
           echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}" | base64 --decode > ${{ runner.temp }}/.gnupg/secring.gpg
       - name: Publish with Gradle
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
-          ./gradlew publish -x test publishToSonatype closeAndReleaseSonatypeStagingRepository
+          ./gradlew publish -x test publishToSonatype sonar closeAndReleaseSonatypeStagingRepository
           -Pci
           -PgithubUser=${{ secrets.PUBLISH_USER_NAME }}
           -PgithubToken=${{ secrets.PUBLISH_KEY }}
@@ -80,27 +82,3 @@ jobs:
         if: always()
         run: |
           rm -rf ${{ runner.temp }}/.gnupg/
-      - name: Upload coverage to Codecov - Core
-        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./file-barj-core/build/reports/jacoco/report.xml
-          flags: core
-          disable_search: true
-          fail_ci_if_error: false
-      - name: Upload coverage to Codecov - Job
-        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./file-barj-job/build/reports/jacoco/report.xml
-          flags: job
-          disable_search: true
-          fail_ci_if_error: false
-      - name: Upload coverage to Codecov - Stream IO
-        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./file-barj-stream-io/build/reports/jacoco/report.xml
-          flags: stream
-          disable_search: true
-          fail_ci_if_error: false

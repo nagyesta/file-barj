@@ -89,8 +89,9 @@ public class ChunkingFileOutputStream extends ChunkingOutputStream {
         final var folderName = folder.toAbsolutePath().toString();
         final var path = Path.of(folderName, fileName);
         final var file = path.toFile();
-        //noinspection ResultOfMethodCallIgnored
-        file.createNewFile();
+        if (!file.createNewFile()) {
+            throw new IOException("Could not create new file: " + file);
+        }
         return path;
     }
 

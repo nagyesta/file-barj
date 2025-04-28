@@ -36,7 +36,8 @@ public class PosixFileMetadataParser implements FileMetadataParser {
 
     @Override
     public @NotNull FileMetadata parse(
-            final @NonNull File file, final @NonNull BackupJobConfiguration configuration) {
+            final @NonNull File file,
+            final @NonNull BackupJobConfiguration configuration) {
         if (!Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
             return FileMetadata.builder()
                     .id(UUID.randomUUID())
@@ -101,7 +102,9 @@ public class PosixFileMetadataParser implements FileMetadataParser {
         return performIoTaskAndHandleException(() -> Files.isHidden(file.toPath()));
     }
 
-    private String calculateHash(final File file, final BackupJobConfiguration configuration) {
+    private String calculateHash(
+            final File file,
+            final BackupJobConfiguration configuration) {
         final var type = FileType.findForAttributes(basicAttributes(file));
         return Optional.of(type)
                 .filter(FileType::isContentSource)
@@ -109,7 +112,10 @@ public class PosixFileMetadataParser implements FileMetadataParser {
                 .orElse(null);
     }
 
-    private String doCalculateHash(final File file, final FileType type, final HashAlgorithm hash) {
+    private String doCalculateHash(
+            final File file,
+            final FileType type,
+            final HashAlgorithm hash) {
         return performIoTaskAndHandleException(() -> {
             try (var stream = type.streamContent(file.toPath());
                  var hashStream = hash.decorate(OutputStream.nullOutputStream())) {
@@ -123,7 +129,10 @@ public class PosixFileMetadataParser implements FileMetadataParser {
 
     protected record Permissions(String owner, String group, String permissions) {
 
-        Permissions(final boolean canRead, final boolean canWrite, final boolean canExecute) {
+        Permissions(
+                final boolean canRead,
+                final boolean canWrite,
+                final boolean canExecute) {
             this(DEFAULT_OWNER, DEFAULT_OWNER, asString(canRead, canWrite, canExecute));
         }
 
@@ -133,22 +142,22 @@ public class PosixFileMetadataParser implements FileMetadataParser {
                     PosixFilePermissions.toString(posixFileAttributes.permissions()));
         }
 
-        private static String asString(final boolean canRead, final boolean canWrite, final boolean canExecute) {
+        private static String asString(
+                final boolean canRead,
+                final boolean canWrite,
+                final boolean canExecute) {
             final var permissions = new HashSet<PosixFilePermission>();
             if (canRead) {
                 permissions.add(PosixFilePermission.OWNER_READ);
                 permissions.add(PosixFilePermission.GROUP_READ);
-                permissions.add(PosixFilePermission.OTHERS_READ);
             }
             if (canWrite) {
                 permissions.add(PosixFilePermission.OWNER_WRITE);
                 permissions.add(PosixFilePermission.GROUP_WRITE);
-                permissions.add(PosixFilePermission.OTHERS_WRITE);
             }
             if (canExecute) {
                 permissions.add(PosixFilePermission.OWNER_EXECUTE);
                 permissions.add(PosixFilePermission.GROUP_EXECUTE);
-                permissions.add(PosixFilePermission.OTHERS_EXECUTE);
             }
             return PosixFilePermissions.toString(permissions);
         }

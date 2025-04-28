@@ -14,7 +14,7 @@ import java.io.InputStream;
 class SelfValidatingOptionalDigestInputStreamTest {
 
     private static final String SHA_256 = "SHA-256";
-    public static final String CONTENT = "content";
+    private static final String CONTENT = "content";
 
     @SuppressWarnings({"resource", "DataFlowIssue"})
     @Test

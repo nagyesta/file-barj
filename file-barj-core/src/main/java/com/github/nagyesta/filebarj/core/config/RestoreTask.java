@@ -52,7 +52,7 @@ public class RestoreTask {
      */
     public Predicate<BackupPath> getPathFilter() {
         return Optional.ofNullable(includedPath)
-                .map(includedPath -> (Predicate<BackupPath>) path -> path.equals(includedPath) || path.startsWith(includedPath))
+                .map(inclPath -> (Predicate<BackupPath>) path -> path.equals(inclPath) || path.startsWith(inclPath))
                 .orElse(path -> true);
     }
 }

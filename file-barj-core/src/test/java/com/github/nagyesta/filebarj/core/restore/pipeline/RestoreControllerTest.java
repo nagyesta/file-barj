@@ -9,10 +9,11 @@ class RestoreControllerTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullDirectory() {
         //given
+        final var builder = RestoreParameters.builder();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> RestoreParameters.builder().backupDirectory(null));
+                () -> builder.backupDirectory(null));
 
         //then + exception
     }
@@ -21,10 +22,11 @@ class RestoreControllerTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
+        final var builder = RestoreParameters.builder();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> RestoreParameters.builder().fileNamePrefix(null));
+                () -> builder.fileNamePrefix(null));
 
         //then + exception
     }

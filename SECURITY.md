@@ -14,7 +14,7 @@ the end user, must ensure that this expectation is met.
 ## Supported Versions
 
 The aim is to support our users as much as possible with security updates, backup and restore are sensitive topics after all. At the end
-of the day, this is a hobby project which is maintained in my free time. So reality is that the latest version will be supported with 
+of the day, this is a hobby project which is maintained in my free time. So reality is that the latest version will be supported with
 security patches in case vulnerabilities are reported and everything else will be decided case by case.
 
 [![Supported version](https://img.shields.io/github/v/tag/nagyesta/file-barj?color=green&logo=git&label=Supported%20version&sort=semver)](https://img.shields.io/github/v/tag/nagyesta/file-barj?color=green&logo=git&label=Supported%20version&sort=semver)
@@ -30,5 +30,5 @@ Thank you in advance!
 Once a vulnerability is reported, I will try to fix it as soon as I can afford the time, preferably under less than 60 days from receiving a
 valid security vulnerability report.
 
-In case of vulnerable dependencies, response time depends on the release of the known safe/fixed dependency version as well. As long as 
+In case of vulnerable dependencies, response time depends on the release of the known safe/fixed dependency version as well. As long as
 there is no such available version, the update activity is considered to be blocked, therefore the normal response timeline does not apply.

@@ -62,7 +62,10 @@ public class MergingInputStream extends InputStream {
     }
 
     @Override
-    public int read(final byte @NotNull [] result, final int offset, final int length) throws IOException {
+    public int read(
+            final byte @NotNull [] result,
+            final int offset,
+            final int length) throws IOException {
         if (closed || isEndOfLastStreamReached()) {
             return IOUtils.EOF;
         }
@@ -85,6 +88,7 @@ public class MergingInputStream extends InputStream {
     }
 
     @Override
+    @SuppressWarnings("java:S2583") //the method may be called by multiple threads
     public void close() throws IOException {
         if (closed) {
             return;

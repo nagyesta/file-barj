@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.io.stream.internal;
 
 import lombok.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,6 +25,14 @@ public class CloseShieldingOutputStream extends OutputStream {
     @Override
     public void write(final int b) throws IOException {
         internal.write(b);
+    }
+
+    @Override
+    public void write(
+            final byte @NotNull [] b,
+            final int off,
+            final int len) throws IOException {
+        internal.write(b, off, len);
     }
 
     /**

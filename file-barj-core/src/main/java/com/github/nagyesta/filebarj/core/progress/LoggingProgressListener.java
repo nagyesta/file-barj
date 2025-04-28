@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.UUID;
 
 @Slf4j(topic = "progress")
+@SuppressWarnings("java:S6548")
 public class LoggingProgressListener implements ProgressListener {
 
     /**
@@ -18,7 +19,11 @@ public class LoggingProgressListener implements ProgressListener {
     }
 
     @Override
-    public void onProgressChanged(final int totalProgressPercentage, final int stepProgressPercentage, final String stepName) {
-        log.info("({}%) {} step {}% complete.", String.format("%3d", totalProgressPercentage), stepName, stepProgressPercentage);
+    public void onProgressChanged(
+            final int totalProgressPercentage,
+            final int stepProgressPercentage,
+            final String stepName) {
+        log.info("({}%) {} step {}% complete.",
+                String.format("%3d", totalProgressPercentage), stepName, stepProgressPercentage);
     }
 }

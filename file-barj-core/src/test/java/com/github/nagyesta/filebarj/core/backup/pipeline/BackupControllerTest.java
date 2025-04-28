@@ -33,10 +33,11 @@ class BackupControllerTest extends TempFileAwareTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullJob() {
         //given
+        final var builder = BackupParameters.builder();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> BackupParameters.builder().job(null));
+                () -> builder.job(null));
 
         //then + exception
     }
