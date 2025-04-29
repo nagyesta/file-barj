@@ -18,7 +18,9 @@ public class FileNamePrefixValidator implements ConstraintValidator<FileNamePref
     }
 
     @Override
-    public boolean isValid(final String value, final ConstraintValidatorContext context) {
+    public boolean isValid(
+            final String value,
+            final ConstraintValidatorContext context) {
         context.disableDefaultConstraintViolation();
         if (!notBlankValidator.isValid(value, context)) {
             context.buildConstraintViolationWithTemplate("{jakarta.validation.constraints.NotBlank.message}")

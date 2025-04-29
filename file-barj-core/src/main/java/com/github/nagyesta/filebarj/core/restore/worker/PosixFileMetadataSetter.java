@@ -32,6 +32,8 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
     /**
      * The full access permission string.
      */
+    @SuppressWarnings("java:S2612")
+    //we are setting this temporarily and intentionally to full access to be able to set the real permissions later
     public static final String FULL_ACCESS = "rwxrwxrwx";
 
     private final RestoreTargets restoreTargets;
@@ -60,6 +62,8 @@ public class PosixFileMetadataSetter implements FileMetadataSetter {
         setPermissions(metadata);
     }
 
+    @SuppressWarnings("java:S2612")
+    //we are setting this temporarily and intentionally to full access to be able to set the real permissions later
     @Override
     public void setInitialPermissions(final @NonNull FileMetadata metadata) {
         if (!permissionComparisonStrategy.isPermissionImportant()) {

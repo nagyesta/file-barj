@@ -17,7 +17,9 @@ public class CliInspectIncrementsParser extends CliICommonBackupFileParser<Inspe
      * @param args    the command line arguments
      * @param console the console we should use for password input
      */
-    public CliInspectIncrementsParser(final String[] args, final Console console) {
+    public CliInspectIncrementsParser(
+            final String[] args,
+            final Console console) {
         super(Task.INSPECT_INCREMENTS,  args, commandLine -> {
             final var prefix = commandLine.getOptionValue(PREFIX);
             final var keyProperties = parseKeyProperties(console, commandLine);

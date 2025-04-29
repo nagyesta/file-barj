@@ -179,7 +179,9 @@ public class BaseBackupPipeline<T extends BarjCargoArchiverFileOutputStream> imp
      * @param fileMetadata         the file metadata
      * @param archivedFileMetadata the archived file metadata
      */
-    protected void warnIfHashDoesNotMatch(final FileMetadata fileMetadata, final ArchivedFileMetadata archivedFileMetadata) {
+    protected void warnIfHashDoesNotMatch(
+            final FileMetadata fileMetadata,
+            final ArchivedFileMetadata archivedFileMetadata) {
         if (!Objects.equals(archivedFileMetadata.getOriginalHash(), fileMetadata.getOriginalHash())) {
             log.warn("The hash changed between delta calculation and archival for: {} The archive might contain corrupt data for the file.",
                     fileMetadata.getAbsolutePath());

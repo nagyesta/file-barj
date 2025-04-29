@@ -51,12 +51,12 @@ public class TabSeparatedBackupContentExporter {
     }
 
     private String generateHeader(final BackupIncrementManifest manifest) {
-        return String.format("permissions\towner\tgroup\tsize\tlast_modified\thash_%s\tpath\n",
+        return String.format("permissions\towner\tgroup\tsize\tlast_modified\thash_%s\tpath%n",
                 manifest.getConfiguration().getHashAlgorithm().name().toLowerCase());
     }
 
     private String toTsv(final FileMetadata fileMetadata) {
-        return String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+        return String.format("%s\t%s\t%s\t%s\t%s\t%s\t%s%n",
                 fileMetadata.getPosixPermissions(),
                 fileMetadata.getOwner(),
                 fileMetadata.getGroup(),

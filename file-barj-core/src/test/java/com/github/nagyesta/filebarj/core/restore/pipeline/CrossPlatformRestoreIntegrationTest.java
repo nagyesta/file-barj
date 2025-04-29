@@ -14,7 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 
-public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
+class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
 
     @Test
     void testRestoreShouldRestoreContentWhenRestoringABackupMadeOnWindows() throws IOException {
@@ -80,7 +80,9 @@ public class CrossPlatformRestoreIntegrationTest extends TempFileAwareTest {
         verifyContent(restoredR, restoredU);
     }
 
-    private void verifyContent(final Path restoredR, final Path restoredU) throws IOException {
+    private void verifyContent(
+            final Path restoredR,
+            final Path restoredU) throws IOException {
         Assertions.assertEquals("11111111", Files.readString(restoredR.resolve("A/1.txt")));
         Assertions.assertEquals("22222222-22222222", Files.readString(restoredR.resolve("B/2.txt")));
         Assertions.assertEquals(restoredU.resolve("B/2.txt"), Files.readSymbolicLink(restoredU.resolve("A/1.txt/link-2.txt")));

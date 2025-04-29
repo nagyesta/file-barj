@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -30,7 +29,7 @@ class DoOnCloseOutputStreamTest {
         underTest.write(content);
 
         //then
-        verify(stream).write(eq(content));
+        verify(stream).write(content);
     }
 
     @Test
@@ -58,7 +57,7 @@ class DoOnCloseOutputStreamTest {
         underTest.write(content);
 
         //then
-        verify(stream).write(eq(content));
+        verify(stream).write(content);
     }
 
     @Test
@@ -86,7 +85,7 @@ class DoOnCloseOutputStreamTest {
         underTest.write(content, 0, 1);
 
         //then
-        verify(stream).write(eq(content), eq(0), eq(1));
+        verify(stream).write(content, 0, 1);
     }
 
     @Test
@@ -160,11 +159,13 @@ class DoOnCloseOutputStreamTest {
     }
 
     @Test
+    @SuppressWarnings("java:S1612")
     void testCloseShouldUseLockToAvoidRaceConditionWhenTheStreamIsClosedFromMultipleThreads() {
         //given
         final var stream = mock(OutputStream.class);
         final var underTest = new TestDoOnCloseOutputStream(stream) {
             @Override
+            @SuppressWarnings("java:S2925")
             public void flush() {
                 Assertions.assertDoesNotThrow(() -> Thread.sleep(WAIT_MILLIS));
             }

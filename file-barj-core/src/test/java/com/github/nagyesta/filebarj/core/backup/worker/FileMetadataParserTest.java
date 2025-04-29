@@ -36,12 +36,12 @@ class FileMetadataParserTest extends TempFileAwareTest {
 
     public static Stream<Arguments> permissionSource() {
         return Stream.<Arguments>builder()
-                .add(Arguments.of(true, true, true, "rwxrwxrwx"))
-                .add(Arguments.of(true, false, true, "r-xr-xr-x"))
-                .add(Arguments.of(true, true, false, "rw-rw-rw-"))
-                .add(Arguments.of(true, false, false, "r--r--r--"))
-                .add(Arguments.of(false, true, false, "-w--w--w-"))
-                .add(Arguments.of(false, false, true, "--x--x--x"))
+                .add(Arguments.of(true, true, true, "rwxrwx---"))
+                .add(Arguments.of(true, false, true, "r-xr-x---"))
+                .add(Arguments.of(true, true, false, "rw-rw----"))
+                .add(Arguments.of(true, false, false, "r--r-----"))
+                .add(Arguments.of(false, true, false, "-w--w----"))
+                .add(Arguments.of(false, false, true, "--x--x---"))
                 .add(Arguments.of(false, false, false, "---------"))
                 .build();
     }
@@ -73,10 +73,11 @@ class FileMetadataParserTest extends TempFileAwareTest {
     void testParseShouldThrowExceptionWhenTheFileIsNull() {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
+        final var configuration = getConfiguration();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.parse(null, getConfiguration()));
+                () -> underTest.parse(null, configuration));
 
         //then + exception
     }
@@ -86,10 +87,11 @@ class FileMetadataParserTest extends TempFileAwareTest {
     void testParseShouldThrowExceptionWhenTheConfigurationIsNull() {
         //given
         final var underTest = FileMetadataParserFactory.newInstance();
+        final var file = testDataRoot.toFile();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.parse(testDataRoot.toFile(), null));
+                () -> underTest.parse(file, null));
 
         //then + exception
     }
@@ -219,7 +221,10 @@ class FileMetadataParserTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("permissionSource")
     void testConstructorOfPermissionsShouldGeneratePosixStyleDataWhenCalled(
-            final boolean canRead, final boolean canWrite, final boolean canExecute, final String expected) {
+            final boolean canRead,
+            final boolean canWrite,
+            final boolean canExecute,
+            final String expected) {
         //given
 
         //when

@@ -48,8 +48,4 @@ class BarjCargoArchiveEntryTest {
 
         //then + exception
     }
-
-    @Test
-    void getMetadata() {
-    }
 }

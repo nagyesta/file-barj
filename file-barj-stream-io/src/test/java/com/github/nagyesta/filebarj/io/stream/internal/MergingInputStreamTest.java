@@ -22,7 +22,7 @@ class MergingInputStreamTest {
 
     @SuppressWarnings({"DataFlowIssue", "resource"})
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullStreamList() throws IOException {
+    void testConstructorShouldThrowExceptionWhenCalledWithNullStreamList() {
         //given
 
         //when
@@ -163,6 +163,7 @@ class MergingInputStreamTest {
 
 
     @Test
+    @SuppressWarnings("java:S1612")
     void testCloseShouldUseLockToAvoidRaceConditionWhenTheStreamIsClosedFromMultipleThreads() throws IOException {
         //given
         final var allStreams = List.of(delayCloseStream());
@@ -194,6 +195,7 @@ class MergingInputStreamTest {
                     }
 
                     @Override
+                    @SuppressWarnings("java:S2925")
                     public void close() throws IOException {
                         Assertions.assertDoesNotThrow(() -> Thread.sleep(WAIT_MILLIS));
                         super.close();

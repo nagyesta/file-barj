@@ -82,7 +82,9 @@ public enum PermissionComparisonStrategy {
      * @param permissionImportant true if the permissions should be compared
      * @param ownerImportant      true if the owner and group name should be compared
      */
-    PermissionComparisonStrategy(final boolean permissionImportant, final boolean ownerImportant) {
+    PermissionComparisonStrategy(
+            final boolean permissionImportant,
+            final boolean ownerImportant) {
         this.permissionImportant = permissionImportant;
         this.ownerImportant = ownerImportant;
     }

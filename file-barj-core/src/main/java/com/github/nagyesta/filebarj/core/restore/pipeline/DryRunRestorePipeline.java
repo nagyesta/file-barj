@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ForkJoinPool;
 
 /**
@@ -39,7 +40,9 @@ public class DryRunRestorePipeline extends RestorePipeline {
     }
 
     @Override
-    public void evaluateRestoreSuccess(final @NotNull List<FileMetadata> files, final @NotNull ForkJoinPool threadPool) {
+    public void evaluateRestoreSuccess(
+            final @NotNull List<FileMetadata> files,
+            final @NotNull ForkJoinPool threadPool) {
         //no-op
     }
 
@@ -51,7 +54,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
     @Override
     protected void createSymbolicLink(
             final @NotNull Path linkTarget,
-            final @NotNull Path symbolicLink) throws IOException {
+            final @NotNull Path symbolicLink) {
         log.info("+ Create symbolic link {} -> {}", symbolicLink, linkTarget);
     }
 
@@ -63,7 +66,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
         remainingCopies.forEach(file -> {
             final var copy = getRestoreTargets().mapToRestorePath(file.getAbsolutePath());
             deleteIfExists(copy);
-            if (file.getFileSystemKey().equals(original.getFileSystemKey())) {
+            if (Objects.equals(file.getFileSystemKey(), original.getFileSystemKey())) {
                 log.info("+ Create hard link {} -> {}", copy, unpackedPath);
             } else {
                 log.info("+ Create file {} copied from {}", copy, unpackedPath);

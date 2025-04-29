@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.Console;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
 
@@ -24,9 +25,7 @@ import static org.mockito.Mockito.when;
 
 class ControllerIntegrationTest extends TempFileAwareTest {
 
-    private static final long A_SECOND = 1000;
-
-    @SuppressWarnings("checkstyle:MethodLength")
+    @SuppressWarnings({"checkstyle:MethodLength", "java:S2925"})
     @Test
     void testEndToEndFlowShouldWorkWhenCalledWithValidParameters() throws Exception {
         //given
@@ -77,7 +76,7 @@ class ControllerIntegrationTest extends TempFileAwareTest {
         }
 
         final var atEpochSeconds = Instant.now().getEpochSecond();
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var modifiedTxtContent = "updated value";
         Files.writeString(txt, modifiedTxtContent);
 
@@ -201,7 +200,7 @@ class ControllerIntegrationTest extends TempFileAwareTest {
 
         //when inspect increments is executed
         new Controller(deleteIncrementsArgs, console).run();
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
 
         //then the merged manifest no longer exists
         Assertions.assertFalse(Files.exists(backupDirectory.resolve(prefix + "-" + start + "-" + end + ".manifest.cargo")),

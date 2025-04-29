@@ -14,9 +14,10 @@ class RestoreTaskTest extends TempFileAwareTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullRestoreTargets() {
         //given
+        final var builder = RestoreTask.builder();
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> RestoreTask.builder()
+        Assertions.assertThrows(IllegalArgumentException.class, () -> builder
                 .restoreTargets(null));
 
         //then + exception

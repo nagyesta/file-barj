@@ -25,8 +25,9 @@ public class FixedRangeInputStream extends BoundedInputStream {
      */
     @SuppressWarnings("deprecation")
     public FixedRangeInputStream(
-            final @NonNull InputStream source, final long startInclusive, final long length)
-            throws IOException {
+            final @NonNull InputStream source,
+            final long startInclusive,
+            final long length) throws IOException {
         super(source);
         if (length < 0) {
             throw new IllegalArgumentException("length must be >= 0");
@@ -52,7 +53,10 @@ public class FixedRangeInputStream extends BoundedInputStream {
     }
 
     @Override
-    public int read(final byte[] bts, final int off, final int len) throws IOException {
+    public int read(
+            final byte[] bts,
+            final int off,
+            final int len) throws IOException {
         if (getCount() >= endExclusive) {
             return IOUtils.EOF;
         }

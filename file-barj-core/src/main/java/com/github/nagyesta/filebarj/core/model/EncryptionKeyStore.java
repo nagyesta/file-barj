@@ -74,7 +74,8 @@ public class EncryptionKeyStore {
      */
     @JsonIgnore
     public @NotNull SecretKey dataIndexDecryptionKey(
-            final @NonNull PrivateKey kekPrivateKey, final int version) {
+            final @NonNull PrivateKey kekPrivateKey,
+            final int version) {
         return decryptionKeyByIndex(kekPrivateKey, version, 0);
     }
 
@@ -150,7 +151,10 @@ public class EncryptionKeyStore {
                 .orElse(null);
     }
 
-    private SecretKey decryptionKeyByIndex(final @NotNull PrivateKey kekPrivateKey, final int version, final int index) {
+    private SecretKey decryptionKeyByIndex(
+            final @NotNull PrivateKey kekPrivateKey,
+            final int version,
+            final int index) {
         if (rawEncryptionKeys == null) {
             rawEncryptionKeys = new ConcurrentHashMap<>();
         }
@@ -173,7 +177,9 @@ public class EncryptionKeyStore {
         return Math.abs((int) fileId.getLeastSignificantBits() % DEK_COUNT);
     }
 
-    private String encryptKey(final PublicKey kekPublicKey, final SecretKey key) {
+    private String encryptKey(
+            final PublicKey kekPublicKey,
+            final SecretKey key) {
         final var dek = key.getEncoded();
         final var encrypted = EncryptionUtil.encryptBytes(kekPublicKey, dek);
         return BASE64_ENCODER.encodeToString(encrypted);

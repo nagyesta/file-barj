@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.progress;
 
 import org.jetbrains.annotations.NotNull;
 
+@SuppressWarnings("java:S6548")
 public class NoOpProgressTracker implements ProgressTracker {
 
     /**
@@ -20,12 +21,16 @@ public class NoOpProgressTracker implements ProgressTracker {
     }
 
     @Override
-    public void estimateStepSubtotal(final @NotNull ProgressStep step, final long totalSubSteps) {
+    public void estimateStepSubtotal(
+            final @NotNull ProgressStep step,
+            final long totalSubSteps) {
         //no-op
     }
 
     @Override
-    public void recordProgressInSubSteps(final @NotNull ProgressStep step, final long progress) {
+    public void recordProgressInSubSteps(
+            final @NotNull ProgressStep step,
+            final long progress) {
         //no-op
     }
 
@@ -51,6 +56,6 @@ public class NoOpProgressTracker implements ProgressTracker {
 
     @Override
     public void registerListener(final @NotNull ProgressListener listener) {
-
+        //no-op
     }
 }

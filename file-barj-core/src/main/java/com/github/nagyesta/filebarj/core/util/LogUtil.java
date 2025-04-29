@@ -6,6 +6,7 @@ import lombok.experimental.UtilityClass;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -46,7 +47,7 @@ public class LogUtil {
      * @param ofFiles the files
      * @return the counts of each file type
      */
-    public static @NotNull TreeMap<FileType, Long> countsByType(
+    public static @NotNull SortedMap<FileType, Long> countsByType(
             final @NotNull Collection<FileMetadata> ofFiles) {
         return new TreeMap<>(ofFiles.stream()
                 .collect(Collectors.groupingBy(FileMetadata::getFileType, Collectors.counting())));

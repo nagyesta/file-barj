@@ -61,7 +61,9 @@ public class EncryptionUtil {
      * @return the cipher
      */
     public static Cipher createCipher(
-            final @NonNull SecretKey secretKey, final byte[] ivBytes, final int mode) {
+            final @NonNull SecretKey secretKey,
+            final byte[] ivBytes,
+            final int mode) {
         try {
             final var iv = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, ivBytes);
             final var cipher = Cipher.getInstance(AES_GCM, BOUNCY_CASTLE_PROVIDER);
@@ -79,7 +81,9 @@ public class EncryptionUtil {
      * @param encrypted  the byte array to be decrypted
      * @return the decrypted byte array
      */
-    public byte[] decryptBytes(final @NonNull PrivateKey privateKey, final byte[] encrypted) {
+    public byte[] decryptBytes(
+            final @NonNull PrivateKey privateKey,
+            final byte[] encrypted) {
         try {
             final var cipher = Cipher.getInstance(RSA_ALG, BOUNCY_CASTLE_PROVIDER);
             final var oaepParam = new OAEPParameterSpec(SHA_256, MGF_1, SHA256, DEFAULT);
@@ -97,7 +101,9 @@ public class EncryptionUtil {
      * @param bytes     the byte array to be encrypted
      * @return the encrypted byte array
      */
-    public byte[] encryptBytes(final @NonNull PublicKey publicKey, final byte[] bytes) {
+    public byte[] encryptBytes(
+            final @NonNull PublicKey publicKey,
+            final byte[] bytes) {
         try {
             final var cipher = Cipher.getInstance(RSA_ALG, BOUNCY_CASTLE_PROVIDER);
             final var oaepParam = new OAEPParameterSpec(SHA_256, MGF_1, SHA256, DEFAULT);
@@ -218,7 +224,8 @@ public class EncryptionUtil {
      * @return The function that can encrypt the contents of an {@link OutputStream}
      */
     public static IoFunction<OutputStream, OutputStream> newCipherOutputStream(
-            final SecretKey encryptionKey, final byte[] ivBytes) {
+            final SecretKey encryptionKey,
+            final byte[] ivBytes) {
         if (encryptionKey == null) {
             return IoFunction.IDENTITY_OUTPUT_STREAM;
         }
@@ -237,8 +244,7 @@ public class EncryptionUtil {
      * @param decryptionKey The AES secret key
      * @return The function that can decrypt the contents of an {@link InputStream}
      */
-    public static IoFunction<InputStream, InputStream> newCipherInputStream(
-            final SecretKey decryptionKey) {
+    public static IoFunction<InputStream, InputStream> newCipherInputStream(final SecretKey decryptionKey) {
         if (decryptionKey == null) {
             return IoFunction.IDENTITY_INPUT_STREAM;
         }
@@ -250,7 +256,9 @@ public class EncryptionUtil {
         };
     }
 
-    private static void writeIv(final OutputStream stream, final byte[] randomBytes) {
+    private static void writeIv(
+            final OutputStream stream,
+            final byte[] randomBytes) {
         try {
             stream.write(randomBytes);
         } catch (final IOException e) {

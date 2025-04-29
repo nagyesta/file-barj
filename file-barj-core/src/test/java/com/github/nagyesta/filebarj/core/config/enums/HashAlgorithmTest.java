@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class HashAlgorithmTest {
 
-    public static final long NOW = Instant.now().getEpochSecond();
-    public static final long A_MINUTE_AGO = NOW - 60;
+    private static final long NOW = Instant.now().getEpochSecond();
+    private static final long A_MINUTE_AGO = NOW - 60;
 
     public static Stream<Arguments> sizeBasedGroupingProvider() {
         final var original = getRegularFileMetadata("file.png", 20, "hash1", NOW);
@@ -61,7 +61,9 @@ class HashAlgorithmTest {
     @ParameterizedTest
     @MethodSource("sizeBasedGroupingProvider")
     void testFileGroupingFunctionShouldGenerateSameKeyWhenCalledOnNoneHashWithDuplicatesOfTheSameFile(
-            final FileMetadata fileMetadata1, final FileMetadata fileMetadata2, final boolean expected) {
+            final FileMetadata fileMetadata1,
+            final FileMetadata fileMetadata2,
+            final boolean expected) {
         //given
         final var underTest = HashAlgorithm.NONE;
 
@@ -76,7 +78,9 @@ class HashAlgorithmTest {
     @ParameterizedTest
     @MethodSource("hashBasedGroupingProvider")
     void testFileGroupingFunctionShouldGenerateSameKeyWhenCalledOnShaHashWithDuplicatesOfTheSameFile(
-            final FileMetadata fileMetadata1, final FileMetadata fileMetadata2, final boolean expected) {
+            final FileMetadata fileMetadata1,
+            final FileMetadata fileMetadata2,
+            final boolean expected) {
         //given
         final var underTest = HashAlgorithm.SHA256;
 
@@ -89,7 +93,10 @@ class HashAlgorithmTest {
     }
 
     private static FileMetadata getRegularFileMetadata(
-            final String name, final long size, final String hash, final long lastModified) {
+            final String name,
+            final long size,
+            final String hash,
+            final long lastModified) {
         return FileMetadata.builder()
                 .absolutePath(BackupPath.of(Path.of(name)))
                 .fileType(FileType.REGULAR_FILE)

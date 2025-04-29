@@ -140,7 +140,9 @@ public class BackupSource {
                 .noneMatch(matcher -> matcher.matches(toFilter.toAbsolutePath()));
     }
 
-    private void assertHasNoPatterns(final Set<String> patterns, final String prefix) {
+    private void assertHasNoPatterns(
+            final Set<String> patterns,
+            final String prefix) {
         if (!Optional.ofNullable(patterns).orElse(Collections.emptySet()).isEmpty()) {
             throw new IllegalArgumentException(
                     prefix + " patterns cannot be defined when the backup source is not a directory: " + path);

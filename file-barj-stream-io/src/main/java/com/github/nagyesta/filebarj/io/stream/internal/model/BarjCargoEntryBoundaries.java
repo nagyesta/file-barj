@@ -70,7 +70,8 @@ public class BarjCargoEntryBoundaries {
      * @return the parsed {@link BarjCargoEntryBoundaries}
      */
     public static BarjCargoEntryBoundaries fromProperties(
-            final Properties properties, final String prefix) {
+            final Properties properties,
+            final String prefix) {
         return BarjCargoEntryBoundaries.builder()
                 .chunkRelativeStartIndexInclusive(parseLong(properties.getProperty(prefix + REL_START_IDX)))
                 .startChunkName(properties.getProperty(prefix + REL_START_FILE))

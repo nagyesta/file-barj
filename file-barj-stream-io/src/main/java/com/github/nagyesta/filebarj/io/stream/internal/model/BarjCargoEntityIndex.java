@@ -22,11 +22,11 @@ import static java.lang.Boolean.parseBoolean;
 @Builder
 public class BarjCargoEntityIndex implements BarjCargoBoundarySource {
 
-    private static final String PATH = ".path";
-    private static final String TYPE = ".type";
-    private static final String ENCRYPT = ".encrypt";
-    private static final String CONTENT = ".content";
-    private static final String METADATA = ".metadata";
+    private static final String SUFFIX_PATH = ".path";
+    private static final String SUFFIX_TYPE = ".type";
+    private static final String SUFFIX_ENCRYPT = ".encrypt";
+    private static final String SUFFIX_CONTENT = ".content";
+    private static final String SUFFIX_METADATA = ".metadata";
 
     private final @NonNull String path;
     private final @NonNull FileType fileType;
@@ -51,33 +51,37 @@ public class BarjCargoEntityIndex implements BarjCargoBoundarySource {
      * @return properties formatted data
      */
     public String toProperties(final String prefix) {
-        return prefix + PATH + COLON + path + LINE_BREAK
-                + prefix + TYPE + COLON + fileType.name() + LINE_BREAK
-                + prefix + ENCRYPT + COLON + encrypted + LINE_BREAK
-                + formatProperties(content, prefix + CONTENT)
-                + formatProperties(metadata, prefix + METADATA);
+        return prefix + SUFFIX_PATH + COLON + path + LINE_BREAK
+                + prefix + SUFFIX_TYPE + COLON + fileType.name() + LINE_BREAK
+                + prefix + SUFFIX_ENCRYPT + COLON + encrypted + LINE_BREAK
+                + formatProperties(content, prefix + SUFFIX_CONTENT)
+                + formatProperties(metadata, prefix + SUFFIX_METADATA);
     }
 
     public static BarjCargoEntityIndex fromProperties(
-            final Properties properties, final String prefix) {
+            final Properties properties,
+            final String prefix) {
         //noinspection DataFlowIssue
         return BarjCargoEntityIndex.builder()
-                .path(properties.getProperty(prefix + PATH))
-                .fileType(FileType.valueOf(properties.getProperty(prefix + TYPE)))
-                .encrypted(parseBoolean(properties.getProperty(prefix + ENCRYPT)))
-                .content(parseBoundary(properties, prefix + CONTENT))
-                .metadata(parseBoundary(properties, prefix + METADATA))
+                .path(properties.getProperty(prefix + SUFFIX_PATH))
+                .fileType(FileType.valueOf(properties.getProperty(prefix + SUFFIX_TYPE)))
+                .encrypted(parseBoolean(properties.getProperty(prefix + SUFFIX_ENCRYPT)))
+                .content(parseBoundary(properties, prefix + SUFFIX_CONTENT))
+                .metadata(parseBoundary(properties, prefix + SUFFIX_METADATA))
                 .build();
     }
 
-    private String formatProperties(final BarjCargoEntryBoundaries value, final String prefix) {
+    private String formatProperties(
+            final BarjCargoEntryBoundaries value,
+            final String prefix) {
         return Optional.ofNullable(value)
                 .map(p -> p.toProperties(prefix))
                 .orElse("");
     }
 
     private static BarjCargoEntryBoundaries parseBoundary(
-            final Properties properties, final String prefix) {
+            final Properties properties,
+            final String prefix) {
         if (properties.containsKey(prefix + REL_START_IDX)) {
             return BarjCargoEntryBoundaries.fromProperties(properties, prefix);
         } else {

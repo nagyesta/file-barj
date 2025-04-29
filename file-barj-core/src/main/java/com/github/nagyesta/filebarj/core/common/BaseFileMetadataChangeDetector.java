@@ -32,11 +32,11 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
             final @NotNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
             final @Nullable PermissionComparisonStrategy permissionStrategy) {
         this.filesFromManifests = new TreeMap<>(filesFromManifests);
-        final SortedMap<String, Map<T, List<FileMetadata>>> contentIndex = new TreeMap<>();
-        final Map<String, FileMetadata> nameIndex = new TreeMap<>();
-        index(this.filesFromManifests, contentIndex, nameIndex);
-        this.contentIndex = contentIndex;
-        this.nameIndex = nameIndex;
+        final SortedMap<String, Map<T, List<FileMetadata>>> contentIndexSet = new TreeMap<>();
+        final Map<String, FileMetadata> nameIndexMap = new TreeMap<>();
+        index(this.filesFromManifests, contentIndexSet, nameIndexMap);
+        this.contentIndex = contentIndexSet;
+        this.nameIndex = nameIndexMap;
         this.permissionComparisonStrategy = Objects.requireNonNullElse(permissionStrategy, PermissionComparisonStrategy.STRICT);
     }
 
@@ -45,7 +45,7 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
             final @NonNull FileMetadata previousMetadata,
             final @NonNull FileMetadata currentMetadata) {
         final var permissionsChanged = !permissionComparisonStrategy.matches(previousMetadata, currentMetadata);
-        final var hiddenStatusChanged = currentMetadata.getHidden() != previousMetadata.getHidden();
+        final var hiddenStatusChanged = !Objects.equals(currentMetadata.getHidden(), previousMetadata.getHidden());
         final var timesChanged = currentMetadata.getFileType() != FileType.SYMBOLIC_LINK
                 && !Objects.equals(currentMetadata.getLastModifiedUtcEpochSeconds(), previousMetadata.getLastModifiedUtcEpochSeconds());
         return hiddenStatusChanged || permissionsChanged || timesChanged;
@@ -63,7 +63,7 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
         final var increments = filesFromManifests.keySet().stream().sorted(Comparator.reverseOrder()).toList();
         final var previousSamePath = nameIndex.getOrDefault(currentMetadata.getAbsolutePath().toString(), null);
         if (previousSamePath != null && !hasContentChanged(previousSamePath, currentMetadata)) {
-                return previousSamePath;
+            return previousSamePath;
         }
         for (final var increment : increments) {
             final var index = contentIndex.get(increment);
@@ -118,11 +118,11 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
             final @NotNull SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests,
             final @NotNull SortedMap<String, Map<T, List<FileMetadata>>> contentIndexMap,
             final @NotNull Map<String, FileMetadata> nameIndexMap) {
-        filesFromManifests.forEach((increment, files) -> {
-            files.forEach((uuid, metadata) -> contentIndexMap.computeIfAbsent(increment, k -> new HashMap<>())
-                    .computeIfAbsent(getPrimaryContentCriteria(metadata), k -> new ArrayList<>())
-                    .add(metadata));
-        });
+        filesFromManifests.forEach((increment, files) -> files
+                .forEach((uuid, metadata) -> contentIndexMap
+                        .computeIfAbsent(increment, k -> new HashMap<>())
+                        .computeIfAbsent(getPrimaryContentCriteria(metadata), k -> new ArrayList<>())
+                        .add(metadata)));
         //populate files in reverse manifest order to ensure each file has the latest metadata saved
         filesFromManifests.keySet().stream()
                 .sorted(Comparator.reverseOrder())

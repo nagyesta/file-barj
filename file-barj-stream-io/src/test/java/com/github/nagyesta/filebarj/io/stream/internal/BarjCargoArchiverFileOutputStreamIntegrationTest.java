@@ -56,8 +56,9 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     @ParameterizedTest
     @MethodSource("randomFileContentProvider")
     void testAddFileEntityShouldSuccessfullyStoreFileEntriesWhenTheyAreWrittenToTheStream(
-            final Map<String, Integer> entries, final int chunkSize, final boolean addMetadata)
-            throws IOException {
+            final Map<String, Integer> entries,
+            final int chunkSize,
+            final boolean addMetadata) throws IOException {
         //given
         final var contentMap = new TreeMap<String, String>();
         final var expectedContent = generateTestData(entries, contentMap, addMetadata);
@@ -92,8 +93,8 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     @ParameterizedTest
     @MethodSource("randomLinkContentProvider")
     void testAddSymbolicLinkEntityShouldSuccessfullyStoreLinkEntriesWhenTheyAreWrittenToTheStream(
-            final Map<String, String> entries, final boolean addMetadata)
-            throws IOException {
+            final Map<String, String> entries,
+            final boolean addMetadata) throws IOException {
         //given
         final var contentMap = new TreeMap<>(entries);
         final var expectedContent = contentMap.entrySet().stream()
@@ -137,8 +138,8 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     @ParameterizedTest
     @MethodSource("randomLinkContentProvider")
     void testAddDirectoryEntityShouldSuccessfullyStoreDirectoryEntriesWhenTheyAreWrittenToTheStream(
-            final Map<String, String> entries, final boolean addMetadata)
-            throws IOException {
+            final Map<String, String> entries,
+            final boolean addMetadata) throws IOException {
         //given
         final var contentMap = new TreeMap<>(entries);
         final var expectedContent = contentMap.values().stream()
@@ -268,8 +269,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testAddFileEntityShouldThrowExceptionWhenCalledWithNullName()
-            throws IOException {
+    void testAddFileEntityShouldThrowExceptionWhenCalledWithNullName() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -290,8 +290,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testAddFileEntityShouldThrowExceptionWhenCalledWithNullInputStream()
-            throws IOException {
+    void testAddFileEntityShouldThrowExceptionWhenCalledWithNullInputStream() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -311,8 +310,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testAddSymbolicLinkEntityShouldThrowExceptionWhenCalledWithNullLinkPath()
-            throws IOException {
+    void testAddSymbolicLinkEntityShouldThrowExceptionWhenCalledWithNullLinkPath() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -331,8 +329,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryIsAlreadyOpen()
-            throws IOException {
+    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryIsAlreadyOpen() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -352,8 +349,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testMergeEntityShouldThrowExceptionWhenTheEntryIsAlreadyOpen()
-            throws IOException {
+    void testMergeEntityShouldThrowExceptionWhenTheEntryIsAlreadyOpen() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -362,21 +358,21 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
                 .folder(super.getTestDataRoot())
                 .indexEncryptionKey(null)
                 .build();
-        try (var underTest = new BarjCargoArchiverFileOutputStream(config)) {
+        final var mock = mock(BarjCargoBoundarySource.class);
+
+        try (var nullInputStream = InputStream.nullInputStream();
+             var underTest = new BarjCargoArchiverFileOutputStream(config)) {
             //when
             underTest.openEntity("/key1", FileType.REGULAR_FILE, null);
             Assertions.assertThrows(IllegalStateException.class,
-                    () -> underTest.mergeEntity(
-                            mock(BarjCargoBoundarySource.class),
-                            InputStream.nullInputStream()));
+                    () -> underTest.mergeEntity(mock, nullInputStream));
 
             //then + exception
         }
     }
 
     @Test
-    void testMergeEntityShouldCopyFileContentAndMetadataWhenTheCalledWithValidFileEntity()
-            throws IOException {
+    void testMergeEntityShouldCopyFileContentAndMetadataWhenTheCalledWithValidFileEntity() throws IOException {
         //given
         final var sourceConfig = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test-source")
@@ -428,8 +424,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testMergeEntityShouldCopyDirectoryMetadataWhenTheCalledWithValidDirectoryEntity()
-            throws IOException {
+    void testMergeEntityShouldCopyDirectoryMetadataWhenTheCalledWithValidDirectoryEntity() throws IOException {
         //given
         final var sourceConfig = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test-source")
@@ -477,8 +472,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testMergeEntityShouldThrowExceptionWhenTheCalledWithLinkEntityAndNullStream()
-            throws IOException {
+    void testMergeEntityShouldThrowExceptionWhenTheCalledWithLinkEntityAndNullStream() throws IOException {
         //given
         final var sourceConfig = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test-source")
@@ -513,8 +507,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testMergeEntityShouldThrowExceptionWhenTheCalledWithNullEntity()
-            throws IOException {
+    void testMergeEntityShouldThrowExceptionWhenTheCalledWithNullEntity() throws IOException {
         //given
         final var targetConfig = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test-target")
@@ -523,18 +516,18 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
                 .folder(super.getTestDataRoot())
                 .indexEncryptionKey(null)
                 .build();
-        try (var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
+        try (var nullInputStream = InputStream.nullInputStream();
+             var underTest = new BarjCargoArchiverFileOutputStream(targetConfig)) {
             //when
             Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> underTest.mergeEntity(null, InputStream.nullInputStream()));
+                    () -> underTest.mergeEntity(null, nullInputStream));
 
             //then + exception
         }
     }
 
     @Test
-    void testBarjCargoArchiverEntityConstructorShouldThrowExceptionWhenTheEntryIsAlreadyOpen()
-            throws IOException {
+    void testBarjCargoArchiverEntityConstructorShouldThrowExceptionWhenTheEntryIsAlreadyOpen() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -554,8 +547,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryLifecycleIsStartedWithMetadataForRegularFile()
-            throws IOException {
+    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryLifecycleIsStartedWithMetadataForRegularFile() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -574,8 +566,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryLifecycleIsStartedWithContentForDirectory()
-            throws IOException {
+    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryLifecycleIsStartedWithContentForDirectory() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -594,8 +585,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryContentStreamIsClosedBeforeOpen()
-            throws IOException {
+    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryContentStreamIsClosedBeforeOpen() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -614,8 +604,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testBarjCargoArchiverShouldAutoCompleteRemainingLifecycleWhenCloseIsCalledWhileContentIsOpen()
-            throws IOException {
+    void testBarjCargoArchiverShouldAutoCompleteRemainingLifecycleWhenCloseIsCalledWhileContentIsOpen() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -638,8 +627,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testBarjCargoArchiverShouldAutoCompleteRemainingLifecycleWhenCloseIsCalledWhileMetadataIsOpen()
-            throws IOException {
+    void testBarjCargoArchiverShouldAutoCompleteRemainingLifecycleWhenCloseIsCalledWhileMetadataIsOpen() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -662,8 +650,7 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     @Test
-    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryNameIsAlreadyUsed()
-            throws IOException {
+    void testBarjCargoArchiverShouldThrowExceptionWhenTheEntryNameIsAlreadyUsed() throws IOException {
         //given
         final var config = BarjCargoOutputStreamConfiguration.builder()
                 .prefix("integration-test")
@@ -676,7 +663,8 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
             //when
             underTest.openEntity("/key1", FileType.REGULAR_FILE, null);
             underTest.closeCurrentEntity();
-            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.openEntity("/key1", FileType.REGULAR_FILE, null));
+            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest
+                    .openEntity("/key1", FileType.REGULAR_FILE, null));
 
             //then + exception
         }
@@ -720,7 +708,9 @@ class BarjCargoArchiverFileOutputStreamIntegrationTest extends TempFileAwareTest
     }
 
     private String generateTestData(
-            final Map<String, Integer> input, final TreeMap<String, String> target, final boolean metadata) {
+            final Map<String, Integer> input,
+            final TreeMap<String, String> target,
+            final boolean metadata) {
         final var expectedContentBuilder = new StringBuilder();
         new TreeMap<>(input).forEach((key, value) -> {
             final var randomString = randomString(value);

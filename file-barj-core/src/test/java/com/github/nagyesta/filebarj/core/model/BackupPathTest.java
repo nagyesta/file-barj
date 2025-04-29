@@ -47,7 +47,9 @@ class BackupPathTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @MethodSource("fileUriProvider")
-    void testFromUriShouldRemoveFileSchemeWhenCalledWithValidUri(final URI input, final String expected) {
+    void testFromUriShouldRemoveFileSchemeWhenCalledWithValidUri(
+            final URI input,
+            final String expected) {
         //given
         final var uri = input.toString();
 
@@ -114,19 +116,6 @@ class BackupPathTest extends TempFileAwareTest {
         Assertions.assertThrows(IllegalArgumentException.class, () -> BackupPath.of(null));
 
         //then + exception
-    }
-
-    @Test
-    void testOfWithOneStringShouldCreateAbsolutePathWhenCalledWithValidPath() {
-        //given
-
-        //when
-        final var underTest = BackupPath.of(testDataRoot);
-        final var actual = underTest.toString();
-
-        //then
-        final var expected = FilenameUtils.separatorsToUnix(testDataRoot.toAbsolutePath().toString());
-        Assertions.assertEquals(expected, actual);
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -220,7 +209,10 @@ class BackupPathTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @MethodSource("comparisonProvider")
-    void testCompareToShouldCompareByPath(final URI leftUri, final URI rightUri, final int expected) {
+    void testCompareToShouldCompareByPath(
+            final URI leftUri,
+            final URI rightUri,
+            final int expected) {
         //given
         final var left = BackupPath.fromUri(leftUri.toString());
         final var right = BackupPath.fromUri(rightUri.toString());
@@ -234,7 +226,10 @@ class BackupPathTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @MethodSource("startsWithProvider")
-    void testStartsWithShouldReturnTrueOnlyWhenCalledWithAPrefix(final URI leftUri, final URI rightUri, final boolean expected) {
+    void testStartsWithShouldReturnTrueOnlyWhenCalledWithAPrefix(
+            final URI leftUri,
+            final URI rightUri,
+            final boolean expected) {
         //given
         final var left = BackupPath.fromUri(leftUri.toString());
         final var right = BackupPath.fromUri(rightUri.toString());

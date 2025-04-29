@@ -14,26 +14,26 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ main ]
+    branches: [main]
     paths-ignore:
-      - 'README.md'
-      - '**/README.md'
-      - 'CODE_OF_CONDUCT.md'
-      - 'CONTRIBUTING.md'
-      - 'pull_request_template.md'
-      - 'SECURITY.md'
-      - 'LICENSE'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/assets/**'
-      - '.github/workflows/**'
-      - '!.github/workflows/codeql-analysis.yml'
-      - '.github/pr-labeler.yml'
-      - 'renovate.json'
-      - '.whitesource'
-      - 'gradle/libs.versions.toml'
+      - "README.md"
+      - "**/README.md"
+      - "CODE_OF_CONDUCT.md"
+      - "CONTRIBUTING.md"
+      - "pull_request_template.md"
+      - "SECURITY.md"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/assets/**"
+      - ".github/workflows/**"
+      - "!.github/workflows/codeql-analysis.yml"
+      - ".github/pr-labeler.yml"
+      - "renovate.json"
+      - ".whitesource"
+      - "gradle/libs.versions.toml"
 
 permissions:
   # only required for workflows in private repositories
@@ -46,8 +46,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-        # required for all workflows
-        security-events: write
+      # required for all workflows
+      security-events: write
 
     steps:
       - name: Checkout repository
@@ -62,7 +62,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@28deaeda66b76a05916b6923827895f2b14ab387 # v3.28.16
         with:
-          languages: 'java'
+          languages: "java"
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
         with:

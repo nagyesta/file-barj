@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class CompositeArchiveStreamTest {
@@ -47,7 +46,7 @@ class CompositeArchiveStreamTest {
 
         //then
         Assertions.assertEquals(content.length, actual);
-        verify(destinationStream).write(eq(content), eq(0), eq(content.length));
+        verify(destinationStream).write(content, 0, content.length);
     }
 
     @Test
@@ -62,7 +61,7 @@ class CompositeArchiveStreamTest {
         Assertions.assertThrows(IllegalStateException.class, underTest::getByteCount);
 
         //then + exception
-        verify(destinationStream).write(eq(content), eq(0), eq(content.length));
+        verify(destinationStream).write(content, 0, content.length);
     }
 
     @Test
@@ -80,7 +79,7 @@ class CompositeArchiveStreamTest {
 
         //then
         Assertions.assertEquals(expected, actual);
-        verify(destinationStream).write(eq(content), eq(0), eq(content.length));
+        verify(destinationStream).write(content, 0, content.length);
     }
 
     @Test
@@ -95,7 +94,7 @@ class CompositeArchiveStreamTest {
         Assertions.assertThrows(IllegalStateException.class, underTest::getDigestValue);
 
         //then + exception
-        verify(destinationStream).write(eq(content), eq(0), eq(content.length));
+        verify(destinationStream).write(content, 0, content.length);
     }
 
     @Test

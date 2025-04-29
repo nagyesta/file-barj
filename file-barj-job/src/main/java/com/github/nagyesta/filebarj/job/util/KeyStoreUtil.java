@@ -7,14 +7,17 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Date;
@@ -99,7 +102,7 @@ public final class KeyStoreUtil {
     }
 
     private static @NotNull Certificate[] createChainFor(
-            final @NotNull KeyPair keyPair) throws Exception {
+            final @NotNull KeyPair keyPair) throws OperatorCreationException, CertificateException {
         final var subject = new X500Name("CN=Ignore");
         final var now = new Date(Instant.now().toEpochMilli());
         final var future = new Date(Instant.now().toEpochMilli() + ONE_HUNDRED_YEARS_IN_MILLIS);
@@ -116,7 +119,8 @@ public final class KeyStoreUtil {
     }
 
     private static @NotNull KeyStore newKeyStore(
-            final char @NotNull [] password) throws Exception {
+            final char @NotNull [] password)
+            throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {
         final var store = KeyStore.getInstance(PKCS_12);
         store.load(null, password);
         return store;

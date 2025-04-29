@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
-public class MergeControllerIntegrationTest extends TempFileAwareTest {
+class MergeControllerIntegrationTest extends TempFileAwareTest {
 
     private static final String DASH = "-";
     private static final PrivateKey KEK = getKek();
@@ -140,7 +140,9 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
 
     @ParameterizedTest
     @MethodSource("validRangeProvider")
-    void testConstructorShouldNotThrowExceptionWhenCalledWithValidRange(final long start, final long end) throws IOException {
+    void testConstructorShouldNotThrowExceptionWhenCalledWithValidRange(
+            final long start,
+            final long end) throws IOException {
         //given
         final var backupPath = testDataRoot.resolve("backup");
         Files.createDirectories(backupPath);
@@ -594,7 +596,9 @@ public class MergeControllerIntegrationTest extends TempFileAwareTest {
         verifyContents(restoredU, uContents);
     }
 
-    private static void verifyContents(final Path root, final Map<String, String> expected) throws IOException {
+    private static void verifyContents(
+            final Path root,
+            final Map<String, String> expected) throws IOException {
         for (final var entry : expected.entrySet()) {
             if (entry.getValue().equals(DASH)) {
                 Assertions.assertFalse(Files.exists(root.resolve(entry.getKey())),

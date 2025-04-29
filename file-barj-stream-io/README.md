@@ -4,8 +4,11 @@
 [![Java version](https://img.shields.io/badge/Java%20version-17-yellow?logo=java)](https://img.shields.io/badge/Java%20version-17-yellow?logo=java)
 [![latest-release](https://img.shields.io/github/v/tag/nagyesta/file-barj?color=blue&logo=git&label=releases&sort=semver)](https://github.com/nagyesta/file-barj/releases)
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.nagyesta.file-barj/file-barj-job?logo=apache-maven&color=blue)](https://search.maven.org/search?q=com.github.nagyesta.file-barj)
+
 [![JavaCI](https://img.shields.io/github/actions/workflow/status/nagyesta/file-barj/gradle.yml?logo=github&branch=main)](https://github.com/nagyesta/file-barj/actions/workflows/gradle.yml)
-[![codecov](https://img.shields.io/codecov/c/github/nagyesta/file-barj?label=Coverage&flag=stream&token=62UC72ZRF0)](https://app.codecov.io/gh/nagyesta/file-barj?flags%5B0%5D=stream)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=coverage)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
 
 File BaRJ (File Backup and Restore Java) is a multi-platform backup utility for files. It is intended to be a highly configurable tool
 that can create secure backups of preconfigured files and folders and can be easily scheduled.

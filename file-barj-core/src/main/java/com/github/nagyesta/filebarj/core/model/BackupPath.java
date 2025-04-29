@@ -74,7 +74,9 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @param suffix the suffix of the path
      * @return the new instance
      */
-    public static BackupPath of(final @NonNull Path prefix, final @NonNull String suffix) {
+    public static BackupPath of(
+            final @NonNull Path prefix,
+            final @NonNull String suffix) {
         return BackupPath.ofPathAsIs(prefix.toAbsolutePath() + UNIX_SEPARATOR + suffix);
     }
 
@@ -86,7 +88,10 @@ public final class BackupPath implements Comparable<BackupPath> {
      * @param suffix the suffix of the path
      * @return the new instance
      */
-    public static BackupPath of(final @NonNull Path prefix, final @NonNull String middle, final @NonNull String suffix) {
+    public static BackupPath of(
+            final @NonNull Path prefix,
+            final @NonNull String middle,
+            final @NonNull String suffix) {
         return BackupPath.of(prefix, middle + UNIX_SEPARATOR + suffix);
     }
 

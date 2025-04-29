@@ -29,11 +29,11 @@ import java.io.IOException;
 import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Main controller of the execution.
@@ -56,7 +56,9 @@ public class Controller {
      * @param args    the command line arguments
      * @param console the console we should use for password input
      */
-    public Controller(final String[] args, final Console console) {
+    public Controller(
+            final String[] args,
+            final Console console) {
         this.args = args;
         this.console = console;
     }
@@ -136,6 +138,7 @@ public class Controller {
         log.info("Increment content inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 
+    @SuppressWarnings("java:S106")
     protected void doInspectIncrements(final InspectIncrementsProperties properties) {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
@@ -227,7 +230,8 @@ public class Controller {
     }
 
     protected void doBackup(final BackupProperties properties) throws IOException {
-        final var config = new ObjectMapper().reader().readValue(properties.getConfig().toFile(), BackupJobConfiguration.class);
+        final var config = new ObjectMapper().reader()
+                .readValue(properties.getConfig().toFile(), BackupJobConfiguration.class);
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping backup operation...");
         new BackupController(
@@ -241,14 +245,15 @@ public class Controller {
         log.info("Backup operation completed. Total time: {}", toProcessSummary(durationMillis));
     }
 
+    @SuppressWarnings("java:S106")
     private void printBanner() throws IOException {
-        final var bannerBytes = Objects.requireNonNull(Controller.class.getResourceAsStream("/banner.txt")).readAllBytes();
+        final var bannerBytes = requireNonNull(Controller.class.getResourceAsStream("/banner.txt")).readAllBytes();
         new String(bannerBytes)
-                .replaceAll("3", WHITE)
-                .replaceAll("4", GREEN)
-                .replaceAll("5", BLUE)
-                .replaceAll("6", BLACK)
-                .replaceAll("7", RESET).lines()
+                .replace("3", WHITE)
+                .replace("4", GREEN)
+                .replace("5", BLUE)
+                .replace("6", BLACK)
+                .replace("7", RESET).lines()
                 .forEach(System.out::println);
     }
 

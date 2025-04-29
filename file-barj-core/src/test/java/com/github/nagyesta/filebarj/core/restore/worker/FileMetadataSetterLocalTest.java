@@ -31,7 +31,7 @@ class FileMetadataSetterLocalTest extends TempFileAwareTest {
     private static final Path TEST_FILE_PATH = new File(
             Objects.requireNonNull(TempFileAwareTest.class.getResource("/encrypt/FileBarJ-logo-512_decrypted.png")).getFile())
             .toPath().toAbsolutePath();
-    public static final BackupJobConfiguration BACKUP_JOB_CONFIGURATION = BackupJobConfiguration.builder()
+    private static final BackupJobConfiguration BACKUP_JOB_CONFIGURATION = BackupJobConfiguration.builder()
             .backupType(BackupType.FULL)
             .sources(Set.of())
             .destinationDirectory(Path.of("destination"))

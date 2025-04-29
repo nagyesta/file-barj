@@ -23,7 +23,9 @@ public class CliMergeParser extends CliICommonBackupFileParser<MergeProperties> 
      * @param args    the command line arguments
      * @param console the console we should use for password input
      */
-    public CliMergeParser(final String[] args, final Console console) {
+    public CliMergeParser(
+            final String[] args,
+            final Console console) {
         super(Task.MERGE, args, commandLine -> {
             final var deleteObsolete = Boolean.parseBoolean(commandLine.getOptionValue(DELETE_OBSOLETE, "false"));
             final var backupSource = Path.of(commandLine.getOptionValue(BACKUP_SOURCE)).toAbsolutePath();

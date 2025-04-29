@@ -40,10 +40,16 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     @DisabledOnOs(WINDOWS)
     void testSimpleChangeDetectorShouldDetectChangesWhenCalled(
             final String name,
-            final String prevContent, final FileType prevType, final String prevPermission,
+            final String prevContent,
+            final FileType prevType,
+            final String prevPermission,
             final boolean recreate,
-            final String currContent, final FileType currType, final String currPermission,
-            final boolean expectedContentChanged, final boolean expectedMetadataChanged, final Change expectedChange)
+            final String currContent,
+            final FileType currType,
+            final String currPermission,
+            final boolean expectedContentChanged,
+            final boolean expectedMetadataChanged,
+            final Change expectedChange)
             throws IOException, InterruptedException {
         //given
         final var prev = createMetadata(name, prevContent, prevType, prevPermission, true);

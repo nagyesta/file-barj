@@ -47,8 +47,7 @@ public class MergeController {
      *
      * @param mergeParameters The parameters.
      */
-    public MergeController(
-            final @NonNull MergeParameters mergeParameters) {
+    public MergeController(final @NonNull MergeParameters mergeParameters) {
         mergeParameters.assertValid();
         this.kek = mergeParameters.getKek();
         this.backupDirectory = mergeParameters.getBackupDirectory();
@@ -98,6 +97,7 @@ public class MergeController {
         }
     }
 
+    @SuppressWarnings("java:S4087") //need to close the method before marking the file merged
     private @NotNull BackupIncrementManifest mergeBackupContent() {
         final var lastManifest = manifestsToMerge.get(manifestsToMerge.lastKey());
         final var firstManifest = manifestsToMerge.get(manifestsToMerge.firstKey());
@@ -115,8 +115,9 @@ public class MergeController {
                 .files(mergedManifest.getFilesOfLastManifest())
                 .archivedEntries(mergedManifest.getArchivedEntriesOfLastManifest())
                 .build();
-        final var totalEntries = (long) result.getArchivedEntries().values().size();
+        final var totalEntries = (long) result.getArchivedEntries().size();
         progressTracker.estimateStepSubtotal(MERGE, totalEntries);
+        @SuppressWarnings("java:S2637")
         final var outputStreamConfiguration = BarjCargoOutputStreamConfiguration.builder()
                 .compressionFunction(result.getConfiguration().getCompression()::decorateOutputStream)
                 .prefix(result.getFileNamePrefix())
@@ -175,7 +176,8 @@ public class MergeController {
     }
 
     private void createDirectoriesForEachVersion(
-            final BackupIncrementManifest result, final BarjCargoArchiverFileOutputStream output) {
+            final BackupIncrementManifest result,
+            final BarjCargoArchiverFileOutputStream output) {
         result.getVersions().forEach(version -> {
             try {
                 output.addDirectoryEntity("/" + version, null);
@@ -218,7 +220,9 @@ public class MergeController {
     }
 
     private BarjCargoInputStreamConfiguration getStreamConfig(
-            final BackupIncrementManifest currentManifest, final PrivateKey kek) {
+            final BackupIncrementManifest currentManifest,
+            final PrivateKey kek) {
+        @SuppressWarnings("java:S2637")
         final var decryptionKey = Optional.ofNullable(kek)
                 .map(key -> currentManifest.dataIndexDecryptionKey(key, currentManifest.getVersions().first()))
                 .orElse(null);

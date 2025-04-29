@@ -5,29 +5,29 @@ name: JavaCI-PR
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths-ignore:
-      - 'README.md'
-      - '**/README.md'
-      - 'CODE_OF_CONDUCT.md'
-      - 'CONTRIBUTING.md'
-      - 'pull_request_template.md'
-      - '.lift/.toml'
-      - '**/.lift/.toml'
-      - 'SECURITY.md'
-      - 'LICENSE'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/assets/**'
-      - '.github/workflows/**'
-      - '!.github/workflows/gradle-ci.yml'
-      - '.github/pr-labeler.yml'
-      - 'renovate.json'
-      - '.whitesource'
-      - 'config/ossindex/exclusions.txt'
-      - '.idea/**'
-      - '.gitignore'
+      - "README.md"
+      - "**/README.md"
+      - "CODE_OF_CONDUCT.md"
+      - "CONTRIBUTING.md"
+      - "pull_request_template.md"
+      - ".lift/.toml"
+      - "**/.lift/.toml"
+      - "SECURITY.md"
+      - "LICENSE"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/assets/**"
+      - ".github/workflows/**"
+      - "!.github/workflows/gradle-ci.yml"
+      - ".github/pr-labeler.yml"
+      - "renovate.json"
+      - ".whitesource"
+      - "config/ossindex/exclusions.txt"
+      - ".idea/**"
+      - ".gitignore"
 
 permissions: read-all
 
@@ -35,7 +35,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -58,7 +58,9 @@ jobs:
           cache-disabled: true
       - name: Build with Gradle (if Ubuntu)
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: ./gradlew printVersion build -Pci
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew printVersion build sonar -Pci
       - name: Build with Gradle (if Windows)
         if: ${{ matrix.os != 'ubuntu-latest' }}
         run: ./gradlew printVersion build -x :file-barj-core:jacocoTestCoverageVerification -Pci
@@ -89,30 +91,3 @@ jobs:
             file-barj-stream-io/build/reports/tests/test
             file-barj-stream-io/build/reports/abort-mission/abort-mission-report.html
           retention-days: 5
-      - name: Upload coverage to Codecov - Core (if Ubuntu)
-        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
-        if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./file-barj-core/build/reports/jacoco/report.xml
-          flags: core
-          disable_search: true
-          fail_ci_if_error: false
-      - name: Upload coverage to Codecov - Job (if Ubuntu)
-        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
-        if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./file-barj-job/build/reports/jacoco/report.xml
-          flags: job
-          disable_search: true
-          fail_ci_if_error: false
-      - name: Upload coverage to Codecov - Stream IO (if Ubuntu)
-        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
-        if: ${{ matrix.os == 'ubuntu-latest' && github.repository_owner == 'nagyesta' }}
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./file-barj-stream-io/build/reports/jacoco/report.xml
-          flags: stream
-          disable_search: true
-          fail_ci_if_error: false

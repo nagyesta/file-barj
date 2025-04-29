@@ -221,11 +221,6 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
         }
     }
 
-    @Override
-    public void flush() throws IOException {
-        super.flush();
-    }
-
     /**
      * Closes the current entity as well as every open stream opened implicitly by creating this
      * entity.
@@ -233,6 +228,7 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException If the entity could not be closed due to an I/O exception.
      */
     @Override
+    @SuppressWarnings("java:S2583") //the method may be called by multiple threads
     public void close() throws IOException {
         if (closed) {
             return;
@@ -259,14 +255,15 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @return The normalized and validated path
      */
     protected @Nullable String normalizeAndValidateUniquePath(
-            final @NotNull String path, final @NotNull FileType fileType) {
+            final @NotNull String path,
+            final @NotNull FileType fileType) {
         final var entityPath = normalizeEntityPath(path);
         assertEntityNameIsValidAndUnique(entityPaths, entityPath, fileType);
         return entityPath;
     }
 
     protected void doOnClosed() throws IOException {
-
+        //do nothing by default
     }
 
     /**
@@ -304,8 +301,11 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @see #addDirectoryEntity(String, SecretKey)
      * @see #addDirectoryEntity(String, SecretKey, String)
      */
+    @SuppressWarnings("java:S2093") //the caller is responsible for closing this stream
     protected BarjCargoEntityArchiver openEntity(
-            final @NotNull String archiveEntityPath, final @NotNull FileType fileType, final @Nullable SecretKey encryptionKey) {
+            final @NotNull String archiveEntityPath,
+            final @NotNull FileType fileType,
+            final @Nullable SecretKey encryptionKey) {
         if (this.hasOpenEntity()) {
             throw new IllegalStateException("Entity is already open.");
         }
@@ -348,7 +348,7 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
      * @throws IOException If the entity could not be closed due to an exception@
      */
     protected void doOnEntityClosed(final @Nullable BarjCargoEntityIndex entityToIndex) throws IOException {
-
+        //do nothing by default
     }
 
     protected @Nullable String normalizeEntityPath(final String archiveEntityPath) {
@@ -356,7 +356,9 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
     }
 
     protected void assertEntityNameIsValidAndUnique(
-            final Map<String, FileType> existingEntities, final String archiveEntityPath, final FileType fileType) {
+            final Map<String, FileType> existingEntities,
+            final String archiveEntityPath,
+            final FileType fileType) {
         if (archiveEntityPath == null || archiveEntityPath.isBlank()) {
             throw new IllegalArgumentException("Entity name must not be null or blank.");
         }

@@ -19,7 +19,9 @@ public class OptionalDigestOutputStream extends DigestOutputStream {
      * @param stream    the output stream.
      * @param algorithm the message digest algorithm to use for this stream.
      */
-    public OptionalDigestOutputStream(final OutputStream stream, final String algorithm) {
+    public OptionalDigestOutputStream(
+            final OutputStream stream,
+            final String algorithm) {
         super(stream, Optional.ofNullable(algorithm)
                 .map(DigestUtils::getDigest)
                 .orElse(null));

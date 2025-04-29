@@ -22,7 +22,9 @@ public class CliInspectContentParser extends CliICommonBackupFileParser<InspectI
      * @param args    the command line arguments
      * @param console the console we should use for password input
      */
-    public CliInspectContentParser(final String[] args, final Console console) {
+    public CliInspectContentParser(
+            final String[] args,
+            final Console console) {
         super(Task.RESTORE, args, commandLine -> {
             final var output = Path.of(commandLine.getOptionValue(OUTPUT_FILE, "backup_contents.csv"));
             final var atPointInTime = Long.parseLong(commandLine.getOptionValue(AT_EPOCH_SECONDS));

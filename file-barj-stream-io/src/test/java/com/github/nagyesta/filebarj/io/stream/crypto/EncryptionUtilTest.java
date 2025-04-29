@@ -39,7 +39,8 @@ class EncryptionUtilTest {
     @ParameterizedTest
     @MethodSource("rsaCryptoProvider")
     void testDecryptBytesShouldReturnOriginalBytesWhenCalledOnOutputOfEncryptBytes(
-            final KeyPair keyPair, final String expected) {
+            final KeyPair keyPair,
+            final String expected) {
         //given
         final var encrypted = EncryptionUtil.encryptBytes(keyPair.getPublic(), expected.getBytes());
 
@@ -67,9 +68,10 @@ class EncryptionUtilTest {
     void testDecryptBytesShouldThrowExceptionWhenCalledWithNullBytes() {
         //given
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
+        final var privateKey = keyPair.getPrivate();
 
         //when
-        Assertions.assertThrows(CryptoException.class, () -> EncryptionUtil.decryptBytes(keyPair.getPrivate(), null));
+        Assertions.assertThrows(CryptoException.class, () -> EncryptionUtil.decryptBytes(privateKey, null));
 
         //then + exception
     }
@@ -90,9 +92,10 @@ class EncryptionUtilTest {
     void testEncryptBytesShouldThrowExceptionWhenCalledWithNullBytes() {
         //given
         final var keyPair = EncryptionUtil.generateRsaKeyPair();
+        final var publicKey = keyPair.getPublic();
 
         //when
-        Assertions.assertThrows(CryptoException.class, () -> EncryptionUtil.encryptBytes(keyPair.getPublic(), null));
+        Assertions.assertThrows(CryptoException.class, () -> EncryptionUtil.encryptBytes(publicKey, null));
 
         //then + exception
     }
@@ -281,16 +284,16 @@ class EncryptionUtilTest {
     }
 
     @Test
-    void testNewCipherOutputStreamShouldThrowExceptionWhenStreamFunctionIsCalledWithClosedStream()
-            throws IOException {
+    void testNewCipherOutputStreamShouldThrowExceptionWhenStreamFunctionIsCalledWithClosedStream() throws IOException {
         //given
         final var stream = mock(OutputStream.class);
         doThrow(new IOException()).when(stream).write(any(byte[].class));
         final var key = EncryptionUtil.generateAesKey();
+        final var streamIoFunction = EncryptionUtil.newCipherOutputStream(key);
 
         //when
         Assertions.assertThrows(CryptoException.class,
-                () -> EncryptionUtil.newCipherOutputStream(key).decorate(stream));
+                () -> streamIoFunction.decorate(stream));
 
         //then + exception
     }
@@ -331,7 +334,9 @@ class EncryptionUtilTest {
         }
     }
 
-    private static byte[] concat(final byte[] first, final byte[] second) {
+    private static byte[] concat(
+            final byte[] first,
+            final byte[] second) {
         final var result = new byte[first.length + second.length];
         System.arraycopy(first, 0, result, 0, first.length);
         System.arraycopy(second, 0, result, first.length, second.length);

@@ -53,7 +53,10 @@ public enum ProgressStep {
     private final int reportFrequencyPercent;
     private final int defaultWeight;
 
-    ProgressStep(final String displayName, final int reportFrequencyPercent, final int defaultWeight) {
+    ProgressStep(
+            final String displayName,
+            final int reportFrequencyPercent,
+            final int defaultWeight) {
         this.displayName = displayName;
         this.reportFrequencyPercent = reportFrequencyPercent;
         this.defaultWeight = defaultWeight;

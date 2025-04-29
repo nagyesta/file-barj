@@ -138,7 +138,8 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
 
     @SuppressWarnings("DataFlowIssue")
     private static ArchivedFileMetadata getExpected(
-            final Path indexFile, final FileMetadata... files) throws IOException {
+            final Path indexFile,
+            final FileMetadata... files) throws IOException {
         final var properties = new Properties();
         final var zipContentStream = Files.newInputStream(indexFile);
         properties.load(new GzipCompressorInputStream(zipContentStream));

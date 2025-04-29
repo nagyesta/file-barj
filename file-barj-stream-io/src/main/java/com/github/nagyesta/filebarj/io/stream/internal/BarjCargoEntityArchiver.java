@@ -136,7 +136,8 @@ public class BarjCargoEntityArchiver implements Closeable, BarjCargoBoundarySour
     }
 
     private OutputStream openStreamForStage(
-            final EntityArchivalStage targetStage, final EntityArchivalStage expectedStage) throws IOException {
+            final EntityArchivalStage targetStage,
+            final EntityArchivalStage expectedStage) throws IOException {
         if (status.getNext() != targetStage) {
             throw new IllegalStateException(
                     "Cannot open stream due to unexpected stream stage: " + status + ". Expected: " + expectedStage);
@@ -153,7 +154,10 @@ public class BarjCargoEntityArchiver implements Closeable, BarjCargoBoundarySour
         }
     }
 
-    private void closeStreamForStage(final EntityArchivalStage expectedStage, final Runnable persistBoundary) throws IOException {
+    @SuppressWarnings("java:S2589") //the method may be called by multiple threads
+    private void closeStreamForStage(
+            final EntityArchivalStage expectedStage,
+            final Runnable persistBoundary) throws IOException {
         if (status != expectedStage) {
             throw new IllegalStateException(
                     "Cannot close stream due to unexpected stream stage: " + status + ". Expected: " + expectedStage);

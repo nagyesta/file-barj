@@ -42,10 +42,11 @@ class FixedRangeInputStreamTest {
     @Test
     void testConstructorShouldThrowExceptionWhenLengthIsNegative() {
         //given
+        final var nullInputStream = InputStream.nullInputStream();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new FixedRangeInputStream(InputStream.nullInputStream(), 0, -1));
+                () -> new FixedRangeInputStream(nullInputStream, 0, -1));
 
         //then + exception
     }
@@ -53,10 +54,11 @@ class FixedRangeInputStreamTest {
     @Test
     void testConstructorShouldThrowExceptionWhenStartIndexIsNegative() {
         //given
+        final var nullInputStream = InputStream.nullInputStream();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new FixedRangeInputStream(InputStream.nullInputStream(), -1, 1));
+                () -> new FixedRangeInputStream(nullInputStream, -1, 1));
 
         //then + exception
     }
@@ -64,7 +66,10 @@ class FixedRangeInputStreamTest {
     @ParameterizedTest
     @MethodSource("rangeProvider")
     void testReadAllBytesShouldSkipStartingAndTrailingBytesWhenStartingIndexIsNotZeroAndLengthIsShorterThanRemainingBytes(
-            final String input, final int startInclusive, final int length, final String expected) throws IOException {
+            final String input,
+            final int startInclusive,
+            final int length,
+            final String expected) throws IOException {
         //given
         final var source = new ByteArrayInputStream(input.getBytes());
         final var underTest = new FixedRangeInputStream(source, startInclusive, length);
@@ -80,7 +85,10 @@ class FixedRangeInputStreamTest {
     @ParameterizedTest
     @MethodSource("rangeProvider")
     void testReadShouldSkipStartingAndTrailingBytesWhenStartingIndexIsNotZeroAndLengthIsShorterThanRemainingBytes(
-            final String input, final int startInclusive, final int length, final String expected) throws IOException {
+            final String input,
+            final int startInclusive,
+            final int length,
+            final String expected) throws IOException {
         //given
         final var source = new ByteArrayInputStream(input.getBytes());
         final var underTest = new FixedRangeInputStream(source, startInclusive, length);
@@ -98,7 +106,10 @@ class FixedRangeInputStreamTest {
     @ParameterizedTest
     @MethodSource("rangeProvider")
     void testReadBytesShouldSkipStartingAndTrailingBytesWhenStartingIndexIsNotZeroAndLengthIsShorterThanRemainingBytes(
-            final String input, final int startInclusive, final int length, final String expected) throws IOException {
+            final String input,
+            final int startInclusive,
+            final int length,
+            final String expected) throws IOException {
         //given
         final var source = new ByteArrayInputStream(input.getBytes());
         final var underTest = new FixedRangeInputStream(source, startInclusive, length);

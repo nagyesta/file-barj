@@ -1,7 +1,6 @@
 package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
-import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
@@ -19,16 +18,16 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import static com.github.nagyesta.filebarj.core.common.ManifestManagerImplTest.A_SECOND;
-
-public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
+class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
 
     @Test
+    @SuppressWarnings("java:S2925")
     void testMergeForRestoreShouldKeepLatestFileSetWhenCalledWithValidIncrementalData() throws IOException, InterruptedException {
         //given
         final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
@@ -51,7 +50,7 @@ public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
         Files.writeString(file1, "content1");
         Files.createFile(file2);
         Files.writeString(file2, "content2");
-        final FileMetadataParser parser = FileMetadataParserFactory.newInstance();
+        final var parser = FileMetadataParserFactory.newInstance();
         final var original = underTest.generateManifest(config, BackupType.FULL, 0);
         final var origFile1 = parser.parse(file1.toFile(), config);
         final var origFile2 = parser.parse(file2.toFile(), config);
@@ -67,7 +66,7 @@ public class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
                 .archiveLocation(ArchiveEntryLocator.builder().backupIncrement(0).entryName(origArchiveId).build())
                 .originalHash(origFile1.getOriginalHash())
                 .build());
-        Thread.sleep(A_SECOND);
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var incremental = underTest.generateManifest(config, BackupType.INCREMENTAL, 1);
         FileUtils.deleteQuietly(file2.toFile());
         final var incFile1 = parser.parse(file1.toFile(), config);

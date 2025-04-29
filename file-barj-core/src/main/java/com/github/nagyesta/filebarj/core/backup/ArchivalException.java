@@ -18,7 +18,9 @@ public class ArchivalException extends RuntimeException {
      * @param message the message
      * @param cause   the cause
      */
-    public ArchivalException(final String message, final Throwable cause) {
+    public ArchivalException(
+            final String message,
+            final Throwable cause) {
         super(message, cause);
     }
 }

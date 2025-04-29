@@ -316,7 +316,9 @@ class RestoreScopeTest extends TempFileAwareTest {
         return path;
     }
 
-    private Path setFileContent(final String name, final String content) throws IOException {
+    private Path setFileContent(
+            final String name,
+            final String content) throws IOException {
         if (content == null) {
             Files.deleteIfExists(testDataRoot.resolve(name));
             return null;
@@ -326,7 +328,9 @@ class RestoreScopeTest extends TempFileAwareTest {
         return path;
     }
 
-    private Path setSymbolicLink(final String name, final Path target) throws IOException {
+    private Path setSymbolicLink(
+            final String name,
+            final Path target) throws IOException {
         Files.deleteIfExists(testDataRoot.resolve(name));
         if (target == null) {
             return null;

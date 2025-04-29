@@ -24,8 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class DuplicateHandlingStrategyTest extends TempFileAwareTest {
 
-    public static final long NOW = Instant.now().getEpochSecond();
-    public static final long A_MINUTE_AGO = NOW - 60;
+    private static final long NOW = Instant.now().getEpochSecond();
+    private static final long A_MINUTE_AGO = NOW - 60;
 
     public static Stream<Arguments> groupingProvider() {
         final var original = getRegularFileMetadata("file.png", 20, "hash1", NOW);
@@ -64,8 +64,10 @@ class DuplicateHandlingStrategyTest extends TempFileAwareTest {
     @MethodSource("groupingProvider")
     void testFileGroupingFunctionForHashShouldGenerateSameKeyWhenCalledWithDuplicatesOfTheSameFile(
             final DuplicateHandlingStrategy underTest,
-            final FileMetadata fileMetadata1, final FileMetadata fileMetadata2,
-            final HashAlgorithm hashAlgorithm, final boolean expected) {
+            final FileMetadata fileMetadata1,
+            final FileMetadata fileMetadata2,
+            final HashAlgorithm hashAlgorithm,
+            final boolean expected) {
         //given
 
         //when
@@ -101,7 +103,10 @@ class DuplicateHandlingStrategyTest extends TempFileAwareTest {
     }
 
     private static FileMetadata getRegularFileMetadata(
-            final String name, final long size, final String hash, final long lastModified) {
+            final String name,
+            final long size,
+            final String hash,
+            final long lastModified) {
         return FileMetadata.builder()
                 .absolutePath(BackupPath.of(Path.of(name)))
                 .fileType(FileType.REGULAR_FILE)

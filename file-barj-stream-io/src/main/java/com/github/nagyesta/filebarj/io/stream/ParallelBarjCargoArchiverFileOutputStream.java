@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
  * main stream asynchronously.
  */
 @Slf4j
+@SuppressWarnings("java:S110")
 public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiverFileOutputStream {
 
     private static final String TEMP_DIR_NAME = "temp" + UUID.randomUUID();
@@ -83,6 +84,7 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @param metadata      The optional metadata of the entity (no metadata is added if null)
      * @return An object with the entity boundaries
      */
+    @SuppressWarnings("java:S4087")
     public CompletableFuture<BarjCargoBoundarySource> addFileEntityAsync(
             final @NotNull String path,
             final @NonNull InputStream contentStream,
@@ -128,6 +130,7 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
      * @param metadata       The optional metadata of the entity (no metadata is added if null)
      * @return An object with the entity boundaries
      */
+    @SuppressWarnings("java:S4087")
     public CompletableFuture<BarjCargoBoundarySource> addSymbolicLinkEntityAsync(
             final @NotNull String path,
             final @NonNull String linkTargetPath,
@@ -206,7 +209,8 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
 
     @Override
     public BarjCargoBoundarySource addFileEntity(
-            final @NotNull String path, final @NotNull InputStream contentStream,
+            final @NotNull String path,
+            final @NotNull InputStream contentStream,
             final @Nullable SecretKey encryptionKey)
             throws IOException {
         try {
@@ -310,6 +314,7 @@ public class ParallelBarjCargoArchiverFileOutputStream extends BarjCargoArchiver
         assertEntityNameIsValidAndUnique(asyncEntityPaths, entityPath, fileType);
     }
 
+    @SuppressWarnings({"java:S1181", "java:S1130"})
     private void unwrapIoException(final CompletionException ex) throws IOException {
         try {
             throw ex.getCause();

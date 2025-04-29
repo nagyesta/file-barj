@@ -14,7 +14,9 @@ public class PastOrPresentEpochSecondsValidator implements ConstraintValidator<P
     }
 
     @Override
-    public boolean isValid(final Long value, final ConstraintValidatorContext context) {
+    public boolean isValid(
+            final Long value,
+            final ConstraintValidatorContext context) {
         return Instant.now().getEpochSecond() >= Optional.ofNullable(value).orElse(Long.MAX_VALUE);
     }
 }

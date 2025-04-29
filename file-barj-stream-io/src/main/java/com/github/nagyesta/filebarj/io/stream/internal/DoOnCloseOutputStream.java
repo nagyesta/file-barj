@@ -32,7 +32,10 @@ public abstract class DoOnCloseOutputStream extends OutputStream {
     }
 
     @Override
-    public void write(final byte @NotNull [] b, final int off, final int len) throws IOException {
+    public void write(
+            final byte @NotNull [] b,
+            final int off,
+            final int len) throws IOException {
         throwExceptionIfClosed();
         getOutputStream().write(b, off, len);
         hasAnythingToFlush = true;
@@ -49,6 +52,7 @@ public abstract class DoOnCloseOutputStream extends OutputStream {
     }
 
     @Override
+    @SuppressWarnings("java:S2583") //the method may be called by multiple threads
     public void close() throws IOException {
         if (closed) {
             return;

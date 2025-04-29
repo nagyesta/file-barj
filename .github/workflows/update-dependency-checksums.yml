@@ -1,6 +1,6 @@
 name: UpdateChecksums
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 permissions: read-all
 

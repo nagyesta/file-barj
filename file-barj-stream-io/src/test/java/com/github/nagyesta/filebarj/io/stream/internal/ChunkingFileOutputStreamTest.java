@@ -42,7 +42,8 @@ class ChunkingFileOutputStreamTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("nullProvider")
     void testConstructorShouldThrowExceptionWhenCalledWithNull(
-            final Path folder, final String prefix) {
+            final Path folder,
+            final String prefix) {
         //given
 
         //when
@@ -55,7 +56,10 @@ class ChunkingFileOutputStreamTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("chunkingDataProvider")
     void testTotalByteCountShouldReturnAccurateCountWhenChunkingIsActive(
-            final String name, final int chunkSize, final long randomDataSize, final int numberOfTimes) {
+            final String name,
+            final int chunkSize,
+            final long randomDataSize,
+            final int numberOfTimes) {
         //given
         final var directory = Path.of(getTestDataRoot().toString(), name);
         final var expectedBytes = new byte[(int) randomDataSize];
@@ -82,7 +86,10 @@ class ChunkingFileOutputStreamTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("chunkingDataProvider")
     void testChunkingShouldActivateWhenCalledWithEnoughRandomData(
-            final String name, final int chunkSize, final long randomDataSize, final int expectedFiles) {
+            final String name,
+            final int chunkSize,
+            final long randomDataSize,
+            final int expectedFiles) {
         //given
         final var directory = Path.of(getTestDataRoot().toString(), name);
         final var expectedBytes = new byte[(int) randomDataSize];
@@ -118,7 +125,9 @@ class ChunkingFileOutputStreamTest extends TempFileAwareTest {
     @ParameterizedTest
     @MethodSource("chunkingDataProvider")
     void testChunkingShouldWorkWhenCalledWithBatchesOfRandomDataNotEndingAtThreshold(
-            final String name, final int chunkSize, final long randomDataSize) {
+            final String name,
+            final int chunkSize,
+            final long randomDataSize) {
         //given
         final var directory = Path.of(getTestDataRoot().toString(), name);
         final var offsetToMisalignData = 10;

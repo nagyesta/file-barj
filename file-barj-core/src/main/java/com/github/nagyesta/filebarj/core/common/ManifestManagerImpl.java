@@ -42,6 +42,7 @@ import static com.github.nagyesta.filebarj.core.progress.ProgressStep.LOAD_MANIF
 public class ManifestManagerImpl implements ManifestManager {
     private static final String HISTORY_FOLDER = ".history";
     private static final String MANIFEST_JSON_GZ = ".manifest.json.gz";
+    private static final String MANIFEST_CARGO = ".manifest.cargo";
     private final ObjectMapper mapper = new ObjectMapper();
     private final Validator validator = createValidator();
     private final ProgressTracker progressTracker;
@@ -106,7 +107,7 @@ public class ManifestManagerImpl implements ManifestManager {
             throw new ArchivalException("Failed to save manifest.", e);
         }
         final var encryptedManifestFile = backupDestination.toPath()
-                .resolve(manifest.getFileNamePrefix() + ".manifest.cargo").toFile();
+                .resolve(manifest.getFileNamePrefix() + MANIFEST_CARGO).toFile();
         final var publicKey = manifest.getConfiguration().getEncryptionKey();
         try (var fileIn = new FileInputStream(plainManifestFile);
              var bufferedIn = new BufferedInputStream(fileIn);
@@ -128,7 +129,7 @@ public class ManifestManagerImpl implements ManifestManager {
         try (var pathStream = Files.list(destinationDirectory)) {
             final var manifestFiles = pathStream
                     .filter(path -> path.getFileName().toString().startsWith(fileNamePrefix))
-                    .filter(path -> path.getFileName().toString().endsWith(".manifest.cargo"))
+                    .filter(path -> path.getFileName().toString().endsWith(MANIFEST_CARGO))
                     .sorted(Comparator.comparing(Path::getFileName).reversed())
                     .toList();
             final var manifests = loadManifests(manifestFiles, privateKey, latestBeforeEpochMillis);
@@ -147,7 +148,7 @@ public class ManifestManagerImpl implements ManifestManager {
         try (var pathStream = Files.list(destinationDirectory)) {
             final var manifestFiles = pathStream
                     .filter(path -> path.getFileName().toString().startsWith(fileNamePrefix))
-                    .filter(path -> path.getFileName().toString().endsWith(".manifest.cargo"))
+                    .filter(path -> path.getFileName().toString().endsWith(MANIFEST_CARGO))
                     .sorted(Comparator.comparing(Path::getFileName).reversed())
                     .toList();
             return loadAllManifests(manifestFiles, privateKey);
@@ -195,10 +196,9 @@ public class ManifestManagerImpl implements ManifestManager {
         addDirectoriesToFiles(lastIncrementManifest, files);
         final var filesToBeRestored = calculateRemainingFilesAndLinks(lastIncrementManifest);
         populateFilesAndArchiveEntries(manifests, filesToBeRestored, files, archivedEntries);
-        files.forEach((key, value) -> {
-            LogUtil.logStatistics(value.values(),
-                    (type, count) -> log.info("Increment {} contains {} {} items.", key, count, type));
-        });
+        files.forEach((key, value) ->
+                LogUtil.logStatistics(value.values(), (type, count) ->
+                        log.info("Increment {} contains {} {} items.", key, count, type)));
         return RestoreManifest.builder()
                 .maximumAppVersion(maximumAppVersion)
                 .lastStartTimeUtcEpochSeconds(maximumTimeStamp)
@@ -242,6 +242,7 @@ public class ManifestManagerImpl implements ManifestManager {
         }
     }
 
+    @SuppressWarnings("java:S135")
     private @NotNull SortedMap<Integer, BackupIncrementManifest> loadManifests(
             final @NotNull List<Path> manifestFiles,
             final @Nullable PrivateKey privateKey,
@@ -384,7 +385,8 @@ public class ManifestManagerImpl implements ManifestManager {
     }
 
     private void deleteManifestAndArchiveFilesFromBackupDirectory(
-            final @NotNull Path backupDirectory, final @NotNull String fileNamePrefix) {
+            final @NotNull Path backupDirectory,
+            final @NotNull String fileNamePrefix) {
         final var patterns = Set.of(
                 "^" + fileNamePrefix + "\\.[0-9]{5}\\.cargo$",
                 "^" + fileNamePrefix + "\\.manifest\\.cargo$",
@@ -395,23 +397,28 @@ public class ManifestManagerImpl implements ManifestManager {
             list.filter(path -> patterns.stream().anyMatch(pattern -> path.getFileName().toString().matches(pattern)))
                     .forEach(toDelete::add);
             for (final var path : toDelete) {
-                log.info("Deleting obsolete backup file: {}", path);
-                try {
-                    Files.delete(path);
-                } catch (final IOException e) {
-                    log.warn("Unable to delete file! Will attempt to delete it on exit.", e);
-                    if (Files.exists(path)) {
-                        path.toFile().deleteOnExit();
-                    }
-                }
+                doDelete(path);
             }
         } catch (final IOException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private void doDelete(final Path path) {
+        log.info("Deleting obsolete backup file: {}", path);
+        try {
+            Files.delete(path);
+        } catch (final IOException e) {
+            log.warn("Unable to delete file! Will attempt to delete it on exit.", e);
+            if (Files.exists(path)) {
+                path.toFile().deleteOnExit();
+            }
         }
     }
 
     private void deleteManifestFromHistoryIfExists(
-            final @NotNull Path backupDirectory, final @NotNull String fileNamePrefix) {
+            final @NotNull Path backupDirectory,
+            final @NotNull String fileNamePrefix) {
         final var fromHistory = backupDirectory.resolve(HISTORY_FOLDER)
                 .resolve(fileNamePrefix + MANIFEST_JSON_GZ);
         try {

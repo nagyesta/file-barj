@@ -47,10 +47,11 @@ class IncrementDeletionControllerTest extends TempFileAwareTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullBackupDirectory() {
         //given
+        final var builder = IncrementDeletionParameters.builder();
 
         //when
         assertThrows(IllegalArgumentException.class,
-                () -> IncrementDeletionParameters.builder().backupDirectory(null));
+                () -> builder.backupDirectory(null));
 
         //then + exception
     }
@@ -59,9 +60,10 @@ class IncrementDeletionControllerTest extends TempFileAwareTest {
     @Test
     void testBuilderShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
+        final var builder = IncrementDeletionParameters.builder();
 
         //when
-        assertThrows(IllegalArgumentException.class, () -> IncrementDeletionParameters.builder().fileNamePrefix(null));
+        assertThrows(IllegalArgumentException.class, () -> builder.fileNamePrefix(null));
 
         //then + exception
     }
@@ -80,8 +82,12 @@ class IncrementDeletionControllerTest extends TempFileAwareTest {
     @DisabledOnOs(OS.WINDOWS)
     @ParameterizedTest
     @MethodSource("validParameterProvider")
+    @SuppressWarnings("java:S2925")
     void testDeleteIncrementsShouldReturnSummariesWhenCalledWithStream(
-            final int backups, final int skip, final long expectedBackupFiles, final long expectedHistoryFiles)
+            final int backups,
+            final int skip,
+            final long expectedBackupFiles,
+            final long expectedHistoryFiles)
             throws IOException, InterruptedException {
         //given
         final var originalDirectory = testDataRoot.resolve("original");

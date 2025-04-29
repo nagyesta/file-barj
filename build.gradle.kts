@@ -1,3 +1,4 @@
+import org.sonarqube.gradle.SonarTask
 import org.sonatype.gradle.plugins.scan.ossindex.OutputFormat
 import java.util.*
 
@@ -5,6 +6,7 @@ plugins {
     id("java")
     jacoco
     checkstyle
+    alias(libs.plugins.sonar.qube)
     alias(libs.plugins.versioner)
     alias(libs.plugins.lombok) apply false
     alias(libs.plugins.index.scan)
@@ -44,6 +46,9 @@ buildscript {
         set("scmProjectUrl", "https://github.com/nagyesta/file-barj/")
         set("githubMavenRepoUrl", "https://maven.pkg.github.com/nagyesta/file-barj")
         set("ossrhMavenRepoUrl", "https://oss.sonatype.org/service/local/staging/deploy/maven2")
+        set("sonarOrganization", "nagyesta")
+        set("sonarProjectKey", "nagyesta_file-barj")
+        set("sonarHostUrl", "https://sonarcloud.io/")
     }
 }
 
@@ -76,6 +81,15 @@ versioner {
 
 versioner.apply()
 
+sonar {
+    properties {
+        //no jacoco report because there are no sources
+        property("sonar.organization", rootProject.extra.get("sonarOrganization") as String)
+        property("sonar.projectKey", rootProject.extra.get("sonarProjectKey") as String)
+        property("sonar.host.url", rootProject.extra.get("sonarHostUrl") as String)
+    }
+}
+
 subprojects {
     apply(plugin = "java")
     apply(plugin = "org.gradle.jacoco")
@@ -99,6 +113,19 @@ subprojects {
 
     jacoco {
         toolVersion = rootProject.libs.versions.jacoco.get()
+    }
+
+    sonar {
+        properties {
+            property("sonar.coverage.jacoco.xmlReportPaths", layout.buildDirectory.file("reports/jacoco/report.xml").get().asFile.path)
+            property("sonar.organization", rootProject.extra.get("sonarOrganization") as String)
+            property("sonar.projectKey", rootProject.extra.get("sonarProjectKey") as String)
+            property("sonar.host.url", rootProject.extra.get("sonarHostUrl") as String)
+        }
+    }
+
+    tasks.withType(SonarTask::class).forEach {
+        it.dependsOn(tasks.jacocoTestReport)
     }
 
     tasks.jacocoTestReport {

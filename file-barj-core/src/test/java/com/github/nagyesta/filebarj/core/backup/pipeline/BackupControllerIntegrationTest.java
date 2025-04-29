@@ -291,7 +291,11 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
                 .build();
     }
 
-    private byte[] decrypt(final byte[] bytes, final int offset, final int length, final SecretKey secretKey) {
+    private byte[] decrypt(
+            final byte[] bytes,
+            final int offset,
+            final int length,
+            final SecretKey secretKey) {
         final var iv = new byte[EncryptionUtil.GCM_IV_BYTES];
         System.arraycopy(bytes, offset, iv, 0, EncryptionUtil.GCM_IV_BYTES);
         final var cipher = EncryptionUtil.createCipher(secretKey, iv, Cipher.DECRYPT_MODE);

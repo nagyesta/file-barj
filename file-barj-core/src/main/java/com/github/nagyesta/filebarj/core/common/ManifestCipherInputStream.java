@@ -31,7 +31,8 @@ public class ManifestCipherInputStream extends DoOnCloseInputStream {
      * @throws IOException if an I/O error occurs
      */
     public ManifestCipherInputStream(
-            final @NonNull InputStream source, final @Nullable PrivateKey key) throws IOException {
+            final @NonNull InputStream source,
+            final @Nullable PrivateKey key) throws IOException {
         this.source = source;
         if (key != null) {
             final var encryptedKeyLength = ByteBuffer.wrap(source.readNBytes(BYTES_IN_INT)).getInt();
