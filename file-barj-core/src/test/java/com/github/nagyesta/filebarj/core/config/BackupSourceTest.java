@@ -189,31 +189,29 @@ class BackupSourceTest extends TempFileAwareTest {
     }
 
     @Test
-    void testListMatchingFilePathsShouldThrowExceptionWhenIncludePatternsAreSuppliedAndRootIsRegularFile() {
+    void testBuildShouldThrowExceptionWhenIncludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
         final var expectedFile = BackupPath.of(testDataRoot, "visible-file1.txt");
         final var underTest = BackupSource.builder()
                 .path(expectedFile)
-                .includePatterns(Set.of("**.txt"))
-                .build();
+                .includePatterns(Set.of("**.txt"));
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, underTest::listMatchingFilePaths);
+        Assertions.assertThrows(IllegalArgumentException.class, underTest::build);
 
         //then + exception
     }
 
     @Test
-    void testListMatchingFilePathsShouldThrowExceptionWhenExcludePatternsAreSuppliedAndRootIsRegularFile() {
+    void testBuildShouldThrowExceptionWhenExcludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
         final var expectedFile = BackupPath.of(testDataRoot, "visible-file1.txt");
         final var underTest = BackupSource.builder()
                 .path(expectedFile)
-                .excludePatterns(Set.of("**.txt"))
-                .build();
+                .excludePatterns(Set.of("**.txt"));
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, underTest::listMatchingFilePaths);
+        Assertions.assertThrows(IllegalArgumentException.class, underTest::build);
 
         //then + exception
     }

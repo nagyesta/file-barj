@@ -269,7 +269,7 @@ class BackupJobConfigurationTest extends TempFileAwareTest {
                 .fileNamePrefix("backup-")
                 .chunkSizeMebibyte(1)
                 .sources(Set.of(BackupSource.builder()
-                        .path(BackupPath.of(testDataRoot, "visible-file1.txt"))
+                        .path(BackupPath.of(testDataRoot))
                         .includePatterns(Set.of("")).build()))
                 .build();
 
@@ -298,7 +298,7 @@ class BackupJobConfigurationTest extends TempFileAwareTest {
                 .fileNamePrefix("backup-")
                 .chunkSizeMebibyte(1)
                 .sources(Set.of(BackupSource.builder()
-                        .path(BackupPath.of(testDataRoot, "visible-file1.txt"))
+                        .path(BackupPath.of(testDataRoot))
                         .excludePatterns(Set.of("")).build()))
                 .build();
 
