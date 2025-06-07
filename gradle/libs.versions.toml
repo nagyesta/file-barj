@@ -18,7 +18,7 @@ jacoco = "0.8.13"
 jackson = { strictly = "2.19.0" }
 jetbrainsAnnotations = "26.0.2"
 
-abortMissionPlugin = "5.1.2"
+abortMissionPlugin = "5.1.11"
 indexScanPlugin = "3.1.1"
 lombokPlugin = "8.13.1"
 shadowPlugin = "8.3.6"
