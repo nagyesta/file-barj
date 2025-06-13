@@ -10,6 +10,9 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
+import com.github.nagyesta.filebarj.core.persistence.FileSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileSetId;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
@@ -23,6 +26,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -34,10 +38,10 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutput
 /**
  * Controller implementation for the backup process.
  */
-@SuppressWarnings({"checkstyle:TodoComment"})
 @Slf4j
 public class BackupController {
     private static final int BATCH_SIZE = 250000;
+    private static final int PAGE_SIZE = 100;
     private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, SCAN_FILES, PARSE_METADATA, BACKUP);
     private final FileMetadataParser metadataParser = FileMetadataParserFactory.newInstance();
     private final ManifestManager manifestManager;
@@ -51,6 +55,7 @@ public class BackupController {
     private FileMetadataChangeDetector changeDetector;
     private ForkJoinPool threadPool;
     private final ProgressTracker progressTracker;
+    private final DataRepositories dataRepositories;
 
     /**
      * Creates a new instance and initializes it for the specified job.
@@ -58,6 +63,7 @@ public class BackupController {
      * @param parameters The parameters
      */
     public BackupController(final @NonNull BackupParameters parameters) {
+        this.dataRepositories = DataRepositories.IN_MEMORY;
         this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
         progressTracker.registerListener(parameters.getProgressListener());
         this.manifestManager = new ManifestManagerImpl(progressTracker);
@@ -109,42 +115,52 @@ public class BackupController {
     }
 
     private void listAffectedFilesFromBackupSources() {
+        final var fileSetRepository = this.dataRepositories.getFileSetRepository();
         log.info("Listing affected files from {} backup sources", manifest.getConfiguration().getSources().size());
-        final SortedSet<Path> uniquePaths = manifest.getConfiguration().getSources().stream()
-                .flatMap(source -> {
-                    log.info("Listing files from backup source: {}", source);
-                    return source.listMatchingFilePaths().stream();
-                })
-                .collect(Collectors.toCollection(TreeSet::new));
-        if (uniquePaths.isEmpty()) {
-            throw new IllegalStateException("No files found in backup sources!");
+        try (var uniquePathFileSet = listSources(fileSetRepository)) {
+            if (fileSetRepository.isEmpty(uniquePathFileSet)) {
+                throw new IllegalStateException("No files found in backup sources!");
+            }
+            progressTracker.completeStep(SCAN_FILES);
+            detectCaseInsensitivityIssues(uniquePathFileSet);
+            final var totalUniquePaths = fileSetRepository.countAll(uniquePathFileSet);
+            log.info("Found {} unique paths in backup sources. Parsing metadata...", totalUniquePaths);
+            progressTracker.estimateStepSubtotal(PARSE_METADATA, totalUniquePaths);
+
+            final var parsedMetadata = new ConcurrentSkipListSet<FileMetadata>();
+            fileSetRepository.forEach(uniquePathFileSet, threadPool, path -> {
+                final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
+                progressTracker.recordProgressInSubSteps(PARSE_METADATA);
+                parsedMetadata.add(fileMetadata);
+            });
+            this.filesFound = List.copyOf(parsedMetadata);
+            LogUtil.logStatistics(filesFound,
+                    (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
+            progressTracker.completeStep(PARSE_METADATA);
         }
-        progressTracker.completeStep(SCAN_FILES);
-        detectCaseInsensitivityIssues(uniquePaths);
-        log.info("Found {} unique paths in backup sources. Parsing metadata...", uniquePaths.size());
-        progressTracker.estimateStepSubtotal(PARSE_METADATA, uniquePaths.size());
-        this.filesFound = threadPool.submit(() -> uniquePaths.parallelStream()
-                        .map(path -> {
-                            final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
-                            progressTracker.recordProgressInSubSteps(PARSE_METADATA);
-                            return fileMetadata;
-                        })
-                        .toList())
-                .join();
-        LogUtil.logStatistics(filesFound,
-                (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
-        progressTracker.completeStep(PARSE_METADATA);
     }
 
-    private void detectCaseInsensitivityIssues(final SortedSet<Path> uniquePaths) {
-        final var list = uniquePaths.stream()
-                .collect(Collectors.groupingBy(path -> path.toString().toLowerCase()))
-                .values().stream()
-                .filter(paths -> paths.size() > 1)
-                .toList();
-        if (!list.isEmpty()) {
+    private FileSetId listSources(final @NotNull FileSetRepository fileSetRepository) {
+        final var resultFileSet = fileSetRepository.createFileSet();
+        try {
+            manifest.getConfiguration().getSources()
+                    .forEach(source -> {
+                        log.info("Listing files from backup source: {}", source);
+                        new BackupSourceScanner(fileSetRepository, source).listMatchingFilePaths(resultFileSet);
+                    });
+            return resultFileSet;
+        } catch (final Exception e) {
+            log.error("Error listing files from backup sources", e);
+            resultFileSet.close();
+            throw new ArchivalException("Error listing files from backup sources", e);
+        }
+    }
+
+    private void detectCaseInsensitivityIssues(final @NotNull FileSetId uniquePathFileSet) {
+        final var affected = dataRepositories.getFileSetRepository().detectCaseInsensitivityIssues(uniquePathFileSet);
+        if (!affected.isEmpty()) {
             log.warn(LogUtil.scary("Found some paths which differ only in case! The backup cannot be restored correctly on Windows! "
-                    + "The affected files are: {}"), list);
+                    + "The affected files are: {}"), affected);
         }
     }
 
@@ -172,8 +188,8 @@ public class BackupController {
     }
 
     private void usePreviousVersionInCurrentIncrement(
-            final FileMetadata previousVersion,
-            final FileMetadata file) {
+            final @NotNull FileMetadata previousVersion,
+            final @NotNull FileMetadata file) {
         final var archiveMetadataId = previousVersion.getArchiveMetadataId();
         previousManifests.values().stream()
                 .sorted(Comparator.comparing(BackupIncrementManifest::getStartTimeUtcEpochSeconds).reversed())
@@ -228,8 +244,8 @@ public class BackupController {
     }
 
     private void processScope(
-            final List<List<List<FileMetadata>>> scope,
-            final BaseBackupPipeline<?> pipeline) {
+            final @NotNull List<List<List<FileMetadata>>> scope,
+            final @NotNull BaseBackupPipeline<?> pipeline) {
         try {
             for (final var batch : scope) {
                 final var archived = pipeline.storeEntries(batch);

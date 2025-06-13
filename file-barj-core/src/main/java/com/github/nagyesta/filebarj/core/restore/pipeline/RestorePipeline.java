@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
+import com.github.nagyesta.filebarj.core.common.BackupSourceScanner;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetector;
 import com.github.nagyesta.filebarj.core.common.FileMetadataChangeDetectorFactory;
 import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
@@ -10,6 +11,8 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileSetId;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
@@ -67,6 +70,7 @@ public class RestorePipeline {
     private final FileMetadataSetter fileMetadataSetter;
     private final ReentrantLock streamLock = new ReentrantLock();
     private @NonNull ProgressTracker progressTracker = new NoOpProgressTracker();
+    private final DataRepositories dataRepositories;
 
     /**
      * Creates a new pipeline instance for the specified manifests.
@@ -77,14 +81,16 @@ public class RestorePipeline {
      * @param kek                the key encryption key we would like to use to decrypt files
      * @param permissionStrategy the permission comparison strategy
      */
-    public RestorePipeline(final @NonNull RestoreManifest manifest,
-                           final @NonNull Path backupDirectory,
-                           final @NonNull RestoreTargets restoreTargets,
-                           final @Nullable PrivateKey kek,
-                           final @Nullable PermissionComparisonStrategy permissionStrategy) {
+    public RestorePipeline(
+            final @NonNull RestoreManifest manifest,
+            final @NonNull Path backupDirectory,
+            final @NonNull RestoreTargets restoreTargets,
+            final @Nullable PrivateKey kek,
+            final @Nullable PermissionComparisonStrategy permissionStrategy) {
         if (manifest.getMaximumAppVersion().compareTo(new AppVersion()) > 0) {
             throw new IllegalArgumentException("Manifests were saved with a newer version of the application");
         }
+        this.dataRepositories = DataRepositories.IN_MEMORY;
         this.changeDetector = FileMetadataChangeDetectorFactory
                 .create(manifest.getConfiguration(), manifest.getFiles(), permissionStrategy);
         this.manifest = manifest;
@@ -198,37 +204,29 @@ public class RestorePipeline {
                 .map(path -> " limited to path: " + path)
                 .orElse(""));
         final var files = manifest.getFilesOfLastManifest().values();
-        final var modifiedSources = manifest.getConfiguration().getSources().stream()
-                .map(source -> BackupSource.builder()
-                        .path(BackupPath.of(restoreTargets.mapToRestorePath(source.getPath())))
-                        .includePatterns(source.getIncludePatterns())
-                        .excludePatterns(source.getExcludePatterns())
-                        .build())
-                .collect(Collectors.toSet());
-        final var pathsInRestoreTarget = modifiedSources.stream()
-                .map(BackupSource::listMatchingFilePaths)
-                .flatMap(Collection::stream)
-                .filter(pathRestriction)
-                .collect(Collectors.toSet());
-        final var pathsInBackup = threadPool.submit(() -> files.parallelStream()
-                .map(FileMetadata::getAbsolutePath)
-                .map(restoreTargets::mapToRestorePath)
-                .collect(Collectors.toSet())).join();
-        final var counter = new AtomicInteger(0);
-        threadPool.submit(() -> pathsInRestoreTarget.parallelStream()
-                .filter(path -> !pathsInBackup.contains(path))
-                .sorted(Comparator.reverseOrder())
-                .forEachOrdered(path -> {
-                    try {
-                        log.info("Deleting left-over file: {}", path);
-                        deleteIfExists(path);
-                        counter.incrementAndGet();
-                    } catch (final IOException e) {
-                        throw new ArchivalException("Failed to delete left-over file: " + path, e);
-                    }
-                })).join();
-        progressTracker.completeStep(DELETE_OBSOLETE_FILES);
-        log.info("Deleted {} left-over files.", counter.get());
+        final var fileSetRepository = dataRepositories.getFileSetRepository();
+        try (var pathsInRestoreTarget = fileSetRepository.createFileSet()) {
+            findPathsInRestoreTarget(threadPool, pathsInRestoreTarget, pathRestriction);
+            final var pathsInBackup = threadPool.submit(() -> files.parallelStream()
+                    .map(FileMetadata::getAbsolutePath)
+                    .map(restoreTargets::mapToRestorePath)
+                    .collect(Collectors.toSet())).join();
+            final var counter = new AtomicInteger(0);
+            fileSetRepository.forEachReverse(pathsInRestoreTarget, threadPool, path -> {
+                if (pathsInBackup.contains(path)) {
+                    return;
+                }
+                try {
+                    log.info("Deleting left-over file: {}", path);
+                    deleteIfExists(path);
+                    counter.incrementAndGet();
+                } catch (final IOException e) {
+                    throw new ArchivalException("Failed to delete left-over file: " + path, e);
+                }
+            });
+            progressTracker.completeStep(DELETE_OBSOLETE_FILES);
+            log.info("Deleted {} left-over files.", counter.get());
+        }
     }
 
     /**
@@ -364,6 +362,27 @@ public class RestorePipeline {
             FileUtils.deleteDirectory(currentFile.toFile());
         } else {
             Files.delete(currentFile);
+        }
+    }
+
+    private void findPathsInRestoreTarget(
+            final @NotNull ForkJoinPool threadPool,
+            final @NotNull FileSetId pathsInRestoreTarget,
+            final @NotNull Predicate<Path> pathRestriction) {
+        final var fileSetRepository = dataRepositories.getFileSetRepository();
+        try (var uniquePathSet = fileSetRepository.createFileSet()) {
+            manifest.getConfiguration().getSources().stream()
+                    .map(source -> BackupSource.builder()
+                            .path(BackupPath.of(restoreTargets.mapToRestorePath(source.getPath())))
+                            .includePatterns(source.getIncludePatterns())
+                            .excludePatterns(source.getExcludePatterns())
+                            .build())
+                    .forEach(source -> new BackupSourceScanner(fileSetRepository, source).listMatchingFilePaths(uniquePathSet));
+            fileSetRepository.forEach(uniquePathSet, threadPool, path -> {
+                if (pathRestriction.test(path)) {
+                    fileSetRepository.appendTo(pathsInRestoreTarget, path);
+                }
+            });
         }
     }
 
