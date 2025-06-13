@@ -2,7 +2,9 @@ package com.github.nagyesta.filebarj.core.config;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.common.BackupSourceScanner;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
+import com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFileSetRepository;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,17 +24,34 @@ import java.util.stream.Stream;
 
 class BackupSourceTest extends TempFileAwareTest {
 
+    private static final String ROOT = "";
+    private static final String HIDDEN = ".hidden";
+    private static final String HIDDEN_DIR_1 = ".hidden/dir1";
+    private static final String HIDDEN_DIR_2 = ".hidden/dir2";
+    private static final String VISIBLE = "visible";
+    private static final String VISIBLE_DIR_1 = "visible/dir1";
+    private static final String VISIBLE_DIR_2 = "visible/dir2";
+    private static final String TMP = "tmp";
+    private static final String TMP_IGNORED = "tmp/ignored";
+    private static final String HIDDEN_FILE_1_TXT = ".hidden-file1.txt";
+    private static final String VISIBLE_FILE_1_TXT = "visible-file1.txt";
+    private static final String HIDDEN_FILE_3_TXT = ".hidden/file3.txt";
+    private static final String HIDDEN_DIR_1_1_TXT = ".hidden/dir1/1.txt";
+    private static final String HIDDEN_DIR_2_1_MD = ".hidden/dir2/1.md";
+    private static final String VISIBLE_1_TXT = "visible/1.txt";
+    private static final String VISIBLE_DIR_1_1_TXT = "visible/dir1/1.txt";
+    private static final String TMP_1_TXT = "tmp/1.txt";
     private static final List<String> DIRS_RELATIVE = List.of(
-            "",
-            ".hidden", ".hidden/dir1", ".hidden/dir2",
-            "visible", "visible/dir1", "visible/dir2",
-            "tmp", "tmp/ignored");
+            ROOT,
+            HIDDEN, HIDDEN_DIR_1, HIDDEN_DIR_2,
+            VISIBLE, VISIBLE_DIR_1, VISIBLE_DIR_2,
+            TMP, TMP_IGNORED);
     private static final List<String> FILES_RELATIVE = List.of(
-            ".hidden-file1.txt",
-            "visible-file1.txt",
-            ".hidden/file3.txt", ".hidden/dir1/1.txt", ".hidden/dir2/1.md",
-            "visible/1.txt", "visible/dir1/1.txt",
-            "tmp/1.txt");
+            HIDDEN_FILE_1_TXT,
+            VISIBLE_FILE_1_TXT,
+            HIDDEN_FILE_3_TXT, HIDDEN_DIR_1_1_TXT, HIDDEN_DIR_2_1_MD,
+            VISIBLE_1_TXT, VISIBLE_DIR_1_1_TXT,
+            TMP_1_TXT);
 
     @Override
     @BeforeEach
@@ -58,10 +77,14 @@ class BackupSourceTest extends TempFileAwareTest {
     @SuppressWarnings("checkstyle:MagicNumber")
     public static Stream<Arguments> filterExpressionProvider() {
         return Stream.<Arguments>builder()
-                .add(Arguments.of(Set.of("**/*.txt"), Set.of("**/dir2/**", "tmp", "tmp/**"), 9, ".txt"))
+                .add(Arguments.of(Set.of("**/*.txt"), Set.of("**/dir2/**", TMP, "tmp/**"), 9, ".txt"))
                 .add(Arguments.of(Set.of("**/*.md"), Set.of(), 4, ".md"))
-                .add(Arguments.of(Set.of(".hidden/**"), Set.of("**/*.md", "**/*.txt"), 4, "!!!NONE-MATCH!!!"))
-                .add(Arguments.of(Set.of(".hidden*.txt"), Set.of(), 2, ".hidden-file1.txt"))
+                .add(Arguments.of(Set.of(".[hH]idden/**"), Set.of("**/*.md", "**/*.txt"), 4, "!!!NONE-MATCH!!!"))
+                .add(Arguments.of(Set.of(".?idden*.txt"), Set.of(), 2, HIDDEN_FILE_1_TXT))
+                .add(Arguments.of(Set.of(".hidden-file[0-9].txt"), Set.of(), 2, HIDDEN_FILE_1_TXT))
+                .add(Arguments.of(Set.of(".hidden-file[!a-z].txt"), Set.of(), 2, HIDDEN_FILE_1_TXT))
+                .add(Arguments.of(Set.of("???????-file1.txt"), Set.of(), 3, "-file1.txt"))
+                .add(Arguments.of(Set.of("[.v][hi][is][di][db][el][ne]-file1.txt"), Set.of(), 3, "-file1.txt"))
                 .build();
     }
 
@@ -74,12 +97,29 @@ class BackupSourceTest extends TempFileAwareTest {
                 .build();
     }
 
-    @SuppressWarnings({"checkstyle:MagicNumber", "MagicNumber"})
     public static Stream<Arguments> nullFilterExpressionProvider() {
         return Stream.<Arguments>builder()
-                .add(Arguments.of(null, null, 17))
-                .add(Arguments.of(null, Set.of("**.txt"), 10))
-                .add(Arguments.of(Set.of("visible/**"), null, 6))
+                .add(Arguments.of(null, null,
+                        List.of(ROOT, HIDDEN, HIDDEN_DIR_1, HIDDEN_DIR_2, VISIBLE, VISIBLE_DIR_1, VISIBLE_DIR_2, TMP, TMP_IGNORED,
+                                HIDDEN_FILE_1_TXT, VISIBLE_FILE_1_TXT, HIDDEN_FILE_3_TXT, HIDDEN_DIR_1_1_TXT, HIDDEN_DIR_2_1_MD,
+                                VISIBLE_1_TXT, VISIBLE_DIR_1_1_TXT, TMP_1_TXT
+                        )
+                ))
+                .add(Arguments.of(null, Set.of("**.txt"),
+                        List.of(ROOT, HIDDEN, HIDDEN_DIR_1, HIDDEN_DIR_2, VISIBLE, VISIBLE_DIR_1, VISIBLE_DIR_2, TMP, TMP_IGNORED,
+                                HIDDEN_DIR_2_1_MD
+                        )
+                ))
+                .add(Arguments.of(Set.of("visible/**"), null,
+                        List.of(ROOT, VISIBLE, VISIBLE_DIR_1, VISIBLE_DIR_2,
+                                VISIBLE_1_TXT, VISIBLE_DIR_1_1_TXT
+                        )
+                ))
+                .add(Arguments.of(null, Set.of(VISIBLE),
+                        List.of(ROOT, HIDDEN, HIDDEN_DIR_1, HIDDEN_DIR_2, TMP, TMP_IGNORED,
+                                HIDDEN_FILE_1_TXT, VISIBLE_FILE_1_TXT, HIDDEN_FILE_3_TXT, HIDDEN_DIR_1_1_TXT, HIDDEN_DIR_2_1_MD, TMP_1_TXT
+                        )
+                ))
                 .build();
     }
 
@@ -92,14 +132,18 @@ class BackupSourceTest extends TempFileAwareTest {
             final String expectedExtension
     ) {
         //given
-        final var underTest = BackupSource.builder()
+        final var source = BackupSource.builder()
                 .path(BackupPath.of(testDataRoot))
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
+        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
-        final var actual = underTest.listMatchingFilePaths();
+        final var actualId = fileSetRepository.createFileSet();
+        underTest.listMatchingFilePaths(actualId);
+        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
 
         //then
         Assertions.assertEquals(expectedResults, actual.size());
@@ -122,14 +166,18 @@ class BackupSourceTest extends TempFileAwareTest {
             final int expectedResults
     ) {
         //given
-        final var underTest = BackupSource.builder()
+        final var source = BackupSource.builder()
                 .path(BackupPath.of(testDataRoot))
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
+        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
-        final var actual = underTest.listMatchingFilePaths();
+        final var actualId = fileSetRepository.createFileSet();
+        underTest.listMatchingFilePaths(actualId);
+        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
 
         //then
         Assertions.assertEquals(expectedResults, actual.size());
@@ -142,32 +190,40 @@ class BackupSourceTest extends TempFileAwareTest {
     void testListMatchingFilePathsShouldUseDefaultFiltersWhenNullPatternSetIsSupplied(
             final Set<String> includePatterns,
             final Set<String> excludePatterns,
-            final int expectedResults
+            final List<String> expectedPaths
     ) {
         //given
-        final var underTest = BackupSource.builder()
+        final var source = BackupSource.builder()
                 .path(BackupPath.of(testDataRoot))
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
+        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
-        final var actual = underTest.listMatchingFilePaths();
+        final var actualId = fileSetRepository.createFileSet();
+        underTest.listMatchingFilePaths(actualId);
+        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
 
         //then
-        Assertions.assertEquals(expectedResults, actual.size());
+        assertExpectedPathsFound(expectedPaths, actual);
     }
 
     @Test
     void testListMatchingFilePathsShouldReturnSingleFileWhenRootIsRegularFile() {
         //given
-        final var expectedFile = Path.of(testDataRoot.toString(), ".hidden-file1.txt");
-        final var underTest = BackupSource.builder()
+        final var expectedFile = testDataRoot.resolve(HIDDEN_FILE_1_TXT);
+        final var source = BackupSource.builder()
                 .path(BackupPath.of(expectedFile))
                 .build();
+        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
-        final var actual = underTest.listMatchingFilePaths();
+        final var actualId = fileSetRepository.createFileSet();
+        underTest.listMatchingFilePaths(actualId);
+        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
 
         //then
         Assertions.assertIterableEquals(List.of(expectedFile), actual);
@@ -177,12 +233,16 @@ class BackupSourceTest extends TempFileAwareTest {
     void testListMatchingFilePathsShouldReturnNothingWhenRootDoesNotExist() {
         //given
         final var expectedFile = BackupPath.of(testDataRoot, "unknown-file.txt");
-        final var underTest = BackupSource.builder()
+        final var source = BackupSource.builder()
                 .path(expectedFile)
                 .build();
+        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
-        final var actual = underTest.listMatchingFilePaths();
+        final var actualId = fileSetRepository.createFileSet();
+        underTest.listMatchingFilePaths(actualId);
+        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
 
         //then
         Assertions.assertIterableEquals(List.of(), actual);
@@ -191,13 +251,15 @@ class BackupSourceTest extends TempFileAwareTest {
     @Test
     void testBuildShouldThrowExceptionWhenIncludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
-        final var expectedFile = BackupPath.of(testDataRoot, "visible-file1.txt");
-        final var underTest = BackupSource.builder()
+        final var expectedFile = BackupPath.of(testDataRoot, VISIBLE_FILE_1_TXT);
+        final var source = BackupSource.builder()
                 .path(expectedFile)
-                .includePatterns(Set.of("**.txt"));
+                .includePatterns(Set.of("**.txt"))
+                .build();
+        final var fileSetRepository = new InMemoryFileSetRepository();
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, underTest::build);
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new BackupSourceScanner(fileSetRepository, source));
 
         //then + exception
     }
@@ -205,13 +267,15 @@ class BackupSourceTest extends TempFileAwareTest {
     @Test
     void testBuildShouldThrowExceptionWhenExcludePatternsAreSuppliedAndRootIsRegularFile() {
         //given
-        final var expectedFile = BackupPath.of(testDataRoot, "visible-file1.txt");
-        final var underTest = BackupSource.builder()
+        final var expectedFile = BackupPath.of(testDataRoot, VISIBLE_FILE_1_TXT);
+        final var source = BackupSource.builder()
                 .path(expectedFile)
-                .excludePatterns(Set.of("**.txt"));
+                .excludePatterns(Set.of("**.txt"))
+                .build();
+        final var fileSetRepository = new InMemoryFileSetRepository();
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, underTest::build);
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new BackupSourceScanner(fileSetRepository, source));
 
         //then + exception
     }
@@ -238,7 +302,7 @@ class BackupSourceTest extends TempFileAwareTest {
     void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfMinimalObject() throws JsonProcessingException {
         //given
         final var expected = BackupSource.builder()
-                .path(BackupPath.of(testDataRoot, "visible-file1.txt"))
+                .path(BackupPath.of(testDataRoot, VISIBLE_FILE_1_TXT))
                 .build();
         final var json = objectMapper.writer().writeValueAsString(expected);
 
@@ -273,5 +337,15 @@ class BackupSourceTest extends TempFileAwareTest {
                 "Exclude patterns should be contained in: " + actual);
         Assertions.assertTrue(actual.contains(FilenameUtils.separatorsToUnix(includePatterns.toString())),
                 "Include patterns should be contained in: " + actual);
+    }
+
+    private void assertExpectedPathsFound(
+            final List<String> expectedPaths,
+            final List<Path> actual) {
+        final var expected = expectedPaths.stream()
+                .map(path -> testDataRoot.resolve(path))
+                .sorted()
+                .toList();
+        Assertions.assertIterableEquals(expected, actual);
     }
 }
