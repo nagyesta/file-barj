@@ -49,7 +49,6 @@ buildscript {
         set("ossrhSnapshotRepoUrl", "https://central.sonatype.com/repository/maven-snapshots/")
         set("sonarOrganization", "nagyesta")
         set("sonarProjectKey", "nagyesta_file-barj")
-        set("sonarHostUrl", "https://sonarcloud.io/")
     }
 }
 
@@ -87,7 +86,6 @@ sonar {
         //no jacoco report because there are no sources
         property("sonar.organization", rootProject.extra.get("sonarOrganization") as String)
         property("sonar.projectKey", rootProject.extra.get("sonarProjectKey") as String)
-        property("sonar.host.url", rootProject.extra.get("sonarHostUrl") as String)
     }
 }
 
@@ -121,7 +119,6 @@ subprojects {
             property("sonar.coverage.jacoco.xmlReportPaths", layout.buildDirectory.file("reports/jacoco/report.xml").get().asFile.path)
             property("sonar.organization", rootProject.extra.get("sonarOrganization") as String)
             property("sonar.projectKey", rootProject.extra.get("sonarProjectKey") as String)
-            property("sonar.host.url", rootProject.extra.get("sonarHostUrl") as String)
         }
     }
 
