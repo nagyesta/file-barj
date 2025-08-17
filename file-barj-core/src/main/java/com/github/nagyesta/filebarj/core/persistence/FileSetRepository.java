@@ -11,11 +11,6 @@ import java.util.function.Consumer;
 
 public interface FileSetRepository {
 
-    /**
-     * The default page size used when not specified during looping.
-     */
-    long PAGE_SIZE = 100L;
-
     FileSetId createFileSet();
 
     void appendTo(FileSetId id, Path path);

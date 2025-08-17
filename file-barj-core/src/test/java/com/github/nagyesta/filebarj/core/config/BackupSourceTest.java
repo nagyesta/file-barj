@@ -77,14 +77,33 @@ class BackupSourceTest extends TempFileAwareTest {
     @SuppressWarnings("checkstyle:MagicNumber")
     public static Stream<Arguments> filterExpressionProvider() {
         return Stream.<Arguments>builder()
-                .add(Arguments.of(Set.of("**/*.txt"), Set.of("**/dir2/**", TMP, "tmp/**"), 9, ".txt"))
-                .add(Arguments.of(Set.of("**/*.md"), Set.of(), 4, ".md"))
-                .add(Arguments.of(Set.of(".[hH]idden/**"), Set.of("**/*.md", "**/*.txt"), 4, "!!!NONE-MATCH!!!"))
-                .add(Arguments.of(Set.of(".?idden*.txt"), Set.of(), 2, HIDDEN_FILE_1_TXT))
-                .add(Arguments.of(Set.of(".hidden-file[0-9].txt"), Set.of(), 2, HIDDEN_FILE_1_TXT))
-                .add(Arguments.of(Set.of(".hidden-file[!a-z].txt"), Set.of(), 2, HIDDEN_FILE_1_TXT))
-                .add(Arguments.of(Set.of("???????-file1.txt"), Set.of(), 3, "-file1.txt"))
-                .add(Arguments.of(Set.of("[.v][hi][is][di][db][el][ne]-file1.txt"), Set.of(), 3, "-file1.txt"))
+                .add(Arguments.of(Set.of("**/*.txt"), Set.of("**/dir2/**", TMP, "tmp/**"),
+                        List.of(ROOT, HIDDEN, HIDDEN_DIR_1, VISIBLE, VISIBLE_DIR_1,
+                                HIDDEN_FILE_3_TXT, HIDDEN_DIR_1_1_TXT,
+                                VISIBLE_1_TXT, VISIBLE_DIR_1_1_TXT
+                        )
+                ))
+                .add(Arguments.of(Set.of("**/*.md"), Set.of(),
+                        List.of(ROOT, HIDDEN, HIDDEN_DIR_2, HIDDEN_DIR_2_1_MD)
+                ))
+                .add(Arguments.of(Set.of(".[hH]idden/**"), Set.of("**/*.md", "**/*.txt"),
+                        List.of(ROOT, HIDDEN, HIDDEN_DIR_1, HIDDEN_DIR_2)
+                ))
+                .add(Arguments.of(Set.of(".?idden*.txt"), Set.of(),
+                        List.of(ROOT, HIDDEN_FILE_1_TXT)
+                ))
+                .add(Arguments.of(Set.of(".hidden-file[0-9].txt"), Set.of(),
+                        List.of(ROOT, HIDDEN_FILE_1_TXT)
+                ))
+                .add(Arguments.of(Set.of(".hidden-file[!a-z].txt"), Set.of(),
+                        List.of(ROOT, HIDDEN_FILE_1_TXT)
+                ))
+                .add(Arguments.of(Set.of("???????-file1.txt"), Set.of(),
+                        List.of(ROOT, HIDDEN_FILE_1_TXT, VISIBLE_FILE_1_TXT)
+                ))
+                .add(Arguments.of(Set.of("[.v][hi][is][di][db][el][ne]-file1.txt"), Set.of(),
+                        List.of(ROOT, HIDDEN_FILE_1_TXT, VISIBLE_FILE_1_TXT)
+                ))
                 .build();
     }
 
@@ -128,8 +147,7 @@ class BackupSourceTest extends TempFileAwareTest {
     void testListMatchingFilePathsShouldOnlyReturnMatchingFilesAndTheirParentsWhenFilteringIsUsed(
             final Set<String> includePatterns,
             final Set<String> excludePatterns,
-            final int expectedResults,
-            final String expectedExtension
+            final List<String> expectedPaths
     ) {
         //given
         final var source = BackupSource.builder()
@@ -146,16 +164,7 @@ class BackupSourceTest extends TempFileAwareTest {
         final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
 
         //then
-        Assertions.assertEquals(expectedResults, actual.size());
-        actual.forEach(path -> {
-            if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-                Assertions.assertTrue(path.toString().endsWith(expectedExtension),
-                        "File should be " + expectedExtension + " but found: " + path);
-            } else {
-                Assertions.assertTrue(Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS),
-                        "File should be a directory but wasn't: " + path);
-            }
-        });
+        assertExpectedPathsFound(expectedPaths, actual);
     }
 
     @ParameterizedTest
