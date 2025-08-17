@@ -17,6 +17,6 @@ changelog:
     - title: Dependency updates
       labels:
         - dependency
-    - title: Other Changes
+    - title: Other changes
       labels:
         - "*"
