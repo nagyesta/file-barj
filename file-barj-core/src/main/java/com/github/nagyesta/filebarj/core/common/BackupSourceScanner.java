@@ -31,14 +31,12 @@ public class BackupSourceScanner {
      * Universal pattern not excluding any files.
      */
     private static final Set<String> EXCLUDE_NO_FILES = Set.of();
-    private static final String GLOB_WITH_NO_WILDCARDS = "glob:[^*?\\[]+";
 
     private final FileSetRepository fileSetRepository;
     private final BackupSource backupSource;
     private final Path backupSourceOsPath;
     private final SortedSet<String> includePatterns;
     private final SortedSet<String> excludePatterns;
-    private final SortedSet<String> concreteExcludePatterns;
     private final boolean shouldUsePatterns;
 
     public BackupSourceScanner(
@@ -52,7 +50,6 @@ public class BackupSourceScanner {
         this.shouldUsePatterns = pathTypeCanUsePatterns(backupSource.getPath(), originalIncludes, originalExcludes);
         this.includePatterns = preProcessPatterns(coalescePatterns(originalIncludes, INCLUDE_ALL_FILES));
         this.excludePatterns = preProcessPatterns(coalescePatterns(originalExcludes, EXCLUDE_NO_FILES));
-        this.concreteExcludePatterns = preProcessConcretePatterns(excludePatterns);
     }
 
     /**
@@ -65,9 +62,11 @@ public class BackupSourceScanner {
         try (var tempFileSetId = fileSetRepository.createFileSet()) {
             var current = Optional.of(backupSourceOsPath);
             var parentDirsFromBackupSource = List.<Path>of();
+            Path lastParent = null;
             while (current.isPresent()) {
                 final var currentPath = current.get();
-                if (!parentDirsFromBackupSource.contains(currentPath.getParent())) {
+                if (!currentPath.getParent().equals(lastParent)) {
+                    lastParent = currentPath.getParent();
                     parentDirsFromBackupSource = findParentsFromBackupSource(currentPath);
                 }
                 listRemainingFiles(currentPath, parentDirsFromBackupSource, resultFileSetId, tempFileSetId);
@@ -94,7 +93,7 @@ public class BackupSourceScanner {
         if (!currentPath.toFile().exists()) {
             return;
         }
-        if (shouldIgnoreByConcretePattern(currentPath)) {
+        if (shouldIgnoreByExcludePattern(currentPath)) {
             return;
         }
         if (!Files.isDirectory(currentPath, LinkOption.NOFOLLOW_LINKS)) {
@@ -115,6 +114,7 @@ public class BackupSourceScanner {
                         .stream()
                         .flatMap(Arrays::stream)
                         .map(File::toPath)
+                        .filter(child -> !shouldIgnoreByExcludePattern(child))
                         .forEach((Path child) -> fileSetRepository.appendTo(tempFileSetId, child));
             }
         }
@@ -124,8 +124,8 @@ public class BackupSourceScanner {
         return shouldUsePatterns && includePatternsMatch(currentPath) && !excludePatternsMatch(currentPath);
     }
 
-    private boolean shouldIgnoreByConcretePattern(final @NotNull Path currentPath) {
-        return shouldUsePatterns && concreteExcludePatternsMatch(currentPath);
+    private boolean shouldIgnoreByExcludePattern(final @NotNull Path currentPath) {
+        return shouldUsePatterns && excludePatternsMatch(currentPath);
     }
 
     private boolean shouldIgnoreFileByPatterns(final @NotNull Path currentPath) {
@@ -139,21 +139,14 @@ public class BackupSourceScanner {
     }
 
     private boolean includePatternsMatch(final @NotNull Path toFilter) {
-        final var fileSystem = FileSystems.getDefault();
-        return includePatterns.stream()
-                .map(fileSystem::getPathMatcher)
-                .anyMatch(matcher -> matcher.matches(toFilter.toAbsolutePath()));
+        return anyPatternsMatch(includePatterns, toFilter);
     }
 
     private boolean excludePatternsMatch(final @NotNull Path toFilter) {
-        return excludePatternsMatch(excludePatterns, toFilter);
+        return anyPatternsMatch(excludePatterns, toFilter);
     }
 
-    private boolean concreteExcludePatternsMatch(final @NotNull Path toFilter) {
-        return excludePatternsMatch(concreteExcludePatterns, toFilter);
-    }
-
-    private boolean excludePatternsMatch(
+    private boolean anyPatternsMatch(
             final @NotNull SortedSet<String> patterns,
             final @NotNull Path toFilter) {
         final var fileSystem = FileSystems.getDefault();
@@ -195,12 +188,6 @@ public class BackupSourceScanner {
     private @NotNull SortedSet<String> preProcessPatterns(final @NotNull Set<String> patterns) {
         return Collections.unmodifiableSortedSet(patterns.stream()
                 .map(this::translatePattern)
-                .collect(Collectors.toCollection(TreeSet::new)));
-    }
-
-    private @NotNull SortedSet<String> preProcessConcretePatterns(final @NotNull SortedSet<String> patterns) {
-        return Collections.unmodifiableSortedSet(patterns.stream()
-                .filter(pattern -> pattern.matches(GLOB_WITH_NO_WILDCARDS))
                 .collect(Collectors.toCollection(TreeSet::new)));
     }
 

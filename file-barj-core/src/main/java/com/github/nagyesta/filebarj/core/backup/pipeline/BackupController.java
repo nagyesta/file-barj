@@ -41,7 +41,6 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutput
 @Slf4j
 public class BackupController {
     private static final int BATCH_SIZE = 250000;
-    private static final int PAGE_SIZE = 100;
     private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, SCAN_FILES, PARSE_METADATA, BACKUP);
     private final FileMetadataParser metadataParser = FileMetadataParserFactory.newInstance();
     private final ManifestManager manifestManager;
