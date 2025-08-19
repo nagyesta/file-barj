@@ -42,7 +42,8 @@ tasks.shadowJar {
     exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
     archiveClassifier.set("")
 }
-tasks.build.get().finalizedBy(tasks.shadowJar)
+tasks.shadowJar.get().dependsOn(tasks.jar)
+tasks.build.get().dependsOn(tasks.shadowJar)
 
 val copyLegalDocs = tasks.register<Copy>("copyLegalDocs") {
     group = "documentation"
