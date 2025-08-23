@@ -30,7 +30,6 @@ on:
       - ".github/assets/**"
       - ".github/workflows/**"
       - "!.github/workflows/codeql-analysis.yml"
-      - ".github/pr-labeler.yml"
       - "renovate.json"
       - ".whitesource"
       - "gradle/libs.versions.toml"
