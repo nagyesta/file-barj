@@ -12,14 +12,14 @@ commonsCli = "1.10.0"
 commonsIo = "2.20.0"
 mockitoCore = "5.20.0"
 jupiter = "6.0.0"
-abortMission = "6.0.163"
+abortMission = "6.1.0"
 checkstyle = "12.1.1"
 jacoco = "0.8.14"
 jackson = { strictly = "2.20.0" }
 jacksonAnnotations = { strictly = "2.20" }
 jetbrainsAnnotations = "26.0.2-1"
 
-abortMissionPlugin = "5.1.45"
+abortMissionPlugin = "5.2.1"
 indexScanPlugin = "3.1.4"
 lombokPlugin = "9.0.0"
 shadowPlugin = "9.2.2"
