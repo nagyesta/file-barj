@@ -84,6 +84,7 @@ versioner.apply()
 
 sonar {
     properties {
+        property("sonar.exclusions", "**/*.md,.github/**,.idea/**")
         //no jacoco report because there are no sources
         property("sonar.organization", rootProject.extra.get("sonarOrganization") as String)
         property("sonar.projectKey", rootProject.extra.get("sonarProjectKey") as String)
@@ -118,6 +119,9 @@ subprojects {
     sonar {
         properties {
             property("sonar.coverage.jacoco.xmlReportPaths", layout.buildDirectory.file("reports/jacoco/report.xml").get().asFile.path)
+            property("sonar.junit.reportPaths", layout.buildDirectory.dir("test-results/test").get().asFile.path)
+            property("sonar.sources", "src/main/java")
+            property("sonar.exclusions", "**/*.md,.github/**,.idea/**")
             property("sonar.organization", rootProject.extra.get("sonarOrganization") as String)
             property("sonar.projectKey", rootProject.extra.get("sonarProjectKey") as String)
         }
@@ -141,7 +145,6 @@ subprojects {
 
     tasks.withType<JacocoCoverageVerification>().configureEach {
         inputs.file(layout.buildDirectory.file("reports/jacoco/report.xml"))
-        outputs.file(layout.buildDirectory.file("reports/jacoco/jacocoTestCoverageVerification"))
 
         violationRules {
             rule {
@@ -178,9 +181,6 @@ subprojects {
                         "com.github.nagyesta.filebarj.job.Controller"
                 )
             }
-        }
-        doLast {
-            layout.buildDirectory.file("reports/jacoco/jacocoTestCoverageVerification").get().asFile.writeText("Passed")
         }
     }
 
@@ -274,6 +274,21 @@ ossIndexAudit {
 checkstyle {
     toolVersion = rootProject.libs.versions.checkstyle.get()
 }
+
+val writeVersion = tasks.register<DefaultTask>("writeVersion") {
+    group = "versioning"
+    description = "Writes project version to a file."
+    outputs.file(layout.buildDirectory.file("version").get().asFile)
+    inputs.property("version", project.version)
+
+    val versionFile = file("build/version")
+    val versionText = project.version.toString()
+    doLast {
+        versionFile.writeText("v${versionText}")
+    }
+    mustRunAfter(tasks.clean)
+}.get()
+tasks.build.get().dependsOn(writeVersion)
 
 repositories {
     mavenCentral()
