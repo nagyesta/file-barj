@@ -9,8 +9,9 @@ import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.json.PublicKeyDeserializer;
 import com.github.nagyesta.filebarj.core.json.PublicKeySerializer;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
-import com.github.nagyesta.filebarj.core.validation.FileNamePrefix;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
@@ -95,7 +96,8 @@ public class BackupJobConfiguration {
      * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the previous
      * increments cannot use a different duplicate handling strategy.
      */
-    @FileNamePrefix
+    @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+    @NotBlank
     @JsonProperty("file_name_prefix")
     private final @NonNull String fileNamePrefix;
     /**

@@ -8,12 +8,14 @@ import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Set;
 
 class BackupJobConfigurationTest extends TempFileAwareTest {
@@ -140,12 +142,17 @@ class BackupJobConfigurationTest extends TempFileAwareTest {
         final var actual = validator.validate(underTest);
 
         //then
-        Assertions.assertEquals(1, actual.size());
+        Assertions.assertEquals(2, actual.size());
         //noinspection OptionalGetWithoutIsPresent
-        final var actualEntry = actual.stream().findFirst().get();
-        Assertions.assertEquals("fileNamePrefix", actualEntry.getPropertyPath().toString());
-        Assertions.assertEquals("", actualEntry.getInvalidValue());
-        Assertions.assertEquals("must not be blank", actualEntry.getMessage());
+        final var actualFirstEntry = actual.stream().min(Comparator.comparing(ConstraintViolation::getMessage)).get();
+        Assertions.assertEquals("fileNamePrefix", actualFirstEntry.getPropertyPath().toString());
+        Assertions.assertEquals("", actualFirstEntry.getInvalidValue());
+        Assertions.assertEquals("must match \"^[a-zA-Z0-9_-]+$\"", actualFirstEntry.getMessage());
+        //noinspection OptionalGetWithoutIsPresent
+        final var actualSecondEntry = actual.stream().max(Comparator.comparing(ConstraintViolation::getMessage)).get();
+        Assertions.assertEquals("fileNamePrefix", actualSecondEntry.getPropertyPath().toString());
+        Assertions.assertEquals("", actualSecondEntry.getInvalidValue());
+        Assertions.assertEquals("must not be blank", actualSecondEntry.getMessage());
     }
 
     @Test
