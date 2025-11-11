@@ -3,7 +3,6 @@ package com.github.nagyesta.filebarj.core.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
-import com.github.nagyesta.filebarj.core.validation.FileNamePrefix;
 import com.github.nagyesta.filebarj.core.validation.PastOrPresentEpochSeconds;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -44,7 +43,8 @@ public class BackupIncrementManifest extends EncryptionKeyStore {
     /**
      * The file name prefix used by the backup archives.
      */
-    @FileNamePrefix
+    @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+    @NotBlank
     @JsonProperty("file_name_prefix")
     private @NonNull String fileNamePrefix;
     /**
