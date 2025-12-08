@@ -12,7 +12,7 @@ commonsCli = "1.11.0"
 commonsIo = "2.21.0"
 mockitoCore = "5.20.0"
 jupiter = "6.0.1"
-abortMission = "6.1.33"
+abortMission = "6.2.0"
 checkstyle = "12.2.0"
 jacoco = "0.8.14"
 jackson = { strictly = "2.20.1" }
