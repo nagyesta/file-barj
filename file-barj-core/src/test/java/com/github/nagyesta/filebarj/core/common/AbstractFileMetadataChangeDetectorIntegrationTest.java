@@ -11,6 +11,9 @@ import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.provider.Arguments;
@@ -19,6 +22,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -134,11 +139,23 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
     }
 
     protected SimpleFileMetadataChangeDetector getDefaultSimpleFileMetadataChangeDetector(final FileMetadata prev) {
-        return new SimpleFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)), null);
+        final var fileMetadataSetRepository = DataStore.newInMemoryInstance().fileMetadataSetRepository();
+        final var fileSet = populateRepository(fileMetadataSetRepository, Collections.singleton(prev));
+        return new SimpleFileMetadataChangeDetector(fileMetadataSetRepository, Map.of("test", fileSet), null);
     }
 
     protected HashingFileMetadataChangeDetector getDefaultHashingFileMetadataChangeDetector(final FileMetadata prev) {
-        return new HashingFileMetadataChangeDetector(Map.of("test", Map.of(prev.getId(), prev)), null);
+        final var fileMetadataSetRepository = DataStore.newInMemoryInstance().fileMetadataSetRepository();
+        final var fileSet = populateRepository(fileMetadataSetRepository, Collections.singleton(prev));
+        return new HashingFileMetadataChangeDetector(fileMetadataSetRepository, Map.of("test", fileSet), null);
+    }
+
+    protected FileMetadataSetId populateRepository(
+            final FileMetadataSetRepository fileMetadataSetRepository,
+            final Collection<FileMetadata> prev) {
+        final var fileSet = fileMetadataSetRepository.createFileSet();
+        fileMetadataSetRepository.appendTo(fileSet, prev);
+        return fileSet;
     }
 
     protected FileMetadata createMetadata(

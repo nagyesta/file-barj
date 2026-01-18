@@ -4,6 +4,8 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -27,21 +29,24 @@ public class DryRunRestorePipeline extends RestorePipeline {
     /**
      * Creates a new pipeline instance for the specified manifests.
      *
+     * @param dataStore       the DataStore containing the working data
      * @param manifest        the manifest
      * @param backupDirectory the directory where the backup files are located
      * @param restoreTargets  the mappings of the root paths where we would like to restore
      * @param kek             the key encryption key we would like to use to decrypt files
      */
-    public DryRunRestorePipeline(final @NotNull RestoreManifest manifest,
-                                 final @NotNull Path backupDirectory,
-                                 final @NotNull RestoreTargets restoreTargets,
-                                 final @Nullable PrivateKey kek) {
-        super(manifest, backupDirectory, restoreTargets, kek, null);
+    public DryRunRestorePipeline(
+            final @NotNull DataStore dataStore,
+            final @NotNull RestoreManifest manifest,
+            final @NotNull Path backupDirectory,
+            final @NotNull RestoreTargets restoreTargets,
+            final @Nullable PrivateKey kek) {
+        super(dataStore, manifest, backupDirectory, restoreTargets, kek, null);
     }
 
     @Override
     public void evaluateRestoreSuccess(
-            final @NotNull List<FileMetadata> files,
+            final @NotNull FileMetadataSetId files,
             final @NotNull ForkJoinPool threadPool) {
         //no-op
     }

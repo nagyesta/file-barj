@@ -2,7 +2,7 @@
   <profile version="1.0">
     <option name="myName" value="Project Default" />
     <inspection_tool class="AutoCloseableResource" enabled="true" level="WARNING" enabled_by_default="true">
-      <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,com.github.nagyesta.filebarj.core.backup.pipeline.BaseBackupPipeline,outputStream,com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource,openStreamForSequentialAccess,java.io.InputStream,nullInputStream" />
+      <option name="METHOD_MATCHER_CONFIG" value="java.util.Formatter,format,java.io.Writer,append,com.google.common.base.Preconditions,checkNotNull,org.hibernate.Session,close,java.io.PrintWriter,printf,java.io.PrintStream,printf,com.github.nagyesta.filebarj.core.backup.pipeline.BaseBackupPipeline,outputStream,com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource,openStreamForSequentialAccess,java.io.InputStream,nullInputStream,com.github.nagyesta.filebarj.core.common.SingleUseController,dataStore,com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryBaseFileSetRepository,dataStore" />
     </inspection_tool>
     <inspection_tool class="LocalCanBeFinal" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="REPORT_VARIABLES" value="true" />

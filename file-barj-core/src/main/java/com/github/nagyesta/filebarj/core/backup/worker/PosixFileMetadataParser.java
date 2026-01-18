@@ -38,10 +38,11 @@ public class PosixFileMetadataParser implements FileMetadataParser {
     public @NotNull FileMetadata parse(
             final @NonNull File file,
             final @NonNull BackupJobConfiguration configuration) {
+        final var absolutePath = BackupPath.of(file.toPath().toAbsolutePath());
         if (!Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
             return FileMetadata.builder()
                     .id(UUID.randomUUID())
-                    .absolutePath(BackupPath.of(file.toPath().toAbsolutePath()))
+                    .absolutePath(absolutePath)
                     .fileType(FileType.MISSING)
                     .status(Change.DELETED)
                     .build();
@@ -52,7 +53,7 @@ public class PosixFileMetadataParser implements FileMetadataParser {
         return FileMetadata.builder()
                 .id(UUID.randomUUID())
                 .fileSystemKey(Optional.ofNullable(basicAttributes.fileKey()).map(String::valueOf).orElse(null))
-                .absolutePath(BackupPath.of(file.toPath().toAbsolutePath()))
+                .absolutePath(absolutePath)
                 .owner(posixFileAttributes.owner())
                 .group(posixFileAttributes.group())
                 .posixPermissions(posixFileAttributes.permissions())

@@ -5,6 +5,7 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -82,20 +84,26 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(testDataRoot), testDataRoot)));
         FileMetadataSetterFactory.newInstance(restoreTargets, null).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(manifests, null);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var manifests = Map.of(
+                    "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
+                    "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
+            );
+            final var underTest = new SimpleFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
 
-        //when
-        final var relevant = underTest.findMostRelevantPreviousVersion(restored);
-        Assertions.assertNotNull(relevant);
-        final var actualMetadataChanged = underTest.hasMetadataChanged(relevant, restored);
-        final var actualContentChanged = underTest.hasContentChanged(relevant, restored);
-        final var actualChange = underTest.classifyChange(relevant, restored);
+            //when
+            final var relevant = underTest.findMostRelevantPreviousVersion(restored);
+            Assertions.assertNotNull(relevant);
+            final var actualMetadataChanged = underTest.hasMetadataChanged(relevant, restored);
+            final var actualContentChanged = underTest.hasContentChanged(relevant, restored);
+            final var actualChange = underTest.classifyChange(relevant, restored);
 
-        //then
-        Assertions.assertTrue(actualMetadataChanged);
-        Assertions.assertFalse(actualContentChanged);
-        Assertions.assertEquals(Change.ROLLED_BACK, actualChange);
+            //then
+            Assertions.assertTrue(actualMetadataChanged);
+            Assertions.assertFalse(actualContentChanged);
+            Assertions.assertEquals(Change.ROLLED_BACK, actualChange);
+        }
     }
 
     @Test
@@ -108,15 +116,21 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new SimpleFileMetadataChangeDetector(manifests, null);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var manifests = Map.of(
+                    "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
+                    "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
+            );
+            final var underTest = new SimpleFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
 
-        //when
-        final var actual = underTest.findMostRelevantPreviousVersion(curr);
+            //when
+            final var actual = underTest.findMostRelevantPreviousVersion(curr);
 
-        //then
-        Assertions.assertNotNull(actual);
-        Assertions.assertEquals(actual.getId(), prev.getId());
+            //then
+            Assertions.assertNotNull(actual);
+            Assertions.assertEquals(actual.getId(), prev.getId());
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")

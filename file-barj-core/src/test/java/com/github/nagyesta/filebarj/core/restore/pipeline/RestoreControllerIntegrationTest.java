@@ -95,6 +95,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.execute(null));
 
         //then + exception
+        underTest.close();
     }
 
     @Test
@@ -131,6 +132,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 () -> underTest.execute(restoreTask));
 
         //then + exception
+        underTest.close();
     }
 
     @ParameterizedTest
@@ -248,7 +250,7 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
                 .kek(decryptionKey)
                 .atPointInTime(Long.MAX_VALUE)
                 .build();
-        final var underTest = new RestoreController(restoreParameters);
+        var underTest = new RestoreController(restoreParameters);
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(sourceDir), restoreDir)));
         final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
         final var restoredAPng = realRestorePath.resolve(aPng.getFileName().toString());
@@ -275,7 +277,9 @@ class RestoreControllerIntegrationTest extends TempFileAwareTest {
         Assertions.assertTrue(Files.notExists(restoredFolder, LinkOption.NOFOLLOW_LINKS));
         Assertions.assertTrue(Files.notExists(restoredExternal, LinkOption.NOFOLLOW_LINKS));
 
-        //when the "folder" is restored
+        //when the "folder" is restored,
+        //recreate the controller
+        underTest = new RestoreController(restoreParameters);
         underTest.execute(RestoreTask.builder()
                 .restoreTargets(restoreTargets)
                 .threads(threads)

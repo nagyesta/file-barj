@@ -16,8 +16,11 @@ import com.github.nagyesta.filebarj.core.model.AppVersion;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.function.Consumers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -38,78 +41,90 @@ import static org.mockito.Mockito.mock;
 class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     private static final int FUTURE = 99;
+    private static final TreeMap<String, TreeSet<Integer>> PREFIX_MAP = new TreeMap<>(Map.of("prefix", new TreeSet<>(Set.of(0))));
 
     @Test
     void testConstructorShouldThrowExceptionWhenCalledWithAManifestCreatedByAFutureVersion() {
         //given
-        final var manifest = mock(RestoreManifest.class);
-        doReturn(new AppVersion(FUTURE, FUTURE, FUTURE)).when(manifest).getMaximumAppVersion();
-        doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
-        doReturn(Map.of()).when(manifest).getFiles();
-        final var sourceDirectory = testDataRoot.resolve("source-dir");
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var manifest = mock(RestoreManifest.class);
+            doReturn(new AppVersion(FUTURE, FUTURE, FUTURE)).when(manifest).getMaximumAppVersion();
+            doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
+            doReturn(new FileMetadataSetId(Consumers.nop())).when(manifest).getFiles();
+            final var sourceDirectory = testDataRoot.resolve("source-dir");
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> new RestorePipeline(dataStore, manifest, backupDirectory, restoreTargets, null, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @Test
     void testConstructorShouldThrowExceptionWhenCalledWithAManifestWhichHasNoConfiguration() {
         //given
-        final var manifest = mock(RestoreManifest.class);
-        doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
-        doReturn(null).when(manifest).getConfiguration();
-        doReturn(Map.of()).when(manifest).getFiles();
-        final var sourceDirectory = testDataRoot.resolve("source-dir");
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var fileSet = dataStore.fileMetadataSetRepository().createFileSet();
+            final var manifest = mock(RestoreManifest.class);
+            doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
+            doReturn(null).when(manifest).getConfiguration();
+            doReturn(PREFIX_MAP).when(manifest).getFileNamePrefixes();
+            doReturn(fileSet).when(manifest).getFiles();
+            final var sourceDirectory = testDataRoot.resolve("source-dir");
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> new RestorePipeline(dataStore, manifest, backupDirectory, restoreTargets, null, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @Test
     void testConstructorShouldThrowExceptionWhenCalledWithAManifestWhichHasNoFiles() {
         //given
-        final var manifest = mock(RestoreManifest.class);
-        doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
-        doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
-        doReturn(null).when(manifest).getFiles();
-        final var sourceDirectory = testDataRoot.resolve("source-dir");
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var manifest = mock(RestoreManifest.class);
+            doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
+            doReturn(PREFIX_MAP).when(manifest).getFileNamePrefixes();
+            doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
+            doReturn(null).when(manifest).getFiles();
+            final var sourceDirectory = testDataRoot.resolve("source-dir");
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(manifest, backupDirectory, restoreTargets, null, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> new RestorePipeline(dataStore, manifest, backupDirectory, restoreTargets, null, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testConstructorShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
-        final var sourceDirectory = testDataRoot.resolve("source-dir");
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var sourceDirectory = testDataRoot.resolve("source-dir");
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDirectory), restoreDirectory);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(null, backupDirectory, restoreTargets, null, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> new RestorePipeline(dataStore, null, backupDirectory, restoreTargets, null, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -117,19 +132,21 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testConstructorShouldThrowExceptionWhenCalledWithNullSourcePath() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(restoreManifest, null, restoreTargets, null, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> new RestorePipeline(dataStore, restoreManifest, null, restoreTargets, null, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -137,17 +154,19 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testConstructorShouldThrowExceptionWhenCalledWithNullTargetPath() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> new RestorePipeline(restoreManifest, backupDirectory, null, null, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> new RestorePipeline(dataStore, restoreManifest, backupDirectory, null, null, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -155,22 +174,24 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+            final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.finalizePermissions(null, mock(ForkJoinPool.class)));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.finalizePermissions(null, mock(ForkJoinPool.class)));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -178,23 +199,28 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullMap() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
-        final var list = manifest.getFiles().values().stream().toList();
+            final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
+            final var list = manifest.getFiles().values().stream().toList();
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var fileSet = fileMetadataSetRepository.createFileSet();
+            fileMetadataSetRepository.appendTo(fileSet, list);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.finalizePermissions(list, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.finalizePermissions(fileSet, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -202,22 +228,24 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testRestoreFilesShouldThrowExceptionWhenCalledWithNullContentSources() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+            final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.restoreFiles(null, mock(ForkJoinPool.class)));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.restoreFiles(null, mock(ForkJoinPool.class)));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -225,25 +253,30 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testRestoreFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
-        final var contentSources = manifest.getFiles().values().stream()
-                .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
-                .toList();
+            final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
+            final var contentSources = manifest.getFiles().values().stream()
+                    .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
+                    .toList();
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var fileSet = fileMetadataSetRepository.createFileSet();
+            fileMetadataSetRepository.appendTo(fileSet, contentSources);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.restoreFiles(contentSources, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.restoreFiles(fileSet, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -251,22 +284,24 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+            final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.evaluateRestoreSuccess(null, mock(ForkJoinPool.class)));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.evaluateRestoreSuccess(null, mock(ForkJoinPool.class)));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -274,50 +309,62 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
-        final var list = manifest.getFiles().values().stream().toList();
+            try (var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null)) {
+                final var list = manifest.getFiles().values().stream().toList();
+                final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+                final var fileSet = fileMetadataSetRepository.createFileSet();
+                fileMetadataSetRepository.appendTo(fileSet, list);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.evaluateRestoreSuccess(list, null));
+                //when
+                Assertions.assertThrows(IllegalArgumentException.class,
+                        () -> underTest.evaluateRestoreSuccess(fileSet, null));
 
-        //then + exception
+                //then + exception
+            }
+        }
     }
 
     @Test
     @DisabledOnOs(WINDOWS)
     void testEvaluateRestoreSuccessShouldNotThrowExceptionWhenCalledWithoutRestoringBackup() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+            try (var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null)) {
+                final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+                final var fileSet = fileMetadataSetRepository.createFileSet();
+                fileMetadataSetRepository.appendTo(fileSet, manifest.getFiles().values().stream().toList());
 
-        final var threadPool = new ForkJoinPool(1);
-        try {
-            //when
-            underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList(), threadPool);
+                final var threadPool = new ForkJoinPool(1);
+                try {
+                    //when
+                    underTest.evaluateRestoreSuccess(fileSet, threadPool);
 
-            //then no exception
-        } catch (final Exception e) {
-            Assertions.fail(e.getMessage());
-        } finally {
-            threadPool.shutdownNow();
+                    //then no exception
+                } catch (final Exception e) {
+                    Assertions.fail(e.getMessage());
+                } finally {
+                    threadPool.shutdownNow();
+                }
+            }
         }
     }
 
@@ -326,22 +373,24 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testRestoreDirectoriesShouldThrowExceptionWhenCalledWithNull() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+            final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.restoreDirectories(null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.restoreDirectories(null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @ParameterizedTest
@@ -349,65 +398,70 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testPartialRestoreShouldRestoreFilesToDestinationWhenExecutedWithValidInput(final int threads) throws IOException {
         //given
-        final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
-        final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
-        final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
-        final var configuration = getBackupJobConfiguration(sourceDir, backupDir);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
+            final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
+            final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
+            final var configuration = getBackupJobConfiguration(sourceDir, backupDir);
 
-        final var sourceFiles = List.of(
-                sourceDir.resolve("A.png"),
-                sourceDir.resolve("B.png"),
-                sourceDir.resolve("C.png"));
-        for (final var sourceFile : sourceFiles) {
-            FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+            final var sourceFiles = List.of(
+                    sourceDir.resolve("A.png"),
+                    sourceDir.resolve("B.png"),
+                    sourceDir.resolve("C.png"));
+            for (final var sourceFile : sourceFiles) {
+                FileUtils.copyFile(getExampleResource(), sourceFile.toFile());
+            }
+            final var sourceFolder = sourceDir.resolve("folder");
+            Files.createDirectories(sourceFolder);
+
+            final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
+            final var internalLinkTarget = sourceDir.resolve("A.png");
+            Files.createSymbolicLink(sourceLinkInternal, internalLinkTarget);
+            final var sourceLinkExternal = sourceDir.resolve("external.png");
+            final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
+            Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
+
+            final var parameters = BackupParameters.builder()
+                    .job(configuration)
+                    .forceFull(true)
+                    .build();
+            final var backupController = new BackupController(parameters);
+            backupController.execute(1);
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
+
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var underTest = new RestorePipeline(
+                    dataStore, restoreManifest, backupDir, restoreTargets, null, PermissionComparisonStrategy.STRICT);
+            final var scope = fileMetadataSetRepository.createFileSet();
+            final var scopeList = manifest.getFiles().values().stream()
+                    .filter(f -> f.getAbsolutePath().toOsPath().equals(sourceLinkExternal)
+                            || f.getAbsolutePath().toOsPath().endsWith("A.png")
+                            || f.getAbsolutePath().toOsPath().equals(sourceDir))
+                    .toList();
+            fileMetadataSetRepository.appendTo(scope, scopeList);
+            final var scopeMap = fileMetadataSetRepository.createFileSet();
+            fileMetadataSetRepository.appendTo(scopeMap, scopeList.stream()
+                    .filter(f -> f.getArchiveMetadataId() != null)
+                    .toList());
+
+            final var threadPool = new ForkJoinPool(threads);
+            try {
+                //when
+                underTest.restoreDirectories(scope);
+                underTest.restoreFiles(scopeMap, threadPool);
+                underTest.finalizePermissions(scope, threadPool);
+            } finally {
+                threadPool.shutdownNow();
+            }
+
+            //then
+            final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
+            final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
+            Assertions.assertEquals(externalLinkTarget, restoredExternal);
         }
-        final var sourceFolder = sourceDir.resolve("folder");
-        Files.createDirectories(sourceFolder);
-
-        final var sourceLinkInternal = sourceDir.resolve("folder/internal.png");
-        final var internalLinkTarget = sourceDir.resolve("A.png");
-        Files.createSymbolicLink(sourceLinkInternal, internalLinkTarget);
-        final var sourceLinkExternal = sourceDir.resolve("external.png");
-        final var externalLinkTarget = getExampleResource().toPath().toAbsolutePath();
-        Files.createSymbolicLink(sourceLinkExternal, externalLinkTarget);
-
-        final var parameters = BackupParameters.builder()
-                .job(configuration)
-                .forceFull(true)
-                .build();
-        final var backupController = new BackupController(parameters);
-        backupController.execute(1);
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
-
-        final var underTest = new RestorePipeline(
-                restoreManifest, backupDir, restoreTargets, null, PermissionComparisonStrategy.STRICT);
-        final var scope = manifest.getFiles().values().stream()
-                .filter(f -> f.getAbsolutePath().toOsPath().equals(sourceLinkExternal)
-                        || f.getAbsolutePath().toOsPath().endsWith("A.png")
-                        || f.getAbsolutePath().toOsPath().equals(sourceDir))
-                .toList();
-
-        final var scopeMap = scope.stream()
-                .filter(f -> f.getArchiveMetadataId() != null)
-                .toList();
-
-        final var threadPool = new ForkJoinPool(threads);
-        try {
-            //when
-            underTest.restoreDirectories(scope);
-            underTest.restoreFiles(scopeMap, threadPool);
-            underTest.finalizePermissions(scope, threadPool);
-        } finally {
-            threadPool.shutdownNow();
-        }
-
-        //then
-        final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
-        final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
-        Assertions.assertEquals(externalLinkTarget, restoredExternal);
     }
 
     @SuppressWarnings("DataFlowIssue")
@@ -415,22 +469,24 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @DisabledOnOs(WINDOWS)
     void testDeleteLeftOverFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
         //given
-        final var backupController = executeABackup();
-        final var backupDirectory = testDataRoot.resolve("backup-dir");
-        final var restoreDirectory = testDataRoot.resolve("restore-dir");
-        final var manifest = backupController.getManifest();
-        final var restoreManifest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE)
-                .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
-        final var sourceDirectory = getSourceDirectory(backupController);
-        final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var backupController = executeABackup();
+            final var backupDirectory = testDataRoot.resolve("backup-dir");
+            final var restoreDirectory = testDataRoot.resolve("restore-dir");
+            final var manifest = backupController.getManifest();
+            final var restoreManifest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE)
+                    .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
+            final var sourceDirectory = getSourceDirectory(backupController);
+            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-        final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+            final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.deleteLeftOverFiles(null, true, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.deleteLeftOverFiles(null, true, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     private BackupPath getSourceDirectory(final BackupController backupController) {

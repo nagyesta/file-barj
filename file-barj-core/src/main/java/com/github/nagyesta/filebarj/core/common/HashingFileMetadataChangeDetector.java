@@ -1,13 +1,16 @@
 package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
+import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import lombok.NonNull;
+import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
+import java.util.Set;
 
 /**
  * Hashing based implementation of the {@link FileMetadataChangeDetector}.
@@ -17,13 +20,15 @@ public class HashingFileMetadataChangeDetector extends BaseFileMetadataChangeDet
     /**
      * Creates a new instance with the previous manifests.
      *
+     * @param repository         The repository we can use to access the metadata
      * @param filesFromManifests The files found in the previous manifests
      * @param permissionStrategy The permission comparison strategy
      */
     protected HashingFileMetadataChangeDetector(
-            final @NotNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @NotNull FileMetadataSetRepository repository,
+            final @NotNull Map<String, FileMetadataSetId> filesFromManifests,
             final @Nullable PermissionComparisonStrategy permissionStrategy) {
-        super(filesFromManifests, permissionStrategy);
+        super(repository, filesFromManifests, permissionStrategy);
     }
 
     @Override
@@ -40,5 +45,10 @@ public class HashingFileMetadataChangeDetector extends BaseFileMetadataChangeDet
     @Override
     protected String getPrimaryContentCriteria(final @NotNull FileMetadata metadata) {
         return metadata.getOriginalHash();
+    }
+
+    @Override
+    protected TriFunction<FileMetadataSetRepository, FileMetadataSetId, String, Set<FileMetadata>> findFilesByPrimaryContentCriteria() {
+        return FileMetadataSetRepository::findFilesByOriginalHash;
     }
 }

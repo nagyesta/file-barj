@@ -5,8 +5,10 @@ import org.jetbrains.annotations.NotNull;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public record FileSetId(@NotNull UUID id, @NotNull Consumer<FileSetId> closeWith) implements AutoCloseable {
-    public FileSetId(@NotNull final Consumer<FileSetId> closeWith) {
+public record FilePathSetId(@NotNull UUID id, @NotNull Consumer<FilePathSetId> closeWith)
+        implements BaseFileSetId<FilePathSetId> {
+
+    public FilePathSetId(@NotNull final Consumer<FilePathSetId> closeWith) {
         this(UUID.randomUUID(), closeWith);
     }
 

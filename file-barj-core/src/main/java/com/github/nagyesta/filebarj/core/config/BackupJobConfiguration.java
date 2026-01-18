@@ -10,10 +10,7 @@ import com.github.nagyesta.filebarj.core.json.PublicKeyDeserializer;
 import com.github.nagyesta.filebarj.core.json.PublicKeySerializer;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -113,7 +110,7 @@ public class BackupJobConfiguration {
      */
     @EqualsAndHashCode.Exclude
     @JsonProperty("sources")
-    private final @Valid
+    private final
     @Size(min = 1)
-    @NonNull Set<BackupSource> sources;
+    @NonNull Set<@Valid @NotNull BackupSource> sources;
 }

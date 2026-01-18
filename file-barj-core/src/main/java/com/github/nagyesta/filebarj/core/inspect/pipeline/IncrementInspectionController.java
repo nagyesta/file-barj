@@ -2,9 +2,11 @@ package com.github.nagyesta.filebarj.core.inspect.pipeline;
 
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
+import com.github.nagyesta.filebarj.core.common.SingleUseController;
 import com.github.nagyesta.filebarj.core.inspect.worker.ManifestToSummaryConverter;
 import com.github.nagyesta.filebarj.core.inspect.worker.TabSeparatedBackupContentExporter;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import lombok.NonNull;
@@ -18,9 +20,11 @@ import java.util.SortedMap;
 
 /**
  * Controller for the backup increment inspection task.
+ * <br>
+ * Warning: Each controller is single-use!
  */
 @Slf4j
-public class IncrementInspectionController {
+public class IncrementInspectionController extends SingleUseController {
 
     private final SortedMap<Long, BackupIncrementManifest> manifests;
 
@@ -31,9 +35,10 @@ public class IncrementInspectionController {
      */
     public IncrementInspectionController(
             final @NonNull InspectParameters parameters) {
+        super(DataStore.newInMemoryInstance());
         final var progressTracker = new ObservableProgressTracker(List.of(ProgressStep.LOAD_MANIFESTS));
         progressTracker.registerListener(parameters.getProgressListener());
-        final ManifestManager manifestManager = new ManifestManagerImpl(progressTracker);
+        final ManifestManager manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);
         this.manifests = manifestManager
                 .loadAll(parameters.getBackupDirectory(), parameters.getFileNamePrefix(), parameters.getKek());
     }
@@ -47,11 +52,13 @@ public class IncrementInspectionController {
     public void inspectContent(
             final long latestStartTimeEpochSeconds,
             final @NonNull Path outputFile) {
-        final var selectedUpperLimit = Math.min(Instant.now().getEpochSecond(), latestStartTimeEpochSeconds);
-        final var relevant = this.manifests.headMap(selectedUpperLimit + 1).lastKey();
-        log.info("Found increment with start timestamp: {}", relevant);
-        final var manifest = this.manifests.get(relevant);
-        new TabSeparatedBackupContentExporter().writeManifestContent(manifest, outputFile);
+        try (var self = lock()) {
+            final var selectedUpperLimit = Math.min(Instant.now().getEpochSecond(), latestStartTimeEpochSeconds);
+            final var relevant = this.manifests.headMap(selectedUpperLimit + 1).lastKey();
+            log.info("Found increment with start timestamp: {}", relevant);
+            final var manifest = this.manifests.get(relevant);
+            new TabSeparatedBackupContentExporter().writeManifestContent(manifest, outputFile);
+        }
     }
 
     /**
@@ -60,7 +67,9 @@ public class IncrementInspectionController {
      * @param outputStream the output stream
      */
     public void inspectIncrements(final @NonNull PrintStream outputStream) {
-        final var manifestToSummaryConverter = new ManifestToSummaryConverter();
-        manifests.forEach((key, value) -> outputStream.println(manifestToSummaryConverter.convertToSummaryString(value)));
+        try (var self = lock()) {
+            final var manifestToSummaryConverter = new ManifestToSummaryConverter();
+            manifests.forEach((key, value) -> outputStream.println(manifestToSummaryConverter.convertToSummaryString(value)));
+        }
     }
 }

@@ -30,7 +30,7 @@ public final class BackupPath implements Comparable<BackupPath> {
     private static final Pattern WINDOWS_FILE_SCHEME = Pattern
             .compile("^(" + FILE_SCHEME_SINGLE_SLASH + "|" + FILE_SCHEME_TRIPLE_SLASH + ")(?<" + PATH_GROUP + ">[A-Z]:/.*)$");
     private static final Pattern UNIX_FILE_SCHEME = Pattern
-            .compile("^" + FILE_SCHEME_DOUBLE_SLASH + "(?<" + PATH_GROUP + ">/[^:]*)$");
+            .compile("^" + FILE_SCHEME_DOUBLE_SLASH + "(?<" + PATH_GROUP + ">/(?![A-Z]:/).*)$");
     private static final Set<Pattern> PATTERNS = Set.of(WINDOWS_FILE_SCHEME, UNIX_FILE_SCHEME);
     private final @NotBlank String path;
 

@@ -12,7 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 
 /**
@@ -81,6 +83,17 @@ public enum FileType {
                 .filter(f -> f.test.test(attributes))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unable to find matching file type."));
+    }
+
+    /**
+     * Returns a set of all file types that are content sources.
+     *
+     * @return set
+     */
+    public static Set<FileType> allContentSources() {
+        return EnumSet.copyOf(Arrays.stream(values())
+                .filter(FileType::isContentSource)
+                .toList());
     }
 
     /**
