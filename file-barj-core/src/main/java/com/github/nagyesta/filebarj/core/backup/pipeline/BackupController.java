@@ -11,8 +11,8 @@ import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
-import com.github.nagyesta.filebarj.core.persistence.FileSetRepository;
-import com.github.nagyesta.filebarj.core.persistence.entities.FileSetId;
+import com.github.nagyesta.filebarj.core.persistence.FilePathSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.FilePathSetId;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
@@ -114,7 +114,7 @@ public class BackupController {
     }
 
     private void listAffectedFilesFromBackupSources() {
-        final var fileSetRepository = this.dataRepositories.getFileSetRepository();
+        final var fileSetRepository = this.dataRepositories.getFilePathSetRepository();
         log.info("Listing affected files from {} backup sources", manifest.getConfiguration().getSources().size());
         try (var uniquePathFileSet = listSources(fileSetRepository)) {
             if (fileSetRepository.isEmpty(uniquePathFileSet)) {
@@ -139,13 +139,13 @@ public class BackupController {
         }
     }
 
-    private FileSetId listSources(final @NotNull FileSetRepository fileSetRepository) {
-        final var resultFileSet = fileSetRepository.createFileSet();
+    private FilePathSetId listSources(final @NotNull FilePathSetRepository filePathSetRepository) {
+        final var resultFileSet = filePathSetRepository.createFileSet();
         try {
             manifest.getConfiguration().getSources()
                     .forEach(source -> {
                         log.info("Listing files from backup source: {}", source);
-                        new BackupSourceScanner(fileSetRepository, source).listMatchingFilePaths(resultFileSet);
+                        new BackupSourceScanner(filePathSetRepository, source).listMatchingFilePaths(resultFileSet);
                     });
             return resultFileSet;
         } catch (final Exception e) {
@@ -155,8 +155,8 @@ public class BackupController {
         }
     }
 
-    private void detectCaseInsensitivityIssues(final @NotNull FileSetId uniquePathFileSet) {
-        final var affected = dataRepositories.getFileSetRepository().detectCaseInsensitivityIssues(uniquePathFileSet);
+    private void detectCaseInsensitivityIssues(final @NotNull FilePathSetId uniquePathFileSet) {
+        final var affected = dataRepositories.getFilePathSetRepository().detectCaseInsensitivityIssues(uniquePathFileSet);
         if (!affected.isEmpty()) {
             log.warn(LogUtil.scary("Found some paths which differ only in case! The backup cannot be restored correctly on Windows! "
                     + "The affected files are: {}"), affected);

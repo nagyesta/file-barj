@@ -12,7 +12,7 @@ import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
-import com.github.nagyesta.filebarj.core.persistence.entities.FileSetId;
+import com.github.nagyesta.filebarj.core.persistence.entities.FilePathSetId;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
@@ -204,7 +204,7 @@ public class RestorePipeline {
                 .map(path -> " limited to path: " + path)
                 .orElse(""));
         final var files = manifest.getFilesOfLastManifest().values();
-        final var fileSetRepository = dataRepositories.getFileSetRepository();
+        final var fileSetRepository = dataRepositories.getFilePathSetRepository();
         try (var pathsInRestoreTarget = fileSetRepository.createFileSet()) {
             findPathsInRestoreTarget(threadPool, pathsInRestoreTarget, pathRestriction);
             final var pathsInBackup = threadPool.submit(() -> files.parallelStream()
@@ -367,9 +367,9 @@ public class RestorePipeline {
 
     private void findPathsInRestoreTarget(
             final @NotNull ForkJoinPool threadPool,
-            final @NotNull FileSetId pathsInRestoreTarget,
+            final @NotNull FilePathSetId pathsInRestoreTarget,
             final @NotNull Predicate<Path> pathRestriction) {
-        final var fileSetRepository = dataRepositories.getFileSetRepository();
+        final var fileSetRepository = dataRepositories.getFilePathSetRepository();
         try (var uniquePathSet = fileSetRepository.createFileSet()) {
             manifest.getConfiguration().getSources().stream()
                     .map(source -> BackupSource.builder()

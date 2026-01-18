@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
 import com.github.nagyesta.filebarj.core.common.BackupSourceScanner;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
-import com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFileSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFilePathSetRepository;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -155,7 +155,7 @@ class BackupSourceTest extends TempFileAwareTest {
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
-        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var fileSetRepository = new InMemoryFilePathSetRepository();
         final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
@@ -180,7 +180,7 @@ class BackupSourceTest extends TempFileAwareTest {
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
-        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var fileSetRepository = new InMemoryFilePathSetRepository();
         final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
@@ -207,7 +207,7 @@ class BackupSourceTest extends TempFileAwareTest {
                 .excludePatterns(excludePatterns)
                 .includePatterns(includePatterns)
                 .build();
-        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var fileSetRepository = new InMemoryFilePathSetRepository();
         final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
@@ -226,7 +226,7 @@ class BackupSourceTest extends TempFileAwareTest {
         final var source = BackupSource.builder()
                 .path(BackupPath.of(expectedFile))
                 .build();
-        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var fileSetRepository = new InMemoryFilePathSetRepository();
         final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
@@ -245,7 +245,7 @@ class BackupSourceTest extends TempFileAwareTest {
         final var source = BackupSource.builder()
                 .path(expectedFile)
                 .build();
-        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var fileSetRepository = new InMemoryFilePathSetRepository();
         final var underTest = new BackupSourceScanner(fileSetRepository, source);
 
         //when
@@ -265,7 +265,7 @@ class BackupSourceTest extends TempFileAwareTest {
                 .path(expectedFile)
                 .includePatterns(Set.of("**.txt"))
                 .build();
-        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var fileSetRepository = new InMemoryFilePathSetRepository();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> new BackupSourceScanner(fileSetRepository, source));
@@ -281,7 +281,7 @@ class BackupSourceTest extends TempFileAwareTest {
                 .path(expectedFile)
                 .excludePatterns(Set.of("**.txt"))
                 .build();
-        final var fileSetRepository = new InMemoryFileSetRepository();
+        final var fileSetRepository = new InMemoryFilePathSetRepository();
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class, () -> new BackupSourceScanner(fileSetRepository, source));
