@@ -15,8 +15,8 @@ jupiter = "6.0.2"
 abortMission = "6.3.0"
 checkstyle = "12.3.1"
 jacoco = "0.8.14"
-jackson = { strictly = "2.20.1" }
-jacksonAnnotations = { strictly = "2.20" }
+jackson = { strictly = "2.21.0" }
+jacksonAnnotations = { strictly = "2.21" }
 jetbrainsAnnotations = "26.0.2-1"
 
 abortMissionPlugin = "5.2.22"
