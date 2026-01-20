@@ -18,12 +18,6 @@ public abstract class InMemoryBaseFileSetRepository<K extends BaseFileSetId<K>, 
 
     private final Map<UUID, Collection<V>> fileSets = new ConcurrentHashMap<>();
 
-    protected abstract K createFileSetId(Consumer<K> closeWith);
-
-    protected Collection<V> getFileSetById(final @NonNull K id) {
-        return fileSets.get(id.id());
-    }
-
     @Override
     public K createFileSet() {
         final var id = createFileSetId(this::removeFileSet);
@@ -98,6 +92,12 @@ public abstract class InMemoryBaseFileSetRepository<K extends BaseFileSetId<K>, 
         LongStream.iterate(0L, offset -> offset < countAll, offset -> offset + Integer.MAX_VALUE)
                 .mapToObj(offset -> findAll(id, offset, Integer.MAX_VALUE, order))
                 .forEach(values -> threadPool.submit(() -> values.stream().parallel().forEach(consumer)).join());
+    }
+
+    protected abstract K createFileSetId(Consumer<K> closeWith);
+
+    protected Collection<V> getFileSetById(final @NonNull K id) {
+        return fileSets.get(id.id());
     }
 
     private Comparator<V> orderBy(final @NotNull SortOrder order) {

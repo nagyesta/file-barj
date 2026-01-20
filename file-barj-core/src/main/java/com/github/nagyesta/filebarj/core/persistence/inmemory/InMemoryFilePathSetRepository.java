@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class InMemoryFilePathSetRepository extends InMemoryBaseFileSetRepository<FilePathSetId, Path> implements FilePathSetRepository {
+public class InMemoryFilePathSetRepository
+        extends InMemoryBaseFileSetRepository<FilePathSetId, Path>
+        implements FilePathSetRepository {
 
     @Override
     protected FilePathSetId createFileSetId(final Consumer<FilePathSetId> closeWith) {

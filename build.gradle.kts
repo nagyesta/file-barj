@@ -169,9 +169,7 @@ subprojects {
                         "com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker",
                         "com.github.nagyesta.filebarj.core.restore.worker.WindowsFileMetadataSetter",
                         "com.github.nagyesta.filebarj.job.Main",
-                        "com.github.nagyesta.filebarj.job.Controller",
-                        //TODO: remove this!
-                        "com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId"
+                        "com.github.nagyesta.filebarj.job.Controller"
                 )
             }
         }

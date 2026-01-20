@@ -1,5 +1,9 @@
 <component name="ProjectCodeStyleConfiguration">
   <code_scheme name="Project" version="173">
+    <JavaCodeStyleSettings>
+      <option name="GENERATE_FINAL_LOCALS" value="true" />
+      <option name="GENERATE_FINAL_PARAMETERS" value="true" />
+    </JavaCodeStyleSettings>
     <codeStyleSettings language="Gherkin">
       <indentOptions>
         <option name="INDENT_SIZE" value="4" />
@@ -10,13 +14,16 @@
       <option name="RIGHT_MARGIN" value="140" />
       <option name="SPACE_BEFORE_ARRAY_INITIALIZER_LBRACE" value="true" />
       <option name="CALL_PARAMETERS_WRAP" value="1" />
-      <option name="METHOD_PARAMETERS_WRAP" value="1" />
-      <option name="RESOURCE_LIST_WRAP" value="1" />
+      <option name="METHOD_PARAMETERS_WRAP" value="5" />
+      <option name="METHOD_PARAMETERS_LPAREN_ON_NEXT_LINE" value="true" />
+      <option name="RESOURCE_LIST_WRAP" value="5" />
+      <option name="RESOURCE_LIST_LPAREN_ON_NEXT_LINE" value="true" />
       <option name="EXTENDS_LIST_WRAP" value="1" />
       <option name="THROWS_LIST_WRAP" value="1" />
-      <option name="EXTENDS_KEYWORD_WRAP" value="1" />
+      <option name="EXTENDS_KEYWORD_WRAP" value="2" />
       <option name="THROWS_KEYWORD_WRAP" value="1" />
       <option name="METHOD_CALL_CHAIN_WRAP" value="1" />
+      <option name="WRAP_FIRST_METHOD_IN_CALL_CHAIN" value="true" />
       <option name="BINARY_OPERATION_WRAP" value="1" />
       <option name="TERNARY_OPERATION_WRAP" value="1" />
       <option name="FOR_STATEMENT_WRAP" value="1" />

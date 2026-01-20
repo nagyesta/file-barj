@@ -1,5 +1,6 @@
 package com.github.nagyesta.filebarj.core.persistence;
 
+import com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFileMetadataSetRepository;
 import com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFilePathSetRepository;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,8 +17,11 @@ public enum DataRepositories {
      * Uses in-memory implementations for each repository.
      */
     @SuppressWarnings({"checkstyle:MagicNumber"})
-    IN_MEMORY(new InMemoryFilePathSetRepository());
+    IN_MEMORY(new InMemoryFilePathSetRepository(), new InMemoryFileMetadataSetRepository());
 
     @NonNull
     private final FilePathSetRepository filePathSetRepository;
+
+    @NonNull
+    private final FileMetadataSetRepository fileMetadataSetRepository;
 }
