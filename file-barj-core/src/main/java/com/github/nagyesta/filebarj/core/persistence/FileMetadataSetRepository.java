@@ -2,13 +2,15 @@ package com.github.nagyesta.filebarj.core.persistence;
 
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.entities.BackupPathChangeStatusMapId;
 import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 
@@ -32,6 +34,12 @@ public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMet
         forEachByChangeStatusesAndFileTypes(id, changeStatuses, fileTypes, threadPool, SortOrder.DESC, consumer);
     }
 
+    long countByType(FileMetadataSetId id, Collection<FileType> types);
+
+    SortedMap<FileType, Long> countsByType(FileMetadataSetId id);
+
+    SortedMap<Change, Long> countsByStatus(FileMetadataSetId id);
+
     void forEachByChangeStatusesAndFileTypes(
             FileMetadataSetId id,
             Set<Change> changeStatuses,
@@ -50,5 +58,26 @@ public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMet
             Consumer<List<List<FileMetadata>>> consumer);
 
     long getOriginalSizeBytes(FileMetadataSetId id);
-}
 
+    boolean containsFileId(FileMetadataSetId id, UUID fileId);
+
+    Set<FileMetadata> findFilesByOriginalHash(FileMetadataSetId id, String originalHash);
+
+    Set<FileMetadata> findFilesByOriginalSize(FileMetadataSetId id, Long originalSize);
+
+    Optional<FileMetadata> findFileByPath(FileMetadataSetId id, BackupPath absolutePath);
+
+    List<FileMetadata> findErrorsOf(FileMetadataSetId id);
+
+    void updateArchiveMetadataId(FileMetadataSetId id, UUID metadataId, @Nullable UUID archiveMetadataId);
+
+    FileMetadataSetId intersectByPath(FileMetadataSetId filesFromLastIncrement, FileMetadataSetId restoreScope);
+
+    FileMetadataSetId keepChangedContent(FileMetadataSetId id, BackupPathChangeStatusMapId changeStats);
+
+    FileMetadataSetId keepChangedMetadata(FileMetadataSetId id, BackupPathChangeStatusMapId changeStats);
+
+    SortedSet<FileMetadata> findFilesByIds(FileMetadataSetId id, Set<UUID> files);
+
+    boolean containsPath(FileMetadataSetId id, String absolutePath);
+}

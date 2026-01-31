@@ -4,6 +4,7 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +42,7 @@ public class DryRunRestorePipeline extends RestorePipeline {
 
     @Override
     public void evaluateRestoreSuccess(
-            final @NotNull List<FileMetadata> files,
+            final @NotNull FileMetadataSetId files,
             final @NotNull ForkJoinPool threadPool) {
         //no-op
     }

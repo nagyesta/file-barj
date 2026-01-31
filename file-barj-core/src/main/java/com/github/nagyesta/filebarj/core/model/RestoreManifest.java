@@ -1,26 +1,26 @@
 package com.github.nagyesta.filebarj.core.model;
 
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
-import com.github.nagyesta.filebarj.core.model.enums.Change;
-import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
+import com.github.nagyesta.filebarj.core.persistence.entities.ArchivedFileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.experimental.SuperBuilder;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.crypto.SecretKey;
+import java.io.Closeable;
 import java.security.PrivateKey;
 import java.util.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Data
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
-public class RestoreManifest extends EncryptionKeyStore {
+public class RestoreManifest extends EncryptionKeyStore implements Closeable {
     /**
      * The version number of the app that generated the manifest.
      */
@@ -41,13 +41,13 @@ public class RestoreManifest extends EncryptionKeyStore {
     private final @NonNull BackupJobConfiguration configuration;
     private final @NonNull OperatingSystem operatingSystem;
     /**
-     * The map of matching files identified during backup keyed by filename and Id.
+     * The key to the matching files identified during backup.
      */
-    private final @NonNull Map<String, Map<UUID, FileMetadata>> files;
+    private final @NonNull FileMetadataSetId files;
     /**
-     * The map of archive entries saved during backup keyed by filename and Id.
+     * The key to the archive entries saved during backup.
      */
-    private final @NonNull Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries;
+    private final @NonNull ArchivedFileMetadataSetId archivedEntries;
 
     /**
      * Returns the data decryption key for the given file name prefix using the private key for
@@ -70,68 +70,26 @@ public class RestoreManifest extends EncryptionKeyStore {
         this.fileNamePrefixes = Collections.unmodifiableSortedMap(builder.fileNamePrefixes);
         this.configuration = builder.configuration;
         this.operatingSystem = builder.operatingSystem;
-        this.files = builder.files.entrySet().stream()
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, entry -> Collections.unmodifiableMap(entry.getValue())));
-        this.archivedEntries = builder.archivedEntries.entrySet().stream()
-                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, entry -> Collections.unmodifiableMap(entry.getValue())));
+        this.files = builder.files;
+        this.archivedEntries = builder.archivedEntries;
     }
 
     /**
-     * The map of all files in the manifest. This is a read-only view of the files map.
+     * The key of all files in the manifest. This is a read-only view of the files map.
      *
      * @return the map
      */
-    public Map<UUID, FileMetadata> getFilesOfLastManifest() {
-        return files.get(fileNamePrefixes.lastKey());
+    public FileMetadataSetId getFilesOfLastManifest() {
+        return files;
     }
 
     /**
-     * The map of all files in the manifest which are matching the provided predicate and their
-     * parent directories. This is a read-only view of the files map.
-     *
-     * @param predicate the predicate filtering the paths to be returned
-     * @return the map
-     */
-    public Map<UUID, FileMetadata> getFilesOfLastManifestFilteredBy(
-            final Predicate<BackupPath> predicate) {
-        final var filesOfLastManifest = getFilesOfLastManifest();
-        final var allDirectories = filesOfLastManifest.values().stream()
-                .filter(fileMetadata -> fileMetadata.getFileType() == FileType.DIRECTORY)
-                .map(FileMetadata::getAbsolutePath)
-                .collect(Collectors.toSet());
-        final var foundPaths = filesOfLastManifest.values().stream()
-                .map(FileMetadata::getAbsolutePath)
-                .filter(predicate)
-                .flatMap(path -> parents(allDirectories, path))
-                .collect(Collectors.toSet());
-        return filesOfLastManifest.entrySet().stream()
-                .filter(e -> foundPaths.contains(e.getValue().getAbsolutePath()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    /**
-     * The map of all files in the manifest which are matching the provided predicate and their
-     * parent directories.. This is a read-only view of the files map.
-     *
-     * @param predicate the predicate filtering the paths to be returned
-     * @return the list
-     */
-    public List<FileMetadata> getExistingContentSourceFilesOfLastManifestFilteredBy(
-            final Predicate<BackupPath> predicate) {
-        return getFilesOfLastManifest().values().stream()
-                .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
-                .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
-                .filter(fileMetadata -> predicate.test(fileMetadata.getAbsolutePath()))
-                .toList();
-    }
-
-    /**
-     * The map of all archived entries from the latest manifest.
+     * The key of all archived entries from the latest manifest.
      *
      * @return the map
      */
-    public Map<UUID, ArchivedFileMetadata> getArchivedEntriesOfLastManifest() {
-        return archivedEntries.get(fileNamePrefixes.lastKey());
+    public ArchivedFileMetadataSetId getArchivedEntriesOfLastManifest() {
+        return archivedEntries;
     }
 
     private Stream<BackupPath> parents(
@@ -141,5 +99,11 @@ public class RestoreManifest extends EncryptionKeyStore {
                 .filter(directories::contains)
                 .map(parent -> Stream.concat(Stream.of(path), parents(directories, parent)))
                 .orElse(Stream.of(path));
+    }
+
+    @Override
+    public void close() {
+        IOUtils.closeQuietly(this.files);
+        IOUtils.closeQuietly(this.archivedEntries);
     }
 }

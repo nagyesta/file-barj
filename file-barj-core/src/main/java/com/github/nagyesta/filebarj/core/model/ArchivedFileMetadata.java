@@ -21,7 +21,7 @@ import java.util.UUID;
 @Builder
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ArchivedFileMetadata {
+public class ArchivedFileMetadata implements Comparable<ArchivedFileMetadata> {
     /**
      * The unique Id of the metadata record.
      */
@@ -66,5 +66,10 @@ public class ArchivedFileMetadata {
                 .originalHash(originalHash)
                 .files(new HashSet<>())
                 .build();
+    }
+
+    @Override
+    public int compareTo(@NonNull final ArchivedFileMetadata o) {
+        return getId().compareTo(o.getId());
     }
 }

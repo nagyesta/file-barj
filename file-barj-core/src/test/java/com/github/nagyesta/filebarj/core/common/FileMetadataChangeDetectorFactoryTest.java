@@ -5,14 +5,15 @@ import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
-import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import org.apache.commons.lang3.function.Consumers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import static org.mockito.Mockito.mock;
 
@@ -22,12 +23,26 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
     @Test
     void testCreateShouldThrowExceptionWhenCalledWithNullConfiguration() {
         //given
-        final Map<String, Map<UUID, FileMetadata>> map = Map.of("key", Map.of());
+        final var map = Map.of("key", new FileMetadataSetId(Consumers.nop()));
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> FileMetadataChangeDetectorFactory
-                        .create(null, map, PermissionComparisonStrategy.STRICT));
+                () -> FileMetadataChangeDetectorFactory.create(
+                        null, mock(FileMetadataSetRepository.class), map, PermissionComparisonStrategy.STRICT));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testCreateShouldThrowExceptionWhenCalledWithNullRepository() {
+        //given
+        final var map = Map.of("key", new FileMetadataSetId(Consumers.nop()));
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> FileMetadataChangeDetectorFactory.create(
+                        mock(BackupJobConfiguration.class), null, map, PermissionComparisonStrategy.STRICT));
 
         //then + exception
     }
@@ -39,8 +54,9 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> FileMetadataChangeDetectorFactory
-                        .create(mock(BackupJobConfiguration.class), null, PermissionComparisonStrategy.STRICT));
+                () -> FileMetadataChangeDetectorFactory.create(
+                        mock(BackupJobConfiguration.class), mock(FileMetadataSetRepository.class),
+                        null, PermissionComparisonStrategy.STRICT));
 
         //then + exception
     }
@@ -60,8 +76,9 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
                 .build();
 
         //when
-        final var actual = FileMetadataChangeDetectorFactory
-                .create(config, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT);
+        final var actual = FileMetadataChangeDetectorFactory.create(
+                config, mock(FileMetadataSetRepository.class),
+                Map.of("key", new FileMetadataSetId(Consumers.nop())), PermissionComparisonStrategy.STRICT);
 
         //then
         Assertions.assertInstanceOf(SimpleFileMetadataChangeDetector.class, actual);
@@ -82,8 +99,9 @@ class FileMetadataChangeDetectorFactoryTest extends TempFileAwareTest {
                 .build();
 
         //when
-        final var actual = FileMetadataChangeDetectorFactory
-                .create(config, Map.of("key", Map.of()), PermissionComparisonStrategy.STRICT);
+        final var actual = FileMetadataChangeDetectorFactory.create(
+                config, mock(FileMetadataSetRepository.class),
+                Map.of("key", new FileMetadataSetId(Consumers.nop())), PermissionComparisonStrategy.STRICT);
 
         //then
         Assertions.assertInstanceOf(HashingFileMetadataChangeDetector.class, actual);

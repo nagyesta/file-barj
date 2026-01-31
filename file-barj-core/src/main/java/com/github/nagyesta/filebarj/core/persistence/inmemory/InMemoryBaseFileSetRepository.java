@@ -43,18 +43,6 @@ public abstract class InMemoryBaseFileSetRepository<K extends BaseFileSetId<K>, 
     }
 
     @Override
-    public Optional<V> takeFirst(final @NonNull K id) {
-        final var values = getFileSetById(id);
-        final var iterator = values.iterator();
-        if (!iterator.hasNext()) {
-            return Optional.empty();
-        }
-        final var next = Optional.ofNullable(iterator.next());
-        iterator.remove();
-        return next;
-    }
-
-    @Override
     public void removeFileSet(final @NonNull K id) {
         fileSets.remove(id.id());
     }

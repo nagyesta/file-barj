@@ -76,4 +76,5 @@ public enum Change {
                 .filter(Change::isStoreContent)
                 .toList());
     }
+
 }

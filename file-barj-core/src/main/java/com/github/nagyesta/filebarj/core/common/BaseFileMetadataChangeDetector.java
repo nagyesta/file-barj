@@ -4,7 +4,10 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import lombok.NonNull;
+import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,26 +20,23 @@ import java.util.*;
  */
 public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataChangeDetector {
 
-    private final SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests;
-    private final SortedMap<String, Map<T, List<FileMetadata>>> contentIndex;
-    private final Map<String, FileMetadata> nameIndex;
+    private final FileMetadataSetRepository repository;
+    private final SortedMap<String, FileMetadataSetId> filesFromManifests;
     private final PermissionComparisonStrategy permissionComparisonStrategy;
 
     /**
      * Creates a new instance with the previous manifests.
      *
+     * @param repository         The repository we can use to access the metadata
      * @param filesFromManifests The files found in the previous manifests
      * @param permissionStrategy The permission comparison strategy
      */
     protected BaseFileMetadataChangeDetector(
-            final @NotNull Map<String, Map<UUID, FileMetadata>> filesFromManifests,
+            final @NotNull FileMetadataSetRepository repository,
+            final @NotNull Map<String, FileMetadataSetId> filesFromManifests,
             final @Nullable PermissionComparisonStrategy permissionStrategy) {
+        this.repository = repository;
         this.filesFromManifests = new TreeMap<>(filesFromManifests);
-        final SortedMap<String, Map<T, List<FileMetadata>>> contentIndexSet = new TreeMap<>();
-        final Map<String, FileMetadata> nameIndexMap = new TreeMap<>();
-        index(this.filesFromManifests, contentIndexSet, nameIndexMap);
-        this.contentIndex = contentIndexSet;
-        this.nameIndex = nameIndexMap;
         this.permissionComparisonStrategy = Objects.requireNonNullElse(permissionStrategy, PermissionComparisonStrategy.STRICT);
     }
 
@@ -54,23 +54,24 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     @Override
     public boolean isFromLastIncrement(
             final @NonNull FileMetadata fileMetadata) {
-        return filesFromManifests.get(filesFromManifests.lastKey()).containsKey(fileMetadata.getId());
+        return repository.containsFileId(filesFromManifests.get(filesFromManifests.lastKey()), fileMetadata.getId());
     }
 
     @Override
     public @Nullable FileMetadata findMostRelevantPreviousVersion(
             final @NonNull FileMetadata currentMetadata) {
         final var increments = filesFromManifests.keySet().stream().sorted(Comparator.reverseOrder()).toList();
-        final var previousSamePath = nameIndex.getOrDefault(currentMetadata.getAbsolutePath().toString(), null);
+        final var previousSamePath = findPreviousVersionByAbsolutePath(currentMetadata.getAbsolutePath());
         if (previousSamePath != null && !hasContentChanged(previousSamePath, currentMetadata)) {
             return previousSamePath;
         }
         for (final var increment : increments) {
-            final var index = contentIndex.get(increment);
+            final var index = filesFromManifests.get(increment);
             final var key = getPrimaryContentCriteria(currentMetadata);
-            if (index.containsKey(key)) {
+            final var files = findFilesByPrimaryContentCriteria().apply(repository, index, key);
+            if (!files.isEmpty()) {
                 final var byPath = new TreeMap<BackupPath, FileMetadata>();
-                index.get(key).stream()
+                files.stream()
                         .filter(metadata -> !hasContentChanged(metadata, currentMetadata))
                         .forEach(metadata -> byPath.put(metadata.getAbsolutePath(), metadata));
                 if (!byPath.isEmpty()) {
@@ -84,7 +85,17 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     @Override
     public @Nullable FileMetadata findPreviousVersionByAbsolutePath(
             final @NonNull BackupPath absolutePath) {
-        return nameIndex.get(absolutePath.toString());
+        return filesFromManifests.keySet()
+                .stream().sorted(Comparator.reverseOrder())
+                .map(increment -> {
+                    final var fileMetadataSetId = filesFromManifests.get(increment);
+                    return repository.findFileByPath(fileMetadataSetId, absolutePath)
+                            .filter(metadata -> metadata.getStatus() != Change.DELETED);
+                })
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -114,22 +125,11 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
      */
     protected abstract T getPrimaryContentCriteria(@NotNull FileMetadata metadata);
 
-    private void index(
-            final @NotNull SortedMap<String, Map<UUID, FileMetadata>> filesFromManifests,
-            final @NotNull SortedMap<String, Map<T, List<FileMetadata>>> contentIndexMap,
-            final @NotNull Map<String, FileMetadata> nameIndexMap) {
-        filesFromManifests.forEach((increment, files) -> files
-                .forEach((uuid, metadata) -> contentIndexMap
-                        .computeIfAbsent(increment, k -> new HashMap<>())
-                        .computeIfAbsent(getPrimaryContentCriteria(metadata), k -> new ArrayList<>())
-                        .add(metadata)));
-        //populate files in reverse manifest order to ensure each file has the latest metadata saved
-        filesFromManifests.keySet().stream()
-                .sorted(Comparator.reverseOrder())
-                .map(filesFromManifests::get)
-                .forEachOrdered(files -> files.entrySet().stream()
-                        .filter(entry -> entry.getValue().getStatus() != Change.DELETED)
-                        //put the file only if it is not already in the index
-                        .forEach(entry -> nameIndexMap.putIfAbsent(entry.getValue().getAbsolutePath().toString(), entry.getValue())));
-    }
+    /**
+     * Returns a function that can find the files from the repository by matching based on the primary content criteria.
+     *
+     * @return filter function
+     */
+    protected abstract
+    TriFunction<FileMetadataSetRepository, FileMetadataSetId, T, Set<FileMetadata>> findFilesByPrimaryContentCriteria();
 }
