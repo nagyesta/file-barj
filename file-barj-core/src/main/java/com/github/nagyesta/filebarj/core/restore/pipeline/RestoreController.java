@@ -3,18 +3,18 @@ package com.github.nagyesta.filebarj.core.restore.pipeline;
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.common.PermissionComparisonStrategy;
+import com.github.nagyesta.filebarj.core.common.SingleUseController;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.config.RestoreTask;
 import com.github.nagyesta.filebarj.core.inspect.worker.ManifestToSummaryConverter;
-import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
-import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
-import com.github.nagyesta.filebarj.core.util.LogUtil;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,7 +22,6 @@ import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static com.github.nagyesta.filebarj.core.progress.ProgressStep.*;
 import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
@@ -30,18 +29,20 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStre
 
 /**
  * Controller implementation for the restore process.
+ * <br>
+ * Warning: Each controller is single-use!
  */
 @Slf4j
-public class RestoreController {
+public class RestoreController extends SingleUseController {
     private static final List<ProgressStep> PROGRESS_STEPS = List.of(
             LOAD_MANIFESTS, RESTORE_DIRECTORIES, PARSE_METADATA, RESTORE_CONTENT,
             VERIFY_CONTENT, RESTORE_METADATA, VERIFY_METADATA, DELETE_OBSOLETE_FILES);
     private final RestoreManifest manifest;
     private final PrivateKey kek;
     private final Path backupDirectory;
-    private final ReentrantLock executionLock = new ReentrantLock();
     private ForkJoinPool threadPool;
     private final ProgressTracker progressTracker;
+    private final DataRepositories dataRepositories;
 
     /**
      * Creates a new instance and initializes it for the specified job.
@@ -50,6 +51,7 @@ public class RestoreController {
      */
     public RestoreController(
             final @NonNull RestoreParameters restoreParameters) {
+        this.dataRepositories = DataRepositories.getDefaultInstance();
         this.kek = restoreParameters.getKek();
         this.backupDirectory = restoreParameters.getBackupDirectory();
         this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
@@ -63,7 +65,7 @@ public class RestoreController {
         log.info("Merging {} manifests", manifests.size());
         this.manifest = manifestManager.mergeForRestore(manifests);
         final var filesOfLastManifest = manifest.getFilesOfLastManifest();
-        LogUtil.logStatistics(filesOfLastManifest.values(),
+        dataRepositories.getFileMetadataSetRepository().countsByType(filesOfLastManifest).forEach(
                 (type, count) -> log.info("Found {} {} items in merged backup", count, type));
     }
 
@@ -77,33 +79,37 @@ public class RestoreController {
         if (restoreTask.getThreads() < 1) {
             throw new IllegalArgumentException("Invalid number of threads: " + restoreTask.getThreads());
         }
-        executionLock.lock();
-        try {
+        final var fileMetadataSetRepository = dataRepositories.getFileMetadataSetRepository();
+        try (var self = lock();
+             var filteredEntries = fileMetadataSetRepository.createFileSet();
+             var contentSources = fileMetadataSetRepository.createFileSet();
+             var pipeline = createRestorePipeline(
+                     restoreTask.getRestoreTargets(), restoreTask.isDryRun(), restoreTask.getPermissionComparisonStrategy())) {
             this.threadPool = new ForkJoinPool(restoreTask.getThreads());
             progressTracker.reset();
             progressTracker.skipStep(LOAD_MANIFESTS);
             if (!restoreTask.isDeleteFilesNotInBackup()) {
                 progressTracker.skipStep(DELETE_OBSOLETE_FILES);
             }
-            final var allEntries = manifest.getFilesOfLastManifestFilteredBy(restoreTask.getPathFilter()).values().stream().toList();
-            final var contentSources = manifest.getExistingContentSourceFilesOfLastManifestFilteredBy(restoreTask.getPathFilter());
-            final long totalBackupSize = allEntries.stream()
-                    .map(FileMetadata::getOriginalSizeBytes)
-                    .reduce(0L, Long::sum);
+            fileMetadataSetRepository.forEach(manifest.getFiles(), threadPool, file -> {
+                if (restoreTask.getPathFilter().test(file.getAbsolutePath())) {
+                    fileMetadataSetRepository.appendTo(filteredEntries, file);
+                    if (file.getFileType().isContentSource()) {
+                        fileMetadataSetRepository.appendTo(contentSources, file);
+                    }
+                }
+            });
+            final var totalBackupSize = fileMetadataSetRepository.getOriginalSizeBytes(filteredEntries);
             restoreTask.getRestoreTargets().restoreTargets()
                     .forEach(target -> log.info("Restoring {} to {}", target.backupPath(), target.restorePath()));
             log.info("Starting restore of {} MiB backup content (delta not known yet)", totalBackupSize / MEBIBYTE);
             final var startTimeMillis = System.currentTimeMillis();
-            final var pipeline = createRestorePipeline(
-                    restoreTask.getRestoreTargets(), restoreTask.isDryRun(), restoreTask.getPermissionComparisonStrategy());
             pipeline.setProgressTracker(progressTracker);
-            pipeline.restoreDirectories(allEntries.stream()
-                    .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
-                    .toList());
+            pipeline.restoreDirectories(filteredEntries);
             pipeline.restoreFiles(contentSources, threadPool);
             pipeline.deleteLeftOverFiles(restoreTask.getIncludedPath(), restoreTask.isDeleteFilesNotInBackup(), threadPool);
-            pipeline.finalizePermissions(allEntries, threadPool);
-            pipeline.evaluateRestoreSuccess(allEntries, threadPool);
+            pipeline.finalizePermissions(filteredEntries, threadPool);
+            pipeline.evaluateRestoreSuccess(filteredEntries, threadPool);
             final var endTimeMillis = System.currentTimeMillis();
             final var durationMillis = (endTimeMillis - startTimeMillis);
             log.info("Restore completed. File operations took: {}", toProcessSummary(durationMillis));
@@ -112,7 +118,6 @@ public class RestoreController {
                 threadPool.shutdownNow();
                 threadPool = null;
             }
-            executionLock.unlock();
         }
     }
 
@@ -127,5 +132,11 @@ public class RestoreController {
             pipeline = new RestorePipeline(manifest, backupDirectory, restoreTargets, kek, permissionStrategy);
         }
         return pipeline;
+    }
+
+    @Override
+    public void close() {
+        IOUtils.closeQuietly(manifest);
+        super.close();
     }
 }

@@ -5,10 +5,10 @@ import org.jetbrains.annotations.NotNull;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public record FilePathSetId(@NotNull UUID id, @NotNull Consumer<FilePathSetId> closeWith)
-        implements BaseFileSetId<FilePathSetId> {
+public record BackupPathChangeStatusMapId(@NotNull UUID id, @NotNull Consumer<BackupPathChangeStatusMapId> closeWith)
+        implements BaseFileSetId<BackupPathChangeStatusMapId> {
 
-    public FilePathSetId(@NotNull final Consumer<FilePathSetId> closeWith) {
+    public BackupPathChangeStatusMapId(@NotNull final Consumer<BackupPathChangeStatusMapId> closeWith) {
         this(UUID.randomUUID(), closeWith);
     }
 

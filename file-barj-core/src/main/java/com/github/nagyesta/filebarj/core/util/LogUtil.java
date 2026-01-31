@@ -35,10 +35,11 @@ public class LogUtil {
      * @param ofFiles         the files
      * @param loggingConsumer the consumer
      */
+    @Deprecated(forRemoval = true)
     public static void logStatistics(
-            final @NotNull Collection<FileMetadata> ofFiles,
+            final @NotNull SortedMap<FileType, Long> ofFiles,
             final @NotNull BiConsumer<FileType, Long> loggingConsumer) {
-        countsByType(ofFiles).forEach(loggingConsumer);
+        ofFiles.forEach(loggingConsumer);
     }
 
     /**
@@ -47,6 +48,7 @@ public class LogUtil {
      * @param ofFiles the files
      * @return the counts of each file type
      */
+    @Deprecated(forRemoval = true)
     public static @NotNull SortedMap<FileType, Long> countsByType(
             final @NotNull Collection<FileMetadata> ofFiles) {
         return new TreeMap<>(ofFiles.stream()

@@ -3,7 +3,6 @@ package com.github.nagyesta.filebarj.core.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -45,7 +44,7 @@ public class EncryptionKeyStore {
      * into a single archive.
      */
     @JsonProperty("backup_versions")
-    private @Valid
+    private
     @Size(min = 1)
     @NonNull SortedSet<@PositiveOrZero Integer> versions;
     /**

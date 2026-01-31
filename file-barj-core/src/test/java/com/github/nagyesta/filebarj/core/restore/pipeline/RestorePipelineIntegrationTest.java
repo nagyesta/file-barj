@@ -16,8 +16,11 @@ import com.github.nagyesta.filebarj.core.model.AppVersion;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.function.Consumers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -38,6 +41,7 @@ import static org.mockito.Mockito.mock;
 class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
     private static final int FUTURE = 99;
+    private static final TreeMap<String, TreeSet<Integer>> PREFIX_MAP = new TreeMap<>(Map.of("prefix", new TreeSet<>(Set.of(0))));
 
     @Test
     void testConstructorShouldThrowExceptionWhenCalledWithAManifestCreatedByAFutureVersion() {
@@ -45,7 +49,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var manifest = mock(RestoreManifest.class);
         doReturn(new AppVersion(FUTURE, FUTURE, FUTURE)).when(manifest).getMaximumAppVersion();
         doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
-        doReturn(Map.of()).when(manifest).getFiles();
+        doReturn(new FileMetadataSetId(Consumers.nop())).when(manifest).getFiles();
         final var sourceDirectory = testDataRoot.resolve("source-dir");
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -61,10 +65,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     @Test
     void testConstructorShouldThrowExceptionWhenCalledWithAManifestWhichHasNoConfiguration() {
         //given
+        final var fileSet = DataRepositories.getDefaultInstance().getFileMetadataSetRepository().createFileSet();
         final var manifest = mock(RestoreManifest.class);
         doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
         doReturn(null).when(manifest).getConfiguration();
-        doReturn(Map.of()).when(manifest).getFiles();
+        doReturn(PREFIX_MAP).when(manifest).getFileNamePrefixes();
+        doReturn(fileSet).when(manifest).getFiles();
         final var sourceDirectory = testDataRoot.resolve("source-dir");
         final var backupDirectory = testDataRoot.resolve("backup-dir");
         final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -82,6 +88,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         //given
         final var manifest = mock(RestoreManifest.class);
         doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
+        doReturn(PREFIX_MAP).when(manifest).getFileNamePrefixes();
         doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
         doReturn(null).when(manifest).getFiles();
         final var sourceDirectory = testDataRoot.resolve("source-dir");
@@ -189,10 +196,13 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
         final var list = manifest.getFiles().values().stream().toList();
+        final var fileMetadataSetRepository = DataRepositories.getDefaultInstance().getFileMetadataSetRepository();
+        final var fileSet = fileMetadataSetRepository.createFileSet();
+        fileMetadataSetRepository.appendTo(fileSet, list);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.finalizePermissions(list, null));
+                () -> underTest.finalizePermissions(fileSet, null));
 
         //then + exception
     }
@@ -238,10 +248,13 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var contentSources = manifest.getFiles().values().stream()
                 .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
                 .toList();
+        final var fileMetadataSetRepository = DataRepositories.getDefaultInstance().getFileMetadataSetRepository();
+        final var fileSet = fileMetadataSetRepository.createFileSet();
+        fileMetadataSetRepository.appendTo(fileSet, contentSources);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.restoreFiles(contentSources, null));
+                () -> underTest.restoreFiles(fileSet, null));
 
         //then + exception
     }
@@ -285,10 +298,13 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
 
         final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
         final var list = manifest.getFiles().values().stream().toList();
+        final var fileMetadataSetRepository = DataRepositories.getDefaultInstance().getFileMetadataSetRepository();
+        final var fileSet = fileMetadataSetRepository.createFileSet();
+        fileMetadataSetRepository.appendTo(fileSet, list);
 
         //when
         Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.evaluateRestoreSuccess(list, null));
+                () -> underTest.evaluateRestoreSuccess(fileSet, null));
 
         //then + exception
     }
@@ -307,11 +323,14 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
         final var underTest = new RestorePipeline(restoreManifest, backupDirectory, restoreTargets, null, null);
+        final var fileMetadataSetRepository = DataRepositories.getDefaultInstance().getFileMetadataSetRepository();
+        final var fileSet = fileMetadataSetRepository.createFileSet();
+        fileMetadataSetRepository.appendTo(fileSet, manifest.getFiles().values().stream().toList());
 
         final var threadPool = new ForkJoinPool(1);
         try {
             //when
-            underTest.evaluateRestoreSuccess(manifest.getFiles().values().stream().toList(), threadPool);
+            underTest.evaluateRestoreSuccess(fileSet, threadPool);
 
             //then no exception
         } catch (final Exception e) {
@@ -382,17 +401,21 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
                 .mergeForRestore(new TreeMap<>(Map.of(0, manifest)));
         final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
 
+        final var dataRepositories = DataRepositories.getDefaultInstance();
+        final var fileMetadataSetRepository = dataRepositories.getFileMetadataSetRepository();
         final var underTest = new RestorePipeline(
                 restoreManifest, backupDir, restoreTargets, null, PermissionComparisonStrategy.STRICT);
-        final var scope = manifest.getFiles().values().stream()
+        final var scope = fileMetadataSetRepository.createFileSet();
+        final var scopeList = manifest.getFiles().values().stream()
                 .filter(f -> f.getAbsolutePath().toOsPath().equals(sourceLinkExternal)
                         || f.getAbsolutePath().toOsPath().endsWith("A.png")
                         || f.getAbsolutePath().toOsPath().equals(sourceDir))
                 .toList();
-
-        final var scopeMap = scope.stream()
+        fileMetadataSetRepository.appendTo(scope, scopeList);
+        final var scopeMap = fileMetadataSetRepository.createFileSet();
+        fileMetadataSetRepository.appendTo(scopeMap, scopeList.stream()
                 .filter(f -> f.getArchiveMetadataId() != null)
-                .toList();
+                .toList());
 
         final var threadPool = new ForkJoinPool(threads);
         try {

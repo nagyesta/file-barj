@@ -76,4 +76,27 @@ public enum Change {
                 .filter(Change::isStoreContent)
                 .toList());
     }
+
+    /**
+     * Returns a set of all change statuses that indicate changed metadata.
+     *
+     * @return set
+     */
+    public static Set<Change> allWithChangedMetadata() {
+        return EnumSet.copyOf(Arrays.stream(values())
+                .filter(Change::isRestoreMetadata)
+                .toList());
+    }
+
+    /**
+     * Returns a set of all change statuses that indicate changed content.
+     *
+     * @return set
+     */
+    public static Set<Change> allWithChangedContent() {
+        return EnumSet.copyOf(Arrays.stream(values())
+                .filter(Change::isRestoreContent)
+                .toList());
+    }
+
 }

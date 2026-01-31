@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -10,6 +11,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -73,8 +75,12 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new HashingFileMetadataChangeDetector(manifests, null);
+        final var fileMetadataSetRepository = DataRepositories.getDefaultInstance().getFileMetadataSetRepository();
+        final var manifests = Map.of(
+                "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
+                "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
+        );
+        final var underTest = new HashingFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
 
         //when
         final var relevant = underTest.findMostRelevantPreviousVersion(curr);
@@ -99,8 +105,12 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        final var manifests = Map.of("1", Map.of(orig.getId(), orig), "2", Map.of(prev.getId(), prev));
-        final var underTest = new HashingFileMetadataChangeDetector(manifests, null);
+        final var fileMetadataSetRepository = DataRepositories.getDefaultInstance().getFileMetadataSetRepository();
+        final var manifests = Map.of(
+                "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
+                "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
+        );
+        final var underTest = new HashingFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
 
         //when
         final var actual = underTest.findMostRelevantPreviousVersion(curr);

@@ -4,7 +4,6 @@ import com.github.nagyesta.filebarj.core.persistence.entities.BaseFileSetId;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 
@@ -15,8 +14,6 @@ public interface BaseFileSetRepository<K extends BaseFileSetId<K>, V extends Com
     void appendTo(K id, V value);
 
     void appendTo(K id, Collection<V> values);
-
-    Optional<V> takeFirst(K id);
 
     void removeFileSet(K id);
 

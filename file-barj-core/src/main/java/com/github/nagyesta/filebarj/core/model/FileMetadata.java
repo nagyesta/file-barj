@@ -40,8 +40,7 @@ public class FileMetadata implements Comparable<FileMetadata> {
      * The absolute path where the file is located.
      */
     @JsonProperty("path")
-    private final @Valid
-    @NonNull BackupPath absolutePath;
+    private final @Valid @NonNull BackupPath absolutePath;
     /**
      * The hash of the file content using the configured hash algorithm.
      * <br/>
