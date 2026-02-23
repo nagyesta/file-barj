@@ -3,12 +3,15 @@ package com.github.nagyesta.filebarj.core.common;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
-import com.github.nagyesta.filebarj.core.model.*;
+import com.github.nagyesta.filebarj.core.model.AppVersion;
+import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.RestoreManifest;
+import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
-import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.core.util.OsUtil;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidationException;
@@ -27,7 +30,6 @@ import java.security.PrivateKey;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPInputStream;
@@ -46,9 +48,13 @@ public class ManifestManagerImpl implements ManifestManager {
     private final ObjectMapper mapper = new ObjectMapper();
     private final Validator validator = createValidator();
     private final ProgressTracker progressTracker;
+    private final DataStore dataStore;
 
-    public ManifestManagerImpl(final @NonNull ProgressTracker progressTracker) {
+    public ManifestManagerImpl(
+            final @NonNull DataStore dataStore,
+            final @NonNull ProgressTracker progressTracker) {
         progressTracker.assertSupports(LOAD_MANIFESTS);
+        this.dataStore = dataStore;
         this.progressTracker = progressTracker;
     }
 
@@ -185,20 +191,23 @@ public class ManifestManagerImpl implements ManifestManager {
     @Override
     public RestoreManifest mergeForRestore(
             final @NonNull SortedMap<Integer, BackupIncrementManifest> manifests) {
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
         final var maximumAppVersion = findMaximumAppVersion(manifests);
         final var lastIncrementManifest = manifests.get(manifests.lastKey());
         final var maximumTimeStamp = lastIncrementManifest.getStartTimeUtcEpochSeconds();
         final var keys = mergeEncryptionKeys(manifests);
         final var versions = new TreeSet<>(manifests.keySet());
         final var fileNamePrefixes = findAllFilenamePrefixes(manifests);
-        final Map<String, Map<UUID, FileMetadata>> files = new HashMap<>();
-        final Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries = new HashMap<>();
-        addDirectoriesToFiles(lastIncrementManifest, files);
-        final var filesToBeRestored = calculateRemainingFilesAndLinks(lastIncrementManifest);
-        populateFilesAndArchiveEntries(manifests, filesToBeRestored, files, archivedEntries);
-        files.forEach((key, value) ->
-                LogUtil.logStatistics(value.values(), (type, count) ->
-                        log.info("Increment {} contains {} {} items.", key, count, type)));
+        final var files = fileMetadataSetRepository.createFileSet();
+        final var archivedEntries = archivedFileMetadataSetRepository.createFileSet();
+        //add all not deleted directories and files
+        lastIncrementManifest.getFiles().values().stream()
+                .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
+                .forEach(file -> fileMetadataSetRepository.appendTo(files, file));
+        archivedFileMetadataSetRepository.appendTo(archivedEntries, lastIncrementManifest.getArchivedEntries().values());
+        fileMetadataSetRepository.countsByType(files).forEach((type, count) ->
+                        log.info("Increment {} contains {} {} items.", lastIncrementManifest.getFileNamePrefix(), count, type));
         return RestoreManifest.builder()
                 .maximumAppVersion(maximumAppVersion)
                 .lastStartTimeUtcEpochSeconds(maximumTimeStamp)
@@ -242,7 +251,7 @@ public class ManifestManagerImpl implements ManifestManager {
         }
     }
 
-    @SuppressWarnings("java:S135")
+    @SuppressWarnings({"java:S135", "checkstyle:TodoComment", "java:S1135"})
     private @NotNull SortedMap<Integer, BackupIncrementManifest> loadManifests(
             final @NotNull List<Path> manifestFiles,
             final @Nullable PrivateKey privateKey,
@@ -260,6 +269,8 @@ public class ManifestManagerImpl implements ManifestManager {
                 if (manifest.getStartTimeUtcEpochSeconds() > latestBeforeEpochMillis) {
                     continue;
                 }
+                //TODO: do we really need these duplications?
+                // This will be an issue when we store the content in DB. Can we do better?
                 validate(manifest, ValidationRules.Persisted.class);
                 manifest.getVersions().forEach(version -> manifests.put(version, manifest));
                 if (manifest.getBackupType() == BackupType.FULL) {
@@ -309,54 +320,13 @@ public class ManifestManagerImpl implements ManifestManager {
             final var notWanted = new TreeSet<>(manifests.keySet());
             notWanted.removeAll(expectedVersions);
             if (!notFound.isEmpty()) {
-                log.error("Expected manifest version but not found: " + notFound);
+                log.error("Expected manifest version but not found: {}", notFound);
             }
             if (!notWanted.isEmpty()) {
-                log.error("Found manifest version but not expected: " + notWanted);
+                log.error("Found manifest version but not expected: {}", notWanted);
             }
             throw new ArchivalException("The manifest versions do not match the expected versions.");
         }
-    }
-
-    private void populateFilesAndArchiveEntries(
-            final @NotNull SortedMap<Integer, BackupIncrementManifest> manifests,
-            final @NotNull Set<BackupPath> remainingFiles,
-            final @NotNull Map<String, Map<UUID, FileMetadata>> files,
-            final @NotNull Map<String, Map<UUID, ArchivedFileMetadata>> archivedEntries) {
-        //The merged maps should contain all files and archive entries that are relevant for the
-        //restore process, because the change detector needs the full information set
-        manifests.values().forEach(manifest -> {
-            final var relevantFiles = manifest.getFiles().values().stream()
-                    .filter(fileMetadata -> remainingFiles.contains(fileMetadata.getAbsolutePath()))
-                    .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
-            final var relevantArchiveEntries = manifest.getArchivedEntries().values().stream()
-                    .filter(archiveEntry -> archiveEntry.getFiles().stream().anyMatch(relevantFiles::containsKey))
-                    .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity()));
-            final var fileNamePrefix = manifest.getFileNamePrefix();
-            files.computeIfAbsent(fileNamePrefix, prefix -> new ConcurrentHashMap<>())
-                    .putAll(relevantFiles);
-            archivedEntries.computeIfAbsent(fileNamePrefix, prefix -> new ConcurrentHashMap<>())
-                    .putAll(relevantArchiveEntries);
-        });
-    }
-
-    private @NotNull Set<BackupPath> calculateRemainingFilesAndLinks(
-            final @NotNull BackupIncrementManifest lastIncrementManifest) {
-        return lastIncrementManifest.getFiles().values().stream()
-                .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
-                .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
-                .map(FileMetadata::getAbsolutePath)
-                .collect(Collectors.toSet());
-    }
-
-    private void addDirectoriesToFiles(
-            final @NotNull BackupIncrementManifest lastIncrementManifest,
-            final @NotNull Map<String, Map<UUID, FileMetadata>> files) {
-        lastIncrementManifest.getFiles().values().stream()
-                .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
-                .filter(fileMetadata -> !fileMetadata.getFileType().isContentSource())
-                .forEach(file -> files.computeIfAbsent(lastIncrementManifest.getFileNamePrefix(), k -> new HashMap<>())
-                        .put(file.getId(), file));
     }
 
     private @NotNull AppVersion findMaximumAppVersion(

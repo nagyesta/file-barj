@@ -12,6 +12,7 @@ import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import jakarta.validation.ValidationException;
@@ -44,109 +45,119 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     @Test
     void testGenerateManifestShouldAllowOverridingTheBackupTypeWhenCalledWithFullBackupOfIncrementalConfiguration() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        final var actual = underTest.generateManifest(configuration, BackupType.FULL, 0);
+            //when
+            final var actual = underTest.generateManifest(configuration, BackupType.FULL, 0);
 
-        //then
-        Assertions.assertNotNull(actual);
-        Assertions.assertEquals(configuration, actual.getConfiguration());
-        Assertions.assertEquals(BackupType.FULL, actual.getBackupType());
+            //then
+            Assertions.assertNotNull(actual);
+            Assertions.assertEquals(configuration, actual.getConfiguration());
+            Assertions.assertEquals(BackupType.FULL, actual.getBackupType());
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testGenerateManifestShouldThrowExceptionWhenCalledWithNullConfiguration() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.generateManifest(null, BackupType.FULL, 0));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.generateManifest(null, BackupType.FULL, 0));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testGenerateManifestShouldThrowExceptionWhenCalledWithNullBackupType() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.generateManifest(configuration, null, 0));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.generateManifest(configuration, null, 0));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @Test
     void testLoadShouldReadPreviouslyPersistedManifestWhenUsingEncryption() throws IOException {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var keyPair = EncryptionUtil.generateRsaKeyPair();
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .encryptionKey(keyPair.getPublic())
-                .build();
-        final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(expected);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var keyPair = EncryptionUtil.generateRsaKeyPair();
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .encryptionKey(keyPair.getPublic())
+                    .build();
+            final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(expected);
 
-        //when
-        underTest.persist(expected);
-        final var actual = underTest.load(destinationDirectory, "prefix", keyPair.getPrivate(), Long.MAX_VALUE);
+            //when
+            underTest.persist(expected);
+            final var actual = underTest.load(destinationDirectory, "prefix", keyPair.getPrivate(), Long.MAX_VALUE);
 
-        //then
-        Assertions.assertTrue(destinationDirectory.toFile().exists());
-        final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
-        Assertions.assertTrue(historyPath.toFile().exists());
-        final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
-        Assertions.assertTrue(encryptedPath.toFile().exists());
-        Assertions.assertEquals(1, actual.size());
-        Assertions.assertEquals(expected, actual.get(0));
-        Assertions.assertNotEquals(Files.size(historyPath), Files.size(encryptedPath));
+            //then
+            Assertions.assertTrue(destinationDirectory.toFile().exists());
+            final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
+            Assertions.assertTrue(historyPath.toFile().exists());
+            final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
+            Assertions.assertTrue(encryptedPath.toFile().exists());
+            Assertions.assertEquals(1, actual.size());
+            Assertions.assertEquals(expected, actual.get(0));
+            Assertions.assertNotEquals(Files.size(historyPath), Files.size(encryptedPath));
+        }
     }
 
     @Test
     void testLoadShouldReadPreviouslyPersistedManifestWhenNotUsingEncryption() throws IOException {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .build();
-        final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(expected);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .build();
+            final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(expected);
 
-        //when
-        underTest.persist(expected);
-        final var actual = underTest.load(destinationDirectory, "prefix", null, Long.MAX_VALUE);
+            //when
+            underTest.persist(expected);
+            final var actual = underTest.load(destinationDirectory, "prefix", null, Long.MAX_VALUE);
 
-        //then
-        Assertions.assertTrue(destinationDirectory.toFile().exists());
-        final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
-        Assertions.assertTrue(historyPath.toFile().exists());
-        final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
-        Assertions.assertTrue(encryptedPath.toFile().exists());
-        Assertions.assertEquals(1, actual.size());
-        Assertions.assertEquals(expected, actual.get(0));
-        Assertions.assertEquals(Files.size(historyPath), Files.size(encryptedPath));
+            //then
+            Assertions.assertTrue(destinationDirectory.toFile().exists());
+            final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
+            Assertions.assertTrue(historyPath.toFile().exists());
+            final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
+            Assertions.assertTrue(encryptedPath.toFile().exists());
+            Assertions.assertEquals(1, actual.size());
+            Assertions.assertEquals(expected, actual.get(0));
+            Assertions.assertEquals(Files.size(historyPath), Files.size(encryptedPath));
+        }
     }
 
     @Test
@@ -154,40 +165,42 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     void testLoadShouldFilterOutManifestsAfterThresholdWhenATimeStampIsProvided()
             throws IOException, InterruptedException {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.of(testDataRoot)).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .build();
-        final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(expected);
-        underTest.persist(expected);
-        Thread.sleep(Duration.ofSeconds(1).toMillis());
-        final var limit = Instant.now().getEpochSecond();
-        Thread.sleep(Duration.ofSeconds(1).toMillis());
-        final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(ignored);
-        underTest.persist(ignored);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.of(testDataRoot)).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .build();
+            final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(expected);
+            underTest.persist(expected);
+            Thread.sleep(Duration.ofSeconds(1).toMillis());
+            final var limit = Instant.now().getEpochSecond();
+            Thread.sleep(Duration.ofSeconds(1).toMillis());
+            final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(ignored);
+            underTest.persist(ignored);
 
-        //when
-        final var actual = underTest.load(destinationDirectory, "prefix", null, limit);
+            //when
+            final var actual = underTest.load(destinationDirectory, "prefix", null, limit);
 
-        //then
-        Assertions.assertTrue(destinationDirectory.toFile().exists());
-        final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
-        Assertions.assertTrue(historyPath.toFile().exists());
-        final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
-        Assertions.assertTrue(encryptedPath.toFile().exists());
-        Assertions.assertEquals(1, actual.size());
-        Assertions.assertEquals(expected, actual.get(0));
-        Assertions.assertEquals(Files.size(historyPath), Files.size(encryptedPath));
+            //then
+            Assertions.assertTrue(destinationDirectory.toFile().exists());
+            final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
+            Assertions.assertTrue(historyPath.toFile().exists());
+            final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
+            Assertions.assertTrue(encryptedPath.toFile().exists());
+            Assertions.assertEquals(1, actual.size());
+            Assertions.assertEquals(expected, actual.get(0));
+            Assertions.assertEquals(Files.size(historyPath), Files.size(encryptedPath));
+        }
     }
 
     @Test
@@ -195,285 +208,326 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     void testLoadShouldFilterOutManifestsBeforeLatestFullBackupWhenMultipleFullBackupsAreEligible()
             throws IOException, InterruptedException {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .build();
-        final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(ignored);
-        underTest.persist(ignored);
-        Thread.sleep(Duration.ofSeconds(1).toMillis());
-        final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(expected);
-        underTest.persist(expected);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .build();
+            final var ignored = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(ignored);
+            underTest.persist(ignored);
+            Thread.sleep(Duration.ofSeconds(1).toMillis());
+            final var expected = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(expected);
+            underTest.persist(expected);
 
-        //when
-        final var actual = underTest.load(destinationDirectory, "prefix", null, Long.MAX_VALUE);
+            //when
+            final var actual = underTest.load(destinationDirectory, "prefix", null, Long.MAX_VALUE);
 
-        //then
-        Assertions.assertTrue(destinationDirectory.toFile().exists());
-        final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
-        Assertions.assertTrue(historyPath.toFile().exists());
-        final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
-        Assertions.assertTrue(encryptedPath.toFile().exists());
-        Assertions.assertEquals(1, actual.size());
-        Assertions.assertEquals(expected, actual.get(0));
-        Assertions.assertEquals(Files.size(historyPath), Files.size(encryptedPath));
+            //then
+            Assertions.assertTrue(destinationDirectory.toFile().exists());
+            final var historyPath = destinationDirectory.resolve(".history/" + expected.getFileNamePrefix() + ".manifest.json.gz");
+            Assertions.assertTrue(historyPath.toFile().exists());
+            final var encryptedPath = destinationDirectory.resolve(expected.getFileNamePrefix() + ".manifest.cargo");
+            Assertions.assertTrue(encryptedPath.toFile().exists());
+            Assertions.assertEquals(1, actual.size());
+            Assertions.assertEquals(expected, actual.get(0));
+            Assertions.assertEquals(Files.size(historyPath), Files.size(encryptedPath));
+        }
     }
 
     @Test
     @SuppressWarnings("java:S2925")
     void testLoadShouldThrowExceptionWhenAPreviousVersionIsMissing() throws InterruptedException {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.INCREMENTAL)
-                .build();
-        final var original = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(original);
-        Thread.sleep(Duration.ofSeconds(1).toMillis());
-        final var secondIncrement = underTest.generateManifest(config, BackupType.INCREMENTAL, 2);
-        simulateThatADirectoryWasArchived(secondIncrement);
-        underTest.persist(original);
-        underTest.persist(secondIncrement);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.INCREMENTAL)
+                    .build();
+            final var original = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(original);
+            Thread.sleep(Duration.ofSeconds(1).toMillis());
+            final var secondIncrement = underTest.generateManifest(config, BackupType.INCREMENTAL, 2);
+            simulateThatADirectoryWasArchived(secondIncrement);
+            underTest.persist(original);
+            underTest.persist(secondIncrement);
 
-        //when
-        Assertions.assertThrows(ArchivalException.class,
-                () -> underTest.load(destinationDirectory, "prefix", null, Long.MAX_VALUE));
+            //when
+            Assertions.assertThrows(ArchivalException.class,
+                    () -> underTest.load(destinationDirectory, "prefix", null, Long.MAX_VALUE));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testPersistShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testPersistShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destination = Path.of("destination");
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destination = Path.of("destination");
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null, destination));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.persist(null, destination));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testPersistShouldThrowExceptionWhenCalledWithNullDestination() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.persist(mock(BackupIncrementManifest.class), null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.persist(mock(BackupIncrementManifest.class), null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testLoadShouldThrowExceptionWhenCalledWithNullDirectory() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .build();
-        final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(manifest);
-        underTest.persist(manifest);
-        final var fileNamePrefix = manifest.getFileNamePrefix();
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .build();
+            final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(manifest);
+            underTest.persist(manifest);
+            final var fileNamePrefix = manifest.getFileNamePrefix();
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.load(null, fileNamePrefix, null, Long.MAX_VALUE));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.load(null, fileNamePrefix, null, Long.MAX_VALUE));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testLoadShouldThrowExceptionWhenCalledWithNullPrefix() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .build();
-        final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
-        simulateThatADirectoryWasArchived(manifest);
-        underTest.persist(manifest);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .build();
+            final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
+            simulateThatADirectoryWasArchived(manifest);
+            underTest.persist(manifest);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.load(destinationDirectory, null, null, Long.MAX_VALUE));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.load(destinationDirectory, null, null, Long.MAX_VALUE));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testValidateShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.validate(null, ValidationRules.Persisted.class));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.validate(null, ValidationRules.Persisted.class));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testValidateShouldThrowExceptionWhenCalledWithNullRules() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .build();
-        final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .build();
+            final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.validate(manifest, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.validate(manifest, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @Test
     void testValidateShouldThrowExceptionWhenCalledWithInvalidData() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.FULL)
-                .build();
-        final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.ofPathAsIs("/tmp")).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.FULL)
+                    .build();
+            final var manifest = underTest.generateManifest(config, BackupType.FULL, 0);
 
-        //when
-        Assertions.assertThrows(ValidationException.class,
-                () -> underTest.validate(manifest, ValidationRules.Persisted.class));
+            //when
+            Assertions.assertThrows(ValidationException.class,
+                    () -> underTest.validate(manifest, ValidationRules.Persisted.class));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testMergeForRestoreShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.mergeForRestore(null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.mergeForRestore(null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullManifest() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
-        final var destination = Path.of("destination");
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destination = Path.of("destination");
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.deleteIncrement(destination, null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.deleteIncrement(destination, null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullDestination() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.deleteIncrement(null, mock(BackupIncrementManifest.class)));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.deleteIncrement(null, mock(BackupIncrementManifest.class)));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
     void testLoadPreviousManifestsForBackupShouldThrowExceptionWhenCalledWithNull() {
         //given
-        final var underTest = new ManifestManagerImpl(NoOpProgressTracker.INSTANCE);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
-        //when
-        Assertions.assertThrows(IllegalArgumentException.class,
-                () -> underTest.loadPreviousManifestsForBackup(null));
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> underTest.loadPreviousManifestsForBackup(null));
 
-        //then + exception
+            //then + exception
+        }
     }
 
     @SuppressWarnings("DataFlowIssue")
     @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNull() {
+    void testConstructorShouldThrowExceptionWhenCalledWithNullProgressTracker() {
+        //given
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+
+            //when
+            Assertions.assertThrows(IllegalArgumentException.class, () -> new ManifestManagerImpl(dataStore, null));
+
+            //then + exception
+        }
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    void testConstructorShouldThrowExceptionWhenCalledWithNullDataStore() {
         //given
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> new ManifestManagerImpl(null));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> new ManifestManagerImpl(null, NoOpProgressTracker.INSTANCE));
 
         //then + exception
     }

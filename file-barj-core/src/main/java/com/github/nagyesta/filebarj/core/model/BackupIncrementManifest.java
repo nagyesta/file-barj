@@ -67,16 +67,18 @@ public class BackupIncrementManifest extends EncryptionKeyStore {
     /**
      * The map of matching files identified during backup keyed by Id.
      */
+    @Deprecated(forRemoval = true)
     @JsonProperty("files")
-    private @Valid
-    @Size(max = 0, groups = ValidationRules.Created.class)
-    @Size(min = 1, groups = ValidationRules.Persisted.class) Map<UUID, FileMetadata> files;
+    private @Size(max = 0, groups = ValidationRules.Created.class)
+    @Size(min = 1, groups = ValidationRules.Persisted.class)
+    Map<UUID, @Valid @NotNull FileMetadata> files;
     /**
      * The map of archive entries saved during backup keyed by Id.
      */
+    @Deprecated(forRemoval = true)
     @JsonProperty("archive_entries")
-    private @Valid
-    @Size(max = 0, groups = ValidationRules.Created.class) Map<UUID, ArchivedFileMetadata> archivedEntries;
+    private @Size(max = 0, groups = ValidationRules.Created.class)
+    Map<UUID, @Valid @NotNull ArchivedFileMetadata> archivedEntries;
     /**
      * The name of the index file.
      */
@@ -90,5 +92,5 @@ public class BackupIncrementManifest extends EncryptionKeyStore {
     @JsonProperty("data_file_names")
     private @Null(groups = ValidationRules.Created.class)
     @NotNull(groups = ValidationRules.Persisted.class)
-    @Size(min = 1, groups = ValidationRules.Persisted.class) List<String> dataFileNames;
+    @Size(min = 1, groups = ValidationRules.Persisted.class) List<@NotNull String> dataFileNames;
 }

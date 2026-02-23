@@ -18,6 +18,7 @@ class BackupPathTest extends TempFileAwareTest {
         return Stream.<Arguments>builder()
                 .add(Arguments.of(URI.create("file:///"), "/"))
                 .add(Arguments.of(URI.create("file:///test"), "/test"))
+                .add(Arguments.of(URI.create("file:///test/D:/something"), "/test/D:/something"))
                 .add(Arguments.of(URI.create("file:///D:/test"), "D:/test"))
                 .add(Arguments.of(URI.create("file:/D:/test"), "D:/test"))
                 .build();

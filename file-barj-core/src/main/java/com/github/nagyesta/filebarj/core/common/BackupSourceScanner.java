@@ -3,8 +3,8 @@ package com.github.nagyesta.filebarj.core.common;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
-import com.github.nagyesta.filebarj.core.persistence.FileSetRepository;
-import com.github.nagyesta.filebarj.core.persistence.entities.FileSetId;
+import com.github.nagyesta.filebarj.core.persistence.FilePathSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.FilePathSetId;
 import lombok.NonNull;
 import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +32,7 @@ public class BackupSourceScanner {
      */
     private static final Set<String> EXCLUDE_NO_FILES = Set.of();
 
-    private final FileSetRepository fileSetRepository;
+    private final FilePathSetRepository filePathSetRepository;
     private final BackupSource backupSource;
     private final Path backupSourceOsPath;
     private final SortedSet<String> includePatterns;
@@ -40,9 +40,9 @@ public class BackupSourceScanner {
     private final boolean shouldUsePatterns;
 
     public BackupSourceScanner(
-            final @NonNull FileSetRepository fileSetRepository,
+            final @NonNull FilePathSetRepository filePathSetRepository,
             final @NonNull BackupSource backupSource) {
-        this.fileSetRepository = fileSetRepository;
+        this.filePathSetRepository = filePathSetRepository;
         this.backupSource = backupSource;
         this.backupSourceOsPath = backupSource.getPath().toOsPath();
         final var originalIncludes = backupSource.getIncludePatterns();
@@ -55,11 +55,11 @@ public class BackupSourceScanner {
     /**
      * Lists the matching {@link Path} entries.
      *
-     * @param resultFileSetId the Id of the file se where we should collect the results
+     * @param resultFilePathSetId the Id of the file se where we should collect the results
      */
     @JsonIgnore
-    public void listMatchingFilePaths(final @NonNull FileSetId resultFileSetId) {
-        try (var tempFileSetId = fileSetRepository.createFileSet()) {
+    public void listMatchingFilePaths(final @NonNull FilePathSetId resultFilePathSetId) {
+        try (var tempFileSetId = filePathSetRepository.createFileSet()) {
             var current = Optional.of(backupSourceOsPath);
             var parentDirsFromBackupSource = List.<Path>of();
             Path lastParent = null;
@@ -69,8 +69,8 @@ public class BackupSourceScanner {
                     lastParent = currentPath.getParent();
                     parentDirsFromBackupSource = findParentsFromBackupSource(currentPath);
                 }
-                listRemainingFiles(currentPath, parentDirsFromBackupSource, resultFileSetId, tempFileSetId);
-                current = fileSetRepository.takeFirst(tempFileSetId);
+                listRemainingFiles(currentPath, parentDirsFromBackupSource, resultFilePathSetId, tempFileSetId);
+                current = filePathSetRepository.takeFirst(tempFileSetId);
             }
         }
     }
@@ -88,8 +88,8 @@ public class BackupSourceScanner {
     private void listRemainingFiles(
             final @NotNull Path currentPath,
             final @NotNull List<Path> parentDirsFromBackupSource,
-            final @NotNull FileSetId sourceFileSetIt,
-            final @NotNull FileSetId tempFileSetId) {
+            final @NotNull FilePathSetId sourceFileSetIt,
+            final @NotNull FilePathSetId tempFilePathSetId) {
         if (!currentPath.toFile().exists()) {
             return;
         }
@@ -101,13 +101,13 @@ public class BackupSourceScanner {
                 return;
             }
             //add all parents if they are not saved yet
-            fileSetRepository.appendTo(sourceFileSetIt, parentDirsFromBackupSource);
-            fileSetRepository.appendTo(sourceFileSetIt, currentPath);
+            filePathSetRepository.appendTo(sourceFileSetIt, parentDirsFromBackupSource);
+            filePathSetRepository.appendTo(sourceFileSetIt, currentPath);
         } else {
             if (isCurrentDirectoryInSourceSetByPatterns(currentPath)) {
                 //always add directories if the include patterns match and the exclude patterns do not match
-                fileSetRepository.appendTo(sourceFileSetIt, parentDirsFromBackupSource);
-                fileSetRepository.appendTo(sourceFileSetIt, currentPath);
+                filePathSetRepository.appendTo(sourceFileSetIt, parentDirsFromBackupSource);
+                filePathSetRepository.appendTo(sourceFileSetIt, currentPath);
             }
             if (hasChildren(currentPath)) {
                 Optional.ofNullable(currentPath.toFile().listFiles())
@@ -115,7 +115,7 @@ public class BackupSourceScanner {
                         .flatMap(Arrays::stream)
                         .map(File::toPath)
                         .filter(child -> !shouldIgnoreByExcludePattern(child))
-                        .forEach((Path child) -> fileSetRepository.appendTo(tempFileSetId, child));
+                        .forEach((Path child) -> filePathSetRepository.appendTo(tempFilePathSetId, child));
             }
         }
     }

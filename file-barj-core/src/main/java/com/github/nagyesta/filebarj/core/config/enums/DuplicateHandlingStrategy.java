@@ -10,7 +10,7 @@ import java.util.function.Function;
  */
 public enum DuplicateHandlingStrategy {
     /**
-     * Archives each copies as separate entry in the archive.
+     * Archives each copy as a separate entry in the archive.
      * <br/>e.g.,<br/>
      * Each duplicate is added as many times as it is found in the source.
      */
@@ -20,7 +20,7 @@ public enum DuplicateHandlingStrategy {
      * <br/>e.g.,<br/>
      * The file is not added to the current archive even if the duplicate is found archived in a
      * previous backup version, such as a file was overwritten with a previously archived version
-     * of the same file,
+     * of the same file.
      */
     KEEP_ONE_PER_BACKUP {
 

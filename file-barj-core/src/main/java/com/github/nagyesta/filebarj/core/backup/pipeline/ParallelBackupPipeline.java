@@ -33,8 +33,9 @@ public class ParallelBackupPipeline extends BaseBackupPipeline<ParallelBarjCargo
      * @param threadCount The number of threads
      * @throws IOException When the stream cannot be created due to an I/O error
      */
-    public ParallelBackupPipeline(final @NotNull BackupIncrementManifest manifest,
-                                  final int threadCount) throws IOException {
+    public ParallelBackupPipeline(
+            final @NotNull BackupIncrementManifest manifest,
+            final int threadCount) throws IOException {
         super(manifest, convert(manifest, threadCount));
     }
 

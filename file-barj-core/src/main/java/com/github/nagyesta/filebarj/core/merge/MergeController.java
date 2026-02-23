@@ -3,12 +3,13 @@ package com.github.nagyesta.filebarj.core.merge;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
+import com.github.nagyesta.filebarj.core.common.SingleUseController;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
-import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoInputStreamConfiguration;
@@ -16,22 +17,27 @@ import com.github.nagyesta.filebarj.io.stream.BarjCargoOutputStreamConfiguration
 import com.github.nagyesta.filebarj.io.stream.enums.FileType;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.*;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import static com.github.nagyesta.filebarj.core.progress.ProgressStep.*;
 
 /**
  * Controller implementation for the merge process.
+ * <br>
+ * Warning: Each controller is single-use!
  */
+@SuppressWarnings({"checkstyle:TodoComment", "java:S1135"})
 @Slf4j
-public class MergeController {
+public class MergeController extends SingleUseController implements Closeable {
+
     private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, MERGE, DELETE_OBSOLETE_FILES);
     private final ManifestManager manifestManager;
     private final RestoreManifest mergedManifest;
@@ -39,7 +45,6 @@ public class MergeController {
     private final SortedMap<Integer, BackupIncrementManifest> manifestsToMerge;
     private final PrivateKey kek;
     private final Path backupDirectory;
-    private final ReentrantLock executionLock = new ReentrantLock();
     private final ProgressTracker progressTracker;
 
     /**
@@ -48,12 +53,13 @@ public class MergeController {
      * @param mergeParameters The parameters.
      */
     public MergeController(final @NonNull MergeParameters mergeParameters) {
+        super(DataStore.newInMemoryInstance());
         mergeParameters.assertValid();
         this.kek = mergeParameters.getKek();
         this.backupDirectory = mergeParameters.getBackupDirectory();
         this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
         progressTracker.registerListener(mergeParameters.getProgressListener());
-        manifestManager = new ManifestManagerImpl(progressTracker);
+        manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);
         log.info("Loading backup manifests for merge from: {}", backupDirectory);
         final var manifests = manifestManager.loadAll(this.backupDirectory, mergeParameters.getFileNamePrefix(), kek);
         selectedManifests = filterToSelection(manifests,
@@ -62,8 +68,8 @@ public class MergeController {
         manifestsToMerge = keepManifestsSinceLastFullBackupOfTheSelection(selectedManifests);
         mergedManifest = manifestManager.mergeForRestore(manifestsToMerge);
         final var filesOfLastManifest = mergedManifest.getFilesOfLastManifest();
-        LogUtil.logStatistics(filesOfLastManifest.values(),
-                (type, count) -> log.info("Found {} {} items in merged backup", count, type));
+        dataStore().fileMetadataSetRepository().countsByType(filesOfLastManifest)
+                .forEach((type, count) -> log.info("Found {} {} items in merged backup", count, type));
     }
 
     /**
@@ -74,8 +80,7 @@ public class MergeController {
      * @return the merged manifest
      */
     public BackupIncrementManifest execute(final boolean deleteObsoleteFiles) {
-        executionLock.lock();
-        try {
+        try (var self = lock()) {
             progressTracker.reset();
             progressTracker.skipStep(LOAD_MANIFESTS);
             if (!deleteObsoleteFiles) {
@@ -92,15 +97,22 @@ public class MergeController {
                 });
             }
             return result;
-        } finally {
-            executionLock.unlock();
         }
     }
 
-    @SuppressWarnings("java:S4087") //need to close the method before marking the file merged
+    @SuppressWarnings({"java:S4087"}) //need to close the method before marking the file merged
     private @NotNull BackupIncrementManifest mergeBackupContent() {
         final var lastManifest = manifestsToMerge.get(manifestsToMerge.lastKey());
         final var firstManifest = manifestsToMerge.get(manifestsToMerge.firstKey());
+        final var files = new HashMap<UUID, FileMetadata>();
+        final var archives = new HashMap<UUID, ArchivedFileMetadata>();
+        final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
+        final var forkJoinPool = dataStore().singleThreadedPool();
+        fileMetadataSetRepository.forEach(mergedManifest.getFilesOfLastManifest(), forkJoinPool,
+                fileMetadata -> files.put(fileMetadata.getId(), fileMetadata));
+        archivedFileMetadataSetRepository.forEach(mergedManifest.getArchivedEntriesOfLastManifest(), forkJoinPool,
+                archivedFileMetadata -> archives.put(archivedFileMetadata.getId(), archivedFileMetadata));
         final var result = BackupIncrementManifest.builder()
                 .backupType(firstManifest.getBackupType())
                 .startTimeUtcEpochSeconds(mergedManifest.getLastStartTimeUtcEpochSeconds())
@@ -112,13 +124,12 @@ public class MergeController {
                 .encryptionKeys(mergedManifest.getEncryptionKeys())
                 .operatingSystem(lastManifest.getOperatingSystem())
                 .versions(mergedManifest.getVersions())
-                .files(mergedManifest.getFilesOfLastManifest())
-                .archivedEntries(mergedManifest.getArchivedEntriesOfLastManifest())
+                .files(files)
+                .archivedEntries(archives)
                 .build();
         final var totalEntries = (long) result.getArchivedEntries().size();
         progressTracker.estimateStepSubtotal(MERGE, totalEntries);
-        @SuppressWarnings("java:S2637")
-        final var outputStreamConfiguration = BarjCargoOutputStreamConfiguration.builder()
+        @SuppressWarnings("java:S2637") final var outputStreamConfiguration = BarjCargoOutputStreamConfiguration.builder()
                 .compressionFunction(result.getConfiguration().getCompression()::decorateOutputStream)
                 .prefix(result.getFileNamePrefix())
                 .folder(backupDirectory)
@@ -222,8 +233,7 @@ public class MergeController {
     private BarjCargoInputStreamConfiguration getStreamConfig(
             final BackupIncrementManifest currentManifest,
             final PrivateKey kek) {
-        @SuppressWarnings("java:S2637")
-        final var decryptionKey = Optional.ofNullable(kek)
+        @SuppressWarnings("java:S2637") final var decryptionKey = Optional.ofNullable(kek)
                 .map(key -> currentManifest.dataIndexDecryptionKey(key, currentManifest.getVersions().first()))
                 .orElse(null);
         return BarjCargoInputStreamConfiguration.builder()
@@ -233,5 +243,11 @@ public class MergeController {
                 .hashAlgorithm(currentManifest.getConfiguration().getHashAlgorithm().getAlgorithmName())
                 .indexDecryptionKey(decryptionKey)
                 .build();
+    }
+
+    @Override
+    public void close() {
+        IOUtils.closeQuietly(this.mergedManifest);
+        super.close();
     }
 }

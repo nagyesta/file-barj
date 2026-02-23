@@ -2,6 +2,10 @@ package com.github.nagyesta.filebarj.core.model.enums;
 
 import lombok.Getter;
 
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
+
 /**
  * Indicates the change status of a file.
  */
@@ -16,7 +20,7 @@ public enum Change {
      */
     NO_CHANGE(false, true, false, false, "Restored."),
     /**
-     * The file was present in the previous backup and only the metadata changed.
+     * The file was present in the previous backup, and only the metadata changed.
      */
     METADATA_CHANGED(false, true, true, false, "Failed to restore file metadata."),
     /**
@@ -48,7 +52,7 @@ public enum Change {
      *                             backup creation
      * @param restoreMetadata      true if the metadata should be restored during restore
      * @param restoreContent       true if the content should be restored during restore
-     * @param restoreStatusMessage the message to show in case change is detected after a restore
+     * @param restoreStatusMessage the message to show in case a change is detected after a restore
      */
     Change(final boolean storeContent,
            final boolean linkPreviousContent,
@@ -61,4 +65,38 @@ public enum Change {
         this.restoreContent = restoreContent;
         this.restoreStatusMessage = restoreStatusMessage;
     }
+
+    /**
+     * Returns a set of all change statuses that store content.
+     *
+     * @return set
+     */
+    public static Set<Change> allStoringContent() {
+        return EnumSet.copyOf(Arrays.stream(values())
+                .filter(Change::isStoreContent)
+                .toList());
+    }
+
+    /**
+     * Returns a set of all change statuses that indicate changed metadata.
+     *
+     * @return set
+     */
+    public static Set<Change> allWithChangedMetadata() {
+        return EnumSet.copyOf(Arrays.stream(values())
+                .filter(Change::isRestoreMetadata)
+                .toList());
+    }
+
+    /**
+     * Returns a set of all change statuses that indicate changed content.
+     *
+     * @return set
+     */
+    public static Set<Change> allWithChangedContent() {
+        return EnumSet.copyOf(Arrays.stream(values())
+                .filter(Change::isRestoreContent)
+                .toList());
+    }
+
 }

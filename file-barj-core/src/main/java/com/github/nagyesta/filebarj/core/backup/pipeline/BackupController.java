@@ -1,18 +1,19 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
-import com.github.nagyesta.filebarj.core.backup.worker.DefaultBackupScopePartitioner;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParser;
 import com.github.nagyesta.filebarj.core.backup.worker.FileMetadataParserFactory;
 import com.github.nagyesta.filebarj.core.common.*;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
-import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
-import com.github.nagyesta.filebarj.core.persistence.FileSetRepository;
-import com.github.nagyesta.filebarj.core.persistence.entities.FileSetId;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.persistence.FilePathSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.ArchivedFileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.entities.FilePathSetId;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
@@ -21,15 +22,14 @@ import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiverFileOutputStream;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 import static com.github.nagyesta.filebarj.core.progress.ProgressStep.*;
 import static com.github.nagyesta.filebarj.core.util.TimerUtil.toProcessSummary;
@@ -38,23 +38,27 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutput
 /**
  * Controller implementation for the backup process.
  */
+@SuppressWarnings({"checkstyle:TodoComment", "java:S1135"})
 @Slf4j
-public class BackupController {
-    private static final int BATCH_SIZE = 250000;
+public class BackupController
+        extends SingleUseController implements Closeable {
+
     private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, SCAN_FILES, PARSE_METADATA, BACKUP);
     private final FileMetadataParser metadataParser = FileMetadataParserFactory.newInstance();
     private final ManifestManager manifestManager;
     @Getter
     private final BackupIncrementManifest manifest;
     private final SortedMap<Integer, BackupIncrementManifest> previousManifests;
-    private final Map<BackupPath, FileMetadata> backupFileSet = new TreeMap<>();
-    private List<FileMetadata> filesFound;
+    private final SortedMap<Integer, FileMetadataSetId> previousManifestFiles;
+    private final SortedMap<Integer, ArchivedFileMetadataSetId> previousManifestArchives;
+    private final SortedMap<Integer, String> previousManifestPrefixes;
+    private final FileMetadataSetId filesFound;
+    private final FileMetadataSetId backupFileSet;
+    private final ArchivedFileMetadataSetId backupArchivedFileSet;
     private boolean readyToUse = true;
-    private final ReentrantLock executionLock = new ReentrantLock();
     private FileMetadataChangeDetector changeDetector;
     private ForkJoinPool threadPool;
     private final ProgressTracker progressTracker;
-    private final DataRepositories dataRepositories;
 
     /**
      * Creates a new instance and initializes it for the specified job.
@@ -62,25 +66,57 @@ public class BackupController {
      * @param parameters The parameters
      */
     public BackupController(final @NonNull BackupParameters parameters) {
-        this.dataRepositories = DataRepositories.IN_MEMORY;
+        super(DataStore.newInMemoryInstance());
         this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
         progressTracker.registerListener(parameters.getProgressListener());
-        this.manifestManager = new ManifestManagerImpl(progressTracker);
-
-        final var job = parameters.getJob();
-        var backupType = job.getBackupType();
+        this.manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);
+        final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
         this.previousManifests = new TreeMap<>();
-        final var forceFull = parameters.isForceFull();
-        if (!forceFull && backupType != BackupType.FULL) {
-            this.previousManifests.putAll(manifestManager.loadPreviousManifestsForBackup(job));
-            if (previousManifests.isEmpty()) {
+        this.previousManifestFiles = new TreeMap<>();
+        this.previousManifestArchives = new TreeMap<>();
+        this.previousManifestPrefixes = new TreeMap<>();
+        this.filesFound = fileMetadataSetRepository.createFileSet();
+        this.backupFileSet = fileMetadataSetRepository.createFileSet();
+        this.backupArchivedFileSet = archivedFileMetadataSetRepository.createFileSet();
+        final var backupType = loadPreviousBackups(parameters);
+        this.manifest = manifestManager.generateManifest(parameters.getJob(), backupType, previousManifests.size());
+    }
+
+    private BackupType loadPreviousBackups(final @NotNull BackupParameters parameters) {
+        try {
+            final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
+            final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
+            var backupType = parameters.getJob().getBackupType();
+            final var forceFull = parameters.isForceFull();
+            if (!forceFull && backupType != BackupType.FULL) {
+                this.previousManifests.putAll(manifestManager.loadPreviousManifestsForBackup(parameters.getJob()));
+                if (previousManifests.isEmpty()) {
+                    backupType = BackupType.FULL;
+                } else {
+                    //TODO: can we move this processing to the load logic?
+                    previousManifests.values().forEach(value -> {
+                        final var fileSetId = fileMetadataSetRepository.createFileSet();
+                        final var archiveSetId = archivedFileMetadataSetRepository.createFileSet();
+                        fileMetadataSetRepository.appendTo(fileSetId, value.getFiles().values());
+                        archivedFileMetadataSetRepository.appendTo(archiveSetId, value.getArchivedEntries().values());
+                        value.getVersions().forEach(increment -> {
+                            previousManifestFiles.put(increment, fileSetId);
+                            previousManifestArchives.put(increment, archiveSetId);
+                            previousManifestPrefixes.put(increment, value.getFileNamePrefix());
+                        });
+                    });
+                }
+            }
+            if (forceFull) {
                 backupType = BackupType.FULL;
             }
+            return backupType;
+        } catch (final Exception e) {
+            //close all resources to eliminate unwanted side effects
+            this.close();
+            throw new ArchivalException("Failed to load previous backups.", e);
         }
-        if (forceFull) {
-            backupType = BackupType.FULL;
-        }
-        this.manifest = manifestManager.generateManifest(job, backupType, previousManifests.size());
     }
 
     /**
@@ -92,10 +128,9 @@ public class BackupController {
         if (threads < 1) {
             throw new IllegalArgumentException("Number of threads must be greater than 0");
         }
-        executionLock.lock();
-        try {
+        try (var self = lock()) {
             if (readyToUse) {
-                this.threadPool = new ForkJoinPool(threads);
+                threadPool = new ForkJoinPool(threads);
                 listAffectedFilesFromBackupSources();
                 calculateBackupDelta();
                 executeBackup(threads);
@@ -109,12 +144,11 @@ public class BackupController {
                 threadPool.shutdownNow();
                 threadPool = null;
             }
-            executionLock.unlock();
         }
     }
 
     private void listAffectedFilesFromBackupSources() {
-        final var fileSetRepository = this.dataRepositories.getFileSetRepository();
+        final var fileSetRepository = dataStore().filePathSetRepository();
         log.info("Listing affected files from {} backup sources", manifest.getConfiguration().getSources().size());
         try (var uniquePathFileSet = listSources(fileSetRepository)) {
             if (fileSetRepository.isEmpty(uniquePathFileSet)) {
@@ -126,26 +160,25 @@ public class BackupController {
             log.info("Found {} unique paths in backup sources. Parsing metadata...", totalUniquePaths);
             progressTracker.estimateStepSubtotal(PARSE_METADATA, totalUniquePaths);
 
-            final var parsedMetadata = new ConcurrentSkipListSet<FileMetadata>();
+            final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
             fileSetRepository.forEach(uniquePathFileSet, threadPool, path -> {
                 final var fileMetadata = metadataParser.parse(path.toFile(), manifest.getConfiguration());
                 progressTracker.recordProgressInSubSteps(PARSE_METADATA);
-                parsedMetadata.add(fileMetadata);
+                fileMetadataSetRepository.appendTo(filesFound, fileMetadata);
             });
-            this.filesFound = List.copyOf(parsedMetadata);
-            LogUtil.logStatistics(filesFound,
+            fileMetadataSetRepository.countsByType(filesFound).forEach(
                     (type, count) -> log.info("Found {} {} items in backup sources.", count, type));
             progressTracker.completeStep(PARSE_METADATA);
         }
     }
 
-    private FileSetId listSources(final @NotNull FileSetRepository fileSetRepository) {
-        final var resultFileSet = fileSetRepository.createFileSet();
+    private FilePathSetId listSources(final @NotNull FilePathSetRepository filePathSetRepository) {
+        final var resultFileSet = filePathSetRepository.createFileSet();
         try {
             manifest.getConfiguration().getSources()
                     .forEach(source -> {
                         log.info("Listing files from backup source: {}", source);
-                        new BackupSourceScanner(fileSetRepository, source).listMatchingFilePaths(resultFileSet);
+                        new BackupSourceScanner(filePathSetRepository, source).listMatchingFilePaths(resultFileSet);
                     });
             return resultFileSet;
         } catch (final Exception e) {
@@ -155,8 +188,8 @@ public class BackupController {
         }
     }
 
-    private void detectCaseInsensitivityIssues(final @NotNull FileSetId uniquePathFileSet) {
-        final var affected = dataRepositories.getFileSetRepository().detectCaseInsensitivityIssues(uniquePathFileSet);
+    private void detectCaseInsensitivityIssues(final @NotNull FilePathSetId uniquePathFileSet) {
+        final var affected = dataStore().filePathSetRepository().detectCaseInsensitivityIssues(uniquePathFileSet);
         if (!affected.isEmpty()) {
             log.warn(LogUtil.scary("Found some paths which differ only in case! The backup cannot be restored correctly on Windows! "
                     + "The affected files are: {}"), affected);
@@ -164,96 +197,95 @@ public class BackupController {
     }
 
     private void calculateBackupDelta() {
-        log.info("Calculating backup delta using {} previous backup increments", previousManifests.size());
-        final var previousFiles = new TreeMap<String, Map<UUID, FileMetadata>>();
-        previousManifests.forEach((key, value) -> previousFiles.put(value.getFileNamePrefix(), value.getFiles()));
-        if (!previousManifests.isEmpty()) {
-            changeDetector = FileMetadataChangeDetectorFactory
-                    .create(manifest.getConfiguration(), previousFiles, PermissionComparisonStrategy.STRICT);
-            log.info("Trying to find unchanged files in previous backup increments");
-            threadPool.submit(() -> this.filesFound.parallelStream()
-                    .forEach(this::findPreviousVersionToReuseOrAddToBackupFileSet)).join();
-        } else {
-            this.filesFound.forEach(file -> backupFileSet.put(file.getAbsolutePath(), file));
-        }
-        if (!manifest.getFiles().isEmpty()) {
-            LogUtil.logStatistics(manifest.getFiles().values(),
-                    (type, count) -> log.info("Found {} matching {} items in previous backup increments.", count, type));
-        }
-        final var changeStats = filesFound.stream()
-                .collect(Collectors.groupingBy(FileMetadata::getStatus, Collectors.counting()));
-        log.info("Detected changes: {}", changeStats);
-        filesFound = null;
-    }
+        try (filesFound) {
+            log.info("Calculating backup delta using {} previous backup increments", previousManifestFiles.size());
+            final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
 
-    private void usePreviousVersionInCurrentIncrement(
-            final @NotNull FileMetadata previousVersion,
-            final @NotNull FileMetadata file) {
-        final var archiveMetadataId = previousVersion.getArchiveMetadataId();
-        previousManifests.values().stream()
-                .sorted(Comparator.comparing(BackupIncrementManifest::getStartTimeUtcEpochSeconds).reversed())
-                .map(previousManifest -> Optional.of(previousManifest.getArchivedEntries())
-                        .filter(entries -> entries.containsKey(archiveMetadataId))
-                        .map(entries -> entries.get(archiveMetadataId))
-                        .filter(entry -> entry.getFiles().contains(previousVersion.getId()))
-                        .orElse(null))
-                .filter(Objects::nonNull)
-                .findFirst()
-                .ifPresent(archiveEntry -> {
-                    final var copied = archiveEntry.copyArchiveDetails();
-                    copied.getFiles().add(file.getId());
-                    manifest.getArchivedEntries().put(copied.getId(), copied);
-                    file.setArchiveMetadataId(copied.getId());
-                });
-        manifest.getFiles().put(file.getId(), file);
+            final var previousFiles = new TreeMap<String, FileMetadataSetId>();
+            previousManifestFiles.forEach(
+                    (key, value) -> previousFiles.put(previousManifestPrefixes.get(key), value));
+            if (!previousManifestFiles.isEmpty()) {
+                changeDetector = FileMetadataChangeDetectorFactory
+                        .create(manifest.getConfiguration(), fileMetadataSetRepository, previousFiles, PermissionComparisonStrategy.STRICT);
+                log.info("Trying to find unchanged files in previous backup increments");
+                fileMetadataSetRepository.forEach(filesFound, threadPool, this::findPreviousVersionToReuseOrAddToBackupFileSet);
+            } else {
+                fileMetadataSetRepository.forEach(filesFound, threadPool,
+                        fileMetadata -> fileMetadataSetRepository.appendTo(backupFileSet, fileMetadata));
+            }
+            if (!fileMetadataSetRepository.isEmpty(backupFileSet)) {
+                fileMetadataSetRepository.countsByType(backupFileSet).forEach(
+                        (type, count) -> log.info("Found {} matching {} items in previous backup increments.", count, type));
+            }
+            final var changeStats = fileMetadataSetRepository.countsByStatus(filesFound);
+            log.info("Detected changes: {}", changeStats);
+        }
     }
 
     private void executeBackup(final int threads) {
         final var startTimeMillis = System.currentTimeMillis();
-        final var totalBackupSize = backupFileSet.values().stream()
-                .mapToLong(FileMetadata::getOriginalSizeBytes)
-                .sum();
+        final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
+        final var totalBackupSize = fileMetadataSetRepository
+                .getOriginalSizeBytes(backupFileSet);
+        final var fileCount = fileMetadataSetRepository.countAll(backupFileSet);
         progressTracker.estimateStepSubtotal(BACKUP, totalBackupSize);
         final var totalSize = totalBackupSize / MEBIBYTE;
-        log.info("Backing up delta for {} files ({} MiB)", backupFileSet.size(), totalSize);
+        log.info("Backing up delta for {} files ({} MiB)", fileCount, totalSize);
         try (var pipeline = getPipeline(threads)) {
-            this.backupFileSet.values().stream()
-                    .filter(metadata -> metadata.getStatus().isStoreContent())
-                    .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
-                    .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
             final var config = manifest.getConfiguration();
             final var duplicateStrategy = config.getDuplicateStrategy();
             final var hashAlgorithm = config.getHashAlgorithm();
-            final var scope = new DefaultBackupScopePartitioner(BATCH_SIZE, duplicateStrategy, hashAlgorithm)
-                    .partitionBackupScope(backupFileSet.values());
-            processScope(scope, pipeline);
+            fileMetadataSetRepository
+                    .forEachDuplicateOf(
+                            backupFileSet,
+                            Change.allStoringContent(),
+                            FileType.allContentSources(),
+                            duplicateStrategy,
+                            hashAlgorithm,
+                            threadPool,
+                            batch -> processScope(batch, pipeline));
             final var dataFiles = pipeline.getDataFilesWritten().stream()
                     .map(Path::getFileName)
                     .map(Path::toString)
                     .toList();
             manifest.setDataFileNames(dataFiles);
             manifest.setIndexFileName(pipeline.getIndexFileWritten().getFileName().toString());
+
+            //TODO: need to find a way to stream this into the manifest file
+            //move files from the staging area to the actual manifest
+            fileMetadataSetRepository
+                    .forEach(backupFileSet, threadPool,
+                            metadata -> manifest.getFiles().put(metadata.getId(), metadata));
+            //move archives from the staging area to the actual manifest
+            archivedFileMetadataSetRepository
+                    .forEach(backupArchivedFileSet, threadPool,
+                            metadata -> manifest.getArchivedEntries().put(metadata.getId(), metadata));
+
             final var endTimeMillis = System.currentTimeMillis();
             final var durationMillis = endTimeMillis - startTimeMillis;
             progressTracker.completeStep(BACKUP);
             log.info("Archive write completed. Archive write took: {}", toProcessSummary(durationMillis, totalBackupSize));
         } catch (final Exception e) {
             throw new ArchivalException("Archival process failed.", e);
+        } finally {
+            IOUtils.closeQuietly(backupFileSet);
+            IOUtils.closeQuietly(backupArchivedFileSet);
         }
     }
 
     private void processScope(
-            final @NotNull List<List<List<FileMetadata>>> scope,
+            final @NotNull List<List<FileMetadata>> aBatchOfDuplicates,
             final @NotNull BaseBackupPipeline<?> pipeline) {
+        final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
         try {
-            for (final var batch : scope) {
-                final var archived = pipeline.storeEntries(batch);
-                archived.forEach(entry -> manifest.getArchivedEntries().put(entry.getId(), entry));
-            }
-            scope.stream()
+            final var archived = pipeline.storeEntries(aBatchOfDuplicates);
+            archivedFileMetadataSetRepository.appendTo(backupArchivedFileSet, archived);
+            aBatchOfDuplicates.stream()
                     .flatMap(Collection::stream)
-                    .flatMap(Collection::stream)
-                    .forEach(metadata -> manifest.getFiles().put(metadata.getId(), metadata));
+                    .forEach(metadata -> fileMetadataSetRepository
+                            .updateArchiveMetadataId(backupFileSet, metadata.getId(), metadata.getArchiveMetadataId()));
             pipeline.close();
         } catch (final Exception e) {
             throw new ArchivalException("Failed to store files: " + e.getMessage(), e);
@@ -261,9 +293,10 @@ public class BackupController {
     }
 
     private void findPreviousVersionToReuseOrAddToBackupFileSet(final @NotNull FileMetadata file) {
+        final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
         if (file.getFileType() == FileType.DIRECTORY) {
             updateDirectoryChangeStatus(file);
-            manifest.getFiles().put(file.getId(), file);
+            fileMetadataSetRepository.appendTo(backupFileSet, file);
             return;
         }
         final var previousVersion = changeDetector.findMostRelevantPreviousVersion(file);
@@ -275,7 +308,34 @@ public class BackupController {
                 return;
             }
         }
-        backupFileSet.put(file.getAbsolutePath(), file);
+        fileMetadataSetRepository.appendTo(backupFileSet, file);
+    }
+
+    private void usePreviousVersionInCurrentIncrement(
+            final @NotNull FileMetadata previousVersion,
+            final @NotNull FileMetadata file) {
+        final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
+        final var archiveMetadataId = previousVersion.getArchiveMetadataId();
+
+        final var matchingArchiveMetadata = previousManifests.values()
+                .stream()
+                .map(BackupIncrementManifest::getVersions)
+                .map(SortedSet::last)
+                .sorted(Comparator.reverseOrder())
+                .map(this.previousManifestArchives::get)
+                .map(id -> archivedFileMetadataSetRepository.findByFileMetadataId(id, previousVersion.getId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .filter(archiveEntry -> archiveEntry.getId().equals(archiveMetadataId))
+                .findFirst();
+        matchingArchiveMetadata.ifPresent(archiveEntry -> {
+            final var copied = archiveEntry.copyArchiveDetails();
+            copied.getFiles().add(file.getId());
+            archivedFileMetadataSetRepository.appendTo(backupArchivedFileSet, copied);
+            file.setArchiveMetadataId(copied.getId());
+        });
+        fileMetadataSetRepository.appendTo(backupFileSet, file);
     }
 
     private void updateDirectoryChangeStatus(final @NotNull FileMetadata file) {
@@ -302,4 +362,13 @@ public class BackupController {
         manifestManager.persist(manifest);
     }
 
+    @Override
+    public void close() {
+        super.close();
+        this.previousManifestFiles.values().forEach(IOUtils::closeQuietly);
+        this.previousManifestArchives.values().forEach(IOUtils::closeQuietly);
+        IOUtils.closeQuietly(this.filesFound);
+        IOUtils.closeQuietly(this.backupFileSet);
+        IOUtils.closeQuietly(this.backupArchivedFileSet);
+    }
 }

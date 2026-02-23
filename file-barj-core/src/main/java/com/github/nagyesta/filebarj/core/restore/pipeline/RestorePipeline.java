@@ -11,14 +11,17 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.persistence.DataRepositories;
-import com.github.nagyesta.filebarj.core.persistence.entities.FileSetId;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
+import com.github.nagyesta.filebarj.core.persistence.entities.ArchivedFileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.entities.BackupPathChangeStatusMapId;
+import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.entities.FilePathSetId;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import com.github.nagyesta.filebarj.core.progress.ProgressStep;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetter;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
-import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoArchiveFileInputStreamSource;
 import com.github.nagyesta.filebarj.io.stream.BarjCargoInputStreamConfiguration;
 import com.github.nagyesta.filebarj.io.stream.exception.ArchiveIntegrityException;
@@ -34,10 +37,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.SecretKey;
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -48,7 +48,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -59,8 +58,9 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStre
 /**
  * Performs the actual restore process as instructed by the controller.
  */
+@SuppressWarnings({"checkstyle:TodoComment", "java:S1135"})
 @Slf4j
-public class RestorePipeline {
+public class RestorePipeline implements Closeable {
     private final Map<String, BarjCargoArchiveFileInputStreamSource> cache = new ConcurrentHashMap<>();
     private final FileMetadataChangeDetector changeDetector;
     private final Path backupDirectory;
@@ -70,11 +70,13 @@ public class RestorePipeline {
     private final FileMetadataSetter fileMetadataSetter;
     private final ReentrantLock streamLock = new ReentrantLock();
     private @NonNull ProgressTracker progressTracker = new NoOpProgressTracker();
-    private final DataRepositories dataRepositories;
+    private final DataStore dataStore;
+    private final SortedMap<String, FileMetadataSetId> manifestFileMetadataSetIds = new TreeMap<>();
 
     /**
      * Creates a new pipeline instance for the specified manifests.
      *
+     * @param dataStore          the DataStore containing the working data
      * @param manifest           the manifest
      * @param backupDirectory    the directory where the backup files are located
      * @param restoreTargets     the mappings of the root paths where we would like to restore
@@ -82,6 +84,7 @@ public class RestorePipeline {
      * @param permissionStrategy the permission comparison strategy
      */
     public RestorePipeline(
+            final @NonNull DataStore dataStore,
             final @NonNull RestoreManifest manifest,
             final @NonNull Path backupDirectory,
             final @NonNull RestoreTargets restoreTargets,
@@ -90,9 +93,17 @@ public class RestorePipeline {
         if (manifest.getMaximumAppVersion().compareTo(new AppVersion()) > 0) {
             throw new IllegalArgumentException("Manifests were saved with a newer version of the application");
         }
-        this.dataRepositories = DataRepositories.IN_MEMORY;
+        this.dataStore = dataStore;
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+
+        final var fileMetadataSetId = manifest.getFiles();
+        if (fileMetadataSetRepository.countAll(fileMetadataSetId) == 0) {
+            throw new IllegalArgumentException("Manifest does not contain any files.");
+        }
+        final var fileName = manifest.getFileNamePrefixes().lastKey();
+        manifestFileMetadataSetIds.put(fileName, fileMetadataSetId);
         this.changeDetector = FileMetadataChangeDetectorFactory
-                .create(manifest.getConfiguration(), manifest.getFiles(), permissionStrategy);
+                .create(manifest.getConfiguration(), fileMetadataSetRepository, manifestFileMetadataSetIds, permissionStrategy);
         this.manifest = manifest;
         this.backupDirectory = backupDirectory;
         this.restoreTargets = restoreTargets;
@@ -105,15 +116,19 @@ public class RestorePipeline {
      *
      * @param directories the directories
      */
-    public void restoreDirectories(final @NonNull List<FileMetadata> directories) {
-        log.info("Restoring {} directories", directories.size());
-        progressTracker.estimateStepSubtotal(RESTORE_DIRECTORIES, directories.size());
-        directories.stream()
-                .filter(metadata -> metadata.getFileType() == FileType.DIRECTORY)
-                .sorted(Comparator.comparing(FileMetadata::getAbsolutePath))
-                .forEachOrdered(this::restoreDirectory);
+    public void restoreDirectories(final @NonNull FileMetadataSetId directories) {
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var size = fileMetadataSetRepository.countByType(directories, EnumSet.of(FileType.DIRECTORY));
+        log.info("Restoring {} directories", size);
+        progressTracker.estimateStepSubtotal(RESTORE_DIRECTORIES, size);
+        fileMetadataSetRepository.forEachByChangeStatusesAndFileTypes(
+                directories,
+                EnumSet.allOf(Change.class),
+                EnumSet.of(FileType.DIRECTORY),
+                dataStore.singleThreadedPool(),
+                this::restoreDirectory);
         progressTracker.completeStep(RESTORE_DIRECTORIES);
-        log.info("Restored {} directories", directories.size());
+        log.info("Restored {} directories", size);
     }
 
     /**
@@ -123,33 +138,31 @@ public class RestorePipeline {
      * @param threadPool     the thread pool we can use for parallel processing
      */
     public void restoreFiles(
-            final @NonNull Collection<FileMetadata> contentSources,
+            final @NonNull FileMetadataSetId contentSources,
             final @NonNull ForkJoinPool threadPool) {
-        log.info("Restoring {} items", contentSources.size());
-
-        progressTracker.estimateStepSubtotal(PARSE_METADATA, contentSources.size());
-        final var changeStatus = detectChanges(contentSources, threadPool, false, PARSE_METADATA);
-        final var pathsToRestore = contentSources.stream()
-                .map(FileMetadata::getAbsolutePath)
-                .collect(Collectors.toSet());
-        final var files = manifest.getFilesOfLastManifest();
-        files.values().stream()
-                .filter(fileMetadata -> fileMetadata.getError() != null)
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var size = fileMetadataSetRepository.countAll(contentSources);
+        log.info("Restoring {} items", size);
+        progressTracker.estimateStepSubtotal(PARSE_METADATA, size);
+        final var filesFromLastIncrement = manifestFileMetadataSetIds.get(manifestFileMetadataSetIds.lastKey());
+        fileMetadataSetRepository.findErrorsOf(filesFromLastIncrement)
                 .forEach(fileMetadata -> log.warn("File {} might be corrupted. The following error was saved during backup:\n  {}",
                         fileMetadata.getAbsolutePath(), fileMetadata.getError()));
-        final var entries = manifest.getArchivedEntriesOfLastManifest();
-        final var restoreScope = new RestoreScope(files, entries, changeStatus, pathsToRestore);
-        final var filesWithContentChanges = restoreScope.getChangedContentSourcesByPath();
-        final var itemsCount = filesWithContentChanges.size();
-        final var contentSize = filesWithContentChanges.values().stream()
-                .mapToLong(FileMetadata::getOriginalSizeBytes)
-                .sum();
-        log.info("Unpacking {} items with content changes ({} MiB)", itemsCount, contentSize / MEBIBYTE);
-        final var startTimeMillis = System.currentTimeMillis();
-        restoreContent(threadPool, restoreScope, contentSources.size());
-        final var endTimeMillis = System.currentTimeMillis();
-        final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Content is unpacked. Completed under: {}", toProcessSummary(durationMillis, contentSize));
+        final var archivesOfLastManifest = manifest.getArchivedEntriesOfLastManifest();
+        try (var changeStatus = detectChanges(fileMetadataSetRepository, contentSources, threadPool, false, PARSE_METADATA);
+             var restoreScope = new RestoreScope(dataStore, filesFromLastIncrement, archivesOfLastManifest, changeStatus, contentSources)) {
+            final var filesWithContentChanges = restoreScope.getChangedContentSources();
+            final var itemsCount = fileMetadataSetRepository.countAll(filesWithContentChanges);
+            final var contentSize = fileMetadataSetRepository.getOriginalSizeBytes(filesWithContentChanges);
+            log.info("Unpacking {} items with content changes ({} MiB)", itemsCount, contentSize / MEBIBYTE);
+            final var startTimeMillis = System.currentTimeMillis();
+            restoreContent(threadPool, restoreScope, (int) size);
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Content is unpacked. Completed under: {}", toProcessSummary(durationMillis, contentSize));
+        } catch (final IOException e) {
+            throw new ArchivalException("Failed to close restore scope.", e);
+        }
     }
 
     /**
@@ -159,26 +172,43 @@ public class RestorePipeline {
      * @param threadPool The thread pool we can use for parallel processing
      */
     public void finalizePermissions(
-            final @NonNull List<FileMetadata> files,
+            final @NonNull FileMetadataSetId files,
             final @NonNull ForkJoinPool threadPool) {
-        log.info("Finalizing metadata for {} files", files.size());
-        progressTracker.estimateStepSubtotal(VERIFY_CONTENT, files.size());
-        final var changeStatus = detectChanges(files, threadPool, false, VERIFY_CONTENT);
-        final var filesWithMetadataChanges = files.stream()
-                .filter(entry -> changeStatus.get(entry.getAbsolutePath()).isRestoreMetadata())
-                .toList();
-        progressTracker.estimateStepSubtotal(RESTORE_METADATA, filesWithMetadataChanges.size());
-        filesWithMetadataChanges.stream()
-                .sorted(Comparator.comparing(FileMetadata::getAbsolutePath).reversed())
-                .forEachOrdered(fileMetadata -> {
-                    setFileProperties(fileMetadata);
-                    progressTracker.recordProgressInSubSteps(RESTORE_METADATA);
-                });
-        final var totalCount = LogUtil.countsByType(files);
-        final var changedCount = LogUtil.countsByType(filesWithMetadataChanges);
-        progressTracker.completeStep(RESTORE_METADATA);
-        changedCount.keySet().forEach(type -> log.info("Finalized metadata for {} of {} {} entries.",
-                changedCount.get(type), totalCount.get(type), type));
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var size = fileMetadataSetRepository.countAll(files);
+        log.info("Finalizing metadata for {} files", size);
+        progressTracker.estimateStepSubtotal(VERIFY_CONTENT, size);
+        try (var changeStatus = detectChanges(fileMetadataSetRepository, files, threadPool, false, VERIFY_CONTENT);
+             var filesWithMetadataChanges = fileMetadataSetRepository
+                     .keepChangedMetadata(files, EnumSet.allOf(FileType.class), changeStatus)) {
+            final var filesWithMetadataChangesSize = fileMetadataSetRepository.countAll(filesWithMetadataChanges);
+            progressTracker.estimateStepSubtotal(RESTORE_METADATA, filesWithMetadataChangesSize);
+            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesReverse(
+                    filesWithMetadataChanges,
+                    //the change status of the file was not updated during the previous filtering so we should ignore it
+                    EnumSet.allOf(Change.class),
+                    FileType.allContentSources(),
+                    threadPool,
+                    fileMetadata -> {
+                        setFileProperties(fileMetadata);
+                        progressTracker.recordProgressInSubSteps(RESTORE_METADATA);
+                    });
+            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesReverse(
+                    filesWithMetadataChanges,
+                    //the change status of the file was not updated during the previous filtering so we should ignore it
+                    EnumSet.allOf(Change.class),
+                    Set.of(FileType.DIRECTORY),
+                    dataStore.singleThreadedPool(),
+                    fileMetadata -> {
+                        setFileProperties(fileMetadata);
+                        progressTracker.recordProgressInSubSteps(RESTORE_METADATA);
+                    });
+            final var totalCount = fileMetadataSetRepository.countsByType(files);
+            final var changedCount = fileMetadataSetRepository.countsByType(filesWithMetadataChanges);
+            progressTracker.completeStep(RESTORE_METADATA);
+            changedCount.keySet().forEach(type -> log.info("Finalized metadata for {} of {} {} entries.",
+                    changedCount.get(type), totalCount.get(type), type));
+        }
     }
 
     /**
@@ -203,27 +233,28 @@ public class RestorePipeline {
         log.info("Deleting left-over files (if any){}", Optional.ofNullable(includedPath)
                 .map(path -> " limited to path: " + path)
                 .orElse(""));
-        final var files = manifest.getFilesOfLastManifest().values();
-        final var fileSetRepository = dataRepositories.getFileSetRepository();
-        try (var pathsInRestoreTarget = fileSetRepository.createFileSet()) {
+        final var filesFromLastIncrement = manifestFileMetadataSetIds.get(manifestFileMetadataSetIds.lastKey());
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var fileSetRepository = dataStore.filePathSetRepository();
+        try (var pathsInRestoreTarget = fileSetRepository.createFileSet();
+             var pathsInBackup = fileSetRepository.createFileSet()) {
             findPathsInRestoreTarget(threadPool, pathsInRestoreTarget, pathRestriction);
-            final var pathsInBackup = threadPool.submit(() -> files.parallelStream()
-                    .map(FileMetadata::getAbsolutePath)
-                    .map(restoreTargets::mapToRestorePath)
-                    .collect(Collectors.toSet())).join();
-            final var counter = new AtomicInteger(0);
-            fileSetRepository.forEachReverse(pathsInRestoreTarget, threadPool, path -> {
-                if (pathsInBackup.contains(path)) {
-                    return;
-                }
-                try {
-                    log.info("Deleting left-over file: {}", path);
-                    deleteIfExists(path);
-                    counter.incrementAndGet();
-                } catch (final IOException e) {
-                    throw new ArchivalException("Failed to delete left-over file: " + path, e);
-                }
+            fileMetadataSetRepository.forEach(filesFromLastIncrement, threadPool, fileMetadata -> {
+                final var path = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
+                fileSetRepository.appendTo(pathsInBackup, path);
             });
+            final var counter = new AtomicInteger(0);
+            try (var leftOverFiles = fileSetRepository.subtract(pathsInRestoreTarget, pathsInBackup)) {
+                fileSetRepository.forEachReverse(leftOverFiles, threadPool, path -> {
+                    try {
+                        log.info("Deleting left-over file: {}", path);
+                        deleteIfExists(path);
+                        counter.incrementAndGet();
+                    } catch (final IOException e) {
+                        throw new ArchivalException("Failed to delete left-over file: " + path, e);
+                    }
+                });
+            }
             progressTracker.completeStep(DELETE_OBSOLETE_FILES);
             log.info("Deleted {} left-over files.", counter.get());
         }
@@ -237,22 +268,29 @@ public class RestorePipeline {
      * @param threadPool The thread pool
      */
     public void evaluateRestoreSuccess(
-            final @NonNull List<FileMetadata> files,
+            final @NonNull FileMetadataSetId files,
             final @NonNull ForkJoinPool threadPool) {
-        progressTracker.estimateStepSubtotal(VERIFY_METADATA, files.size());
-        final var checkOutcome = detectChanges(files, threadPool, true, VERIFY_METADATA);
-        files.stream()
-                //cannot verify symbolic links because they can be referencing files from the
-                //restore folder which is not necessarily the same as the original backup folder
-                .filter(entry -> entry.getFileType() != FileType.SYMBOLIC_LINK)
-                .filter(entry -> checkOutcome.get(entry.getAbsolutePath()).isRestoreMetadata())
-                .forEach(file -> {
-                    final var change = Optional.ofNullable(checkOutcome.get(file.getAbsolutePath()))
-                            .map(Change::getRestoreStatusMessage)
-                            .orElse("Unknown.");
-                    final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
-                    log.warn("Could not fully restore item.\n  Path: {} \n  Status: {}", restorePath, change);
-                });
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var backupPathChangeStatusMapRepository = dataStore.backupPathChangeStatusMapRepository();
+        final var size = fileMetadataSetRepository.countAll(files);
+        progressTracker.estimateStepSubtotal(VERIFY_METADATA, size);
+        try (var checkOutcome = detectChanges(fileMetadataSetRepository, files, threadPool, true, VERIFY_METADATA);
+             var changedFiles = fileMetadataSetRepository.keepChangedMetadata(files, EnumSet.allOf(FileType.class), checkOutcome)) {
+
+            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypes(
+                    changedFiles,
+                    EnumSet.allOf(Change.class),
+                    EnumSet.of(FileType.DIRECTORY, FileType.REGULAR_FILE),
+                    threadPool,
+                    fileMetadata -> {
+                        final var change = Optional.of(backupPathChangeStatusMapRepository
+                                        .getOrDefault(checkOutcome, fileMetadata.getAbsolutePath(), Change.NO_CHANGE))
+                                .map(Change::getRestoreStatusMessage)
+                                .orElse("Unknown.");
+                        final var restorePath = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
+                        log.warn("Could not fully restore item.\n  Path: {} \n  Status: {}", restorePath, change);
+                    });
+        }
     }
 
     /**
@@ -367,9 +405,9 @@ public class RestorePipeline {
 
     private void findPathsInRestoreTarget(
             final @NotNull ForkJoinPool threadPool,
-            final @NotNull FileSetId pathsInRestoreTarget,
+            final @NotNull FilePathSetId pathsInRestoreTarget,
             final @NotNull Predicate<Path> pathRestriction) {
-        final var fileSetRepository = dataRepositories.getFileSetRepository();
+        final var fileSetRepository = dataStore.filePathSetRepository();
         try (var uniquePathSet = fileSetRepository.createFileSet()) {
             manifest.getConfiguration().getSources().stream()
                     .map(source -> BackupSource.builder()
@@ -401,75 +439,73 @@ public class RestorePipeline {
             final ForkJoinPool threadPool,
             final @NotNull RestoreScope restoreScope,
             final int totalFiles) {
-        final var changedContentSourcesByPath = restoreScope.getChangedContentSourcesByPath();
-        final var size = changedContentSourcesByPath.size();
-        final var restoreSize = changedContentSourcesByPath.values().stream()
-                .map(FileMetadata::getOriginalSizeBytes)
-                .mapToLong(Long::longValue)
-                .sum() / MEBIBYTE;
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
+        final var size = fileMetadataSetRepository.countAll(restoreScope.getChangedContentSources());
+        final var originalSizeBytes = fileMetadataSetRepository.getOriginalSizeBytes(restoreScope.getChangedContentSources());
+        final var restoreSize = originalSizeBytes / MEBIBYTE;
         progressTracker.estimateStepSubtotal(RESTORE_CONTENT, size);
         log.info("Restoring {} entries with content changes ({} MiB).", size, restoreSize);
         final var linkPaths = new ConcurrentHashMap<FileMetadata, Path>();
-        final var contentSourcesInScopeByLocator = restoreScope.getContentSourcesInScopeByLocator();
-        final var scopePerManifest = manifest.getFileNamePrefixes().keySet().stream()
-                .collect(Collectors.toMap(Function.identity(),
-                        prefix -> new ConcurrentHashMap<ArchiveEntryLocator, SortedSet<FileMetadata>>()));
-        threadPool.submit(() -> manifest.getFileNamePrefixes()
-                .entrySet()
-                .parallelStream()
-                .forEach(prefixEntry -> {
-                    final var prefix = prefixEntry.getKey();
-                    final var versions = prefixEntry.getValue();
-                    contentSourcesInScopeByLocator.entrySet().stream()
-                            //keep only those entries that have the same version as the archive
-                            .filter(entry -> versions.contains(entry.getKey().getBackupIncrement()))
-                            //assign the files from the scope to the archive prefix
-                            .forEach(entry -> scopePerManifest.get(prefix).put(entry.getKey(), entry.getValue()));
-                })).join();
-        log.info("Found {} manifests.", scopePerManifest.size());
-        scopePerManifest.forEach((key, value) -> {
-            final var entryCount = value.size();
-            final var fileCount = value.values().stream().mapToLong(Collection::size).sum();
-            log.info("Manifest {} has {} archive entries ({} files) in scope.", key, entryCount, fileCount);
-        });
-        final var partitions = new ArrayList<Map.Entry<String, Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>>();
-        scopePerManifest.forEach((prefix, scope) -> {
-            final var archiveEntryPathsInScope = threadPool.submit(() -> scope.keySet().parallelStream()
-                    .map(ArchiveEntryLocator::asEntryPath)
-                    .collect(Collectors.toSet())).join();
-            log.info("Found {} archive entries in scope for prefix: {}.", archiveEntryPathsInScope.size(), prefix);
-            if (archiveEntryPathsInScope.isEmpty()) {
-                return;
-            }
-            try {
-                final var matchingEntriesInOrderOfOccurrence = getStreamSource(manifest, prefix)
-                        .getMatchingEntriesInOrderOfOccurrence(archiveEntryPathsInScope);
-                log.info("Found {} entries in archive with prefix: {}.", matchingEntriesInOrderOfOccurrence.size(), prefix);
-                partition(matchingEntriesInOrderOfOccurrence, scope, threadPool.getParallelism()).stream()
-                        .filter(chunk -> !chunk.isEmpty())
-                        .forEach(chunk -> {
-                            log.info("Adding a partition with {} entries for prefix: {}", chunk.size(), prefix);
-                            partitions.add(new AbstractMap.SimpleEntry<>(prefix, chunk));
-                        });
-            } catch (final IOException e) {
-                throw new ArchivalException("Failed to filter archive entries.", e);
-            }
-        });
-        log.info("Formed {} partitions", partitions.size());
-        threadPool.submit(() -> partitions.parallelStream().forEach(entry -> {
-            final var prefix = entry.getKey();
-            final var scope = entry.getValue();
-            final var resolvedLinks = restoreMatchingEntriesOfManifest(manifest, restoreScope, prefix, scope);
-            linkPaths.putAll(resolvedLinks);
-        })).join();
-        createSymbolicLinks(linkPaths, threadPool);
-        progressTracker.completeStep(RESTORE_CONTENT);
-        log.info("Restored {} changed entries of {} files", size, totalFiles);
+        final var contentSourcesInScopeByLocator = restoreScope.getArchivedFilesFromLastIncrementFilteredByContentRestoreScope();
+        final var scopePerManifest = new ConcurrentHashMap<String, ArchivedFileMetadataSetId>();
+        try {
+            manifest.getFileNamePrefixes()
+                    .entrySet()
+                    .parallelStream()
+                    .forEach(prefixEntry -> {
+                        final var prefix = prefixEntry.getKey();
+                        final var versions = prefixEntry.getValue();
+                        scopePerManifest.put(prefix,
+                                archivedFileMetadataSetRepository.filterByBackupIncrements(contentSourcesInScopeByLocator, versions));
+                    });
+            log.info("Found {} manifests.", scopePerManifest.size());
+            scopePerManifest.forEach((key, value) -> {
+                final var entryCount = archivedFileMetadataSetRepository.countAll(value);
+                final var fileCount = archivedFileMetadataSetRepository.countAllFiles(value);
+                log.info("Manifest {} has {} archive entries ({} files) in scope.", key, entryCount, fileCount);
+            });
+            final var partitions = new ArrayList<Map.Entry<String, Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>>();
+            scopePerManifest.forEach((prefix, scope) -> {
+                final var archiveEntryPathsInScope = archivedFileMetadataSetRepository.asEntryPaths(scope);
+                log.info("Found {} archive entries in scope for prefix: {}.", archiveEntryPathsInScope.size(), prefix);
+                if (archiveEntryPathsInScope.isEmpty()) {
+                    return;
+                }
+                try {
+                    final var matchingEntriesInOrderOfOccurrence = getStreamSource(manifest, prefix)
+                            .getMatchingEntriesInOrderOfOccurrence(archiveEntryPathsInScope);
+                    log.info("Found {} entries in archive with prefix: {}.", matchingEntriesInOrderOfOccurrence.size(), prefix);
+                    final var files = restoreScope.getFilesFromLastIncrementFilteredByContentRestoreScope();
+                    partition(matchingEntriesInOrderOfOccurrence, files, scope, threadPool.getParallelism()).stream()
+                            .filter(chunk -> !chunk.isEmpty())
+                            .forEach(chunk -> {
+                                log.info("Adding a partition with {} entries for prefix: {}", chunk.size(), prefix);
+                                partitions.add(new AbstractMap.SimpleEntry<>(prefix, chunk));
+                            });
+                } catch (final IOException e) {
+                    throw new ArchivalException("Failed to filter archive entries.", e);
+                }
+            });
+            log.info("Formed {} partitions", partitions.size());
+            threadPool.submit(() -> partitions.parallelStream().forEach(entry -> {
+                final var prefix = entry.getKey();
+                final var scope = entry.getValue();
+                final var resolvedLinks = restoreMatchingEntriesOfManifest(manifest, restoreScope, prefix, scope);
+                linkPaths.putAll(resolvedLinks);
+            })).join();
+            createSymbolicLinks(linkPaths, threadPool);
+            progressTracker.completeStep(RESTORE_CONTENT);
+            log.info("Restored {} changed entries of {} files", size, totalFiles);
+        } finally {
+            scopePerManifest.forEach((key, value) -> IOUtils.closeQuietly(value));
+        }
     }
 
     private @NotNull List<Map<ArchiveEntryLocator, SortedSet<FileMetadata>>> partition(
             final @NotNull List<BarjCargoEntityIndex> input,
-            final @NotNull Map<ArchiveEntryLocator, SortedSet<FileMetadata>> contentSourcesInScopeByLocator,
+            final @NotNull FileMetadataSetId fileMetadataSetId,
+            final @NotNull ArchivedFileMetadataSetId contentSourcesInScopeByLocator,
             final int partitions) {
         final var chunks = new ArrayList<Map<ArchiveEntryLocator, SortedSet<FileMetadata>>>();
         final var threshold = (input.size() / partitions) + 1;
@@ -483,7 +519,8 @@ public class RestorePipeline {
             if (currentLocator == null) {
                 throw new ArchivalException("Failed to extract locator from entry path: " + file.getPath());
             }
-            final var fileMetadataList = contentSourcesInScopeByLocator.get(currentLocator);
+            final var fileMetadataList = dataStore.archivedFileMetadataSetRepository()
+                    .findFileMetadataByArchiveLocator(contentSourcesInScopeByLocator, fileMetadataSetId, currentLocator);
             collector.put(currentLocator, fileMetadataList);
         }
         chunks.add(collector);
@@ -547,16 +584,23 @@ public class RestorePipeline {
         }
     }
 
-    private @NotNull Map<BackupPath, Change> detectChanges(
-            final @NotNull Collection<FileMetadata> files,
+    private @NotNull BackupPathChangeStatusMapId detectChanges(
+            final FileMetadataSetRepository fileMetadataSetRepository,
+            final @NotNull FileMetadataSetId files,
             final @NotNull ForkJoinPool threadPool,
             final boolean ignoreLinks,
             final ProgressStep step) {
         final var parser = FileMetadataParserFactory.newInstance();
-        final Map<BackupPath, Change> changeStatuses = new ConcurrentHashMap<>();
-        threadPool.submit(() -> files.parallelStream()
-                .filter(fileMetadata -> !ignoreLinks || fileMetadata.getFileType() != FileType.SYMBOLIC_LINK)
-                .forEach(file -> {
+        final var backupPathChangeStatusMapRepository = dataStore.backupPathChangeStatusMapRepository();
+        final var changeStatuses = backupPathChangeStatusMapRepository.createFileMap();
+        final Set<FileType> typesIncluded;
+        if (ignoreLinks) {
+            typesIncluded = EnumSet.of(FileType.REGULAR_FILE, FileType.DIRECTORY);
+        } else {
+            typesIncluded = EnumSet.allOf(FileType.class);
+        }
+        fileMetadataSetRepository.forEachByChangeStatusesAndFileTypes(files, EnumSet.allOf(Change.class), typesIncluded, threadPool,
+                file -> {
                     final var previous = changeDetector.findPreviousVersionByAbsolutePath(file.getAbsolutePath());
                     if (previous == null) {
                         throw new IllegalStateException("Previous version not found for " + file.getAbsolutePath());
@@ -565,10 +609,9 @@ public class RestorePipeline {
                     final var current = parser.parse(restorePath.toFile(), manifest.getConfiguration());
                     final var change = changeDetector.classifyChange(previous, current);
                     progressTracker.recordProgressInSubSteps(step);
-                    changeStatuses.put(file.getAbsolutePath(), change);
-                })).join();
-        final var stats = new TreeMap<>(changeStatuses.values().stream()
-                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting())));
+                    backupPathChangeStatusMapRepository.appendTo(changeStatuses, file.getAbsolutePath(), change);
+                });
+        final var stats = backupPathChangeStatusMapRepository.countsByStatus(changeStatuses);
         log.info("Detected changes: {}", stats);
         progressTracker.completeStep(step);
         return changeStatuses;
@@ -662,11 +705,12 @@ public class RestorePipeline {
             final @NotNull FileMetadata fileMetadata,
             final @Nullable SecretKey key,
             final @NotNull RestoreScope restoreScope) {
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var to = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
         try {
             final var target = FilenameUtils.separatorsToUnix(archiveEntry.getLinkTarget(key));
-            final var pointsToAFileCoveredByTheBackup = restoreScope.getAllKnownPathsInBackup().stream()
-                    .anyMatch(path -> path.toString().equals(target));
+            final var pointsToAFileCoveredByTheBackup = fileMetadataSetRepository
+                    .containsPath(restoreScope.getAllFilesLatestIncrement(), target);
             final var targetPath = Path.of(target);
             final var backupPathOfTarget = BackupPath.ofPathAsIs(target);
             return restoreTargets.restoreTargets().stream()
@@ -756,5 +800,10 @@ public class RestorePipeline {
         progressTracker.assertSupports(VERIFY_METADATA);
         progressTracker.assertSupports(DELETE_OBSOLETE_FILES);
         this.progressTracker = progressTracker;
+    }
+
+    @Override
+    public void close() {
+        IOUtils.closeQuietly(manifest);
     }
 }
