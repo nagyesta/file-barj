@@ -222,6 +222,7 @@ public class BackupController
         }
     }
 
+    @SuppressWarnings("java:S4087") //the pipeline must be closed at the right moment to finalize the process
     private void executeBackup(final int threads) {
         final var startTimeMillis = System.currentTimeMillis();
         final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
@@ -245,6 +246,8 @@ public class BackupController
                             hashAlgorithm,
                             threadPool,
                             batch -> processScope(batch, pipeline));
+            //calling close explicitly to trigger finalization of the index and to know a final list of files
+            pipeline.close();
             final var dataFiles = pipeline.getDataFilesWritten().stream()
                     .map(Path::getFileName)
                     .map(Path::toString)
@@ -286,7 +289,6 @@ public class BackupController
                     .flatMap(Collection::stream)
                     .forEach(metadata -> fileMetadataSetRepository
                             .updateArchiveMetadataId(backupFileSet, metadata.getId(), metadata.getArchiveMetadataId()));
-            pipeline.close();
         } catch (final Exception e) {
             throw new ArchivalException("Failed to store files: " + e.getMessage(), e);
         }
