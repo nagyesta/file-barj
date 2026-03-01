@@ -13,6 +13,7 @@ import com.github.nagyesta.filebarj.core.inspect.pipeline.IncrementInspectionCon
 import com.github.nagyesta.filebarj.core.inspect.pipeline.InspectParameters;
 import com.github.nagyesta.filebarj.core.merge.MergeController;
 import com.github.nagyesta.filebarj.core.merge.MergeParameters;
+import com.github.nagyesta.filebarj.core.model.AppVersion;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreController;
 import com.github.nagyesta.filebarj.core.restore.pipeline.RestoreParameters;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
@@ -124,51 +125,54 @@ public class Controller {
     protected void doInspectContent(final InspectIncrementContentsProperties properties) {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
-        log.info("Bootstrapping inspect content operation...");
+        log.info("Bootstrapping inspect content operation with version {}...", AppVersion.DEFAULT_VERSION);
         final var pointInTimeEpochSeconds = properties.getPointInTimeEpochSeconds();
-        new IncrementInspectionController(
-                InspectParameters.builder()
-                        .backupDirectory(properties.getBackupSource())
-                        .fileNamePrefix(properties.getPrefix())
-                        .kek(kek)
-                        .build())
-                .inspectContent(pointInTimeEpochSeconds, properties.getOutputFile());
-        final var endTimeMillis = System.currentTimeMillis();
-        final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Increment content inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
+        final var parameters = InspectParameters.builder()
+                .backupDirectory(properties.getBackupSource())
+                .fileNamePrefix(properties.getPrefix())
+                .kek(kek)
+                .build();
+        try (var controller = new IncrementInspectionController(parameters)) {
+            controller.inspectContent(pointInTimeEpochSeconds, properties.getOutputFile());
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Increment content inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
+        }
     }
 
     @SuppressWarnings("java:S106")
     protected void doInspectIncrements(final InspectIncrementsProperties properties) {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
-        log.info("Bootstrapping inspect increments operation...");
-        new IncrementInspectionController(
-                InspectParameters.builder()
-                        .backupDirectory(properties.getBackupSource())
-                        .fileNamePrefix(properties.getPrefix())
-                        .kek(kek)
-                        .build())
-                .inspectIncrements(System.out);
-        final var endTimeMillis = System.currentTimeMillis();
-        final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Backup increments inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
+        log.info("Bootstrapping inspect increments operation with version {}...", AppVersion.DEFAULT_VERSION);
+        final var parameters = InspectParameters.builder()
+                .backupDirectory(properties.getBackupSource())
+                .fileNamePrefix(properties.getPrefix())
+                .kek(kek)
+                .build();
+        try (var controller = new IncrementInspectionController(parameters)) {
+            controller.inspectIncrements(System.out);
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Backup increments inspection operation completed. Total time: {}", toProcessSummary(durationMillis));
+        }
     }
 
     protected void doDeleteIncrements(final DeleteIncrementsProperties properties) {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
-        log.info("Bootstrapping delete increments operation...");
-        new IncrementDeletionController(
-                IncrementDeletionParameters.builder()
-                        .backupDirectory(properties.getBackupSource())
-                        .fileNamePrefix(properties.getPrefix())
-                        .kek(kek)
-                        .build())
-                .deleteIncrementsUntilNextFullBackupAfter(properties.getAfterEpochSeconds());
-        final var endTimeMillis = System.currentTimeMillis();
-        final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Increment deletion operation completed. Total time: {}", toProcessSummary(durationMillis));
+        log.info("Bootstrapping delete increments operation with version {}...", AppVersion.DEFAULT_VERSION);
+        final var parameters = IncrementDeletionParameters.builder()
+                .backupDirectory(properties.getBackupSource())
+                .fileNamePrefix(properties.getPrefix())
+                .kek(kek)
+                .build();
+        try (var controller = new IncrementDeletionController(parameters)) {
+            controller.deleteIncrementsUntilNextFullBackupAfter(properties.getAfterEpochSeconds());
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Increment deletion operation completed. Total time: {}", toProcessSummary(durationMillis));
+        }
     }
 
     protected void doGenerateKey(final KeyStoreProperties properties) {
@@ -189,7 +193,7 @@ public class Controller {
                         .collect(Collectors.toSet())
         );
         final var startTimeMillis = System.currentTimeMillis();
-        log.info("Bootstrapping restore operation...");
+        log.info("Bootstrapping restore operation with version {}...", AppVersion.DEFAULT_VERSION);
         final var restoreTask = RestoreTask.builder()
                 .restoreTargets(restoreTargets)
                 .threads(properties.getThreads())
@@ -198,35 +202,37 @@ public class Controller {
                 .includedPath(properties.getIncludedPath())
                 .permissionComparisonStrategy(properties.getPermissionComparisonStrategy())
                 .build();
-        new RestoreController(
-                RestoreParameters.builder()
-                        .backupDirectory(properties.getBackupSource())
-                        .fileNamePrefix(properties.getPrefix())
-                        .kek(kek)
-                        .atPointInTime(properties.getPointInTimeEpochSeconds())
-                        .build())
-                .execute(restoreTask);
-        final var endTimeMillis = System.currentTimeMillis();
-        final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Restore operation completed. Total time: {}", toProcessSummary(durationMillis));
+        final var parameters = RestoreParameters.builder()
+                .backupDirectory(properties.getBackupSource())
+                .fileNamePrefix(properties.getPrefix())
+                .kek(kek)
+                .atPointInTime(properties.getPointInTimeEpochSeconds())
+                .build();
+        try (var controller = new RestoreController(parameters)) {
+            controller.execute(restoreTask);
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Restore operation completed. Total time: {}", toProcessSummary(durationMillis));
+        }
     }
 
     protected void doMerge(final MergeProperties properties) {
         final var kek = getPrivateKey(properties.getKeyProperties());
         final var startTimeMillis = System.currentTimeMillis();
-        log.info("Bootstrapping merge operation...");
-        new MergeController(
-                MergeParameters.builder()
-                        .backupDirectory(properties.getBackupSource())
-                        .fileNamePrefix(properties.getPrefix())
-                        .kek(kek)
-                        .rangeStartEpochSeconds(properties.getFromTimeEpochSeconds())
-                        .rangeEndEpochSeconds(properties.getToTimeEpochSeconds())
-                        .build())
-                .execute(properties.isDeleteObsoleteFiles());
-        final var endTimeMillis = System.currentTimeMillis();
-        final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Merge operation completed. Total time: {}", toProcessSummary(durationMillis));
+        log.info("Bootstrapping merge operation with version {}...", AppVersion.DEFAULT_VERSION);
+        final var parameters = MergeParameters.builder()
+                .backupDirectory(properties.getBackupSource())
+                .fileNamePrefix(properties.getPrefix())
+                .kek(kek)
+                .rangeStartEpochSeconds(properties.getFromTimeEpochSeconds())
+                .rangeEndEpochSeconds(properties.getToTimeEpochSeconds())
+                .build();
+        try (var controller = new MergeController(parameters)) {
+            controller.execute(properties.isDeleteObsoleteFiles());
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Merge operation completed. Total time: {}", toProcessSummary(durationMillis));
+        }
     }
 
     protected void doBackup(final BackupProperties properties) throws IOException {
@@ -234,15 +240,16 @@ public class Controller {
                 .readValue(properties.getConfig().toFile(), BackupJobConfiguration.class);
         final var startTimeMillis = System.currentTimeMillis();
         log.info("Bootstrapping backup operation...");
-        new BackupController(
-                BackupParameters.builder()
-                        .job(config)
-                        .forceFull(properties.isForceFullBackup())
-                        .build())
-                .execute(properties.getThreads());
-        final var endTimeMillis = System.currentTimeMillis();
-        final var durationMillis = (endTimeMillis - startTimeMillis);
-        log.info("Backup operation completed. Total time: {}", toProcessSummary(durationMillis));
+        final var parameters = BackupParameters.builder()
+                .job(config)
+                .forceFull(properties.isForceFullBackup())
+                .build();
+        try (var controller = new BackupController(parameters)) {
+            controller.execute(properties.getThreads());
+            final var endTimeMillis = System.currentTimeMillis();
+            final var durationMillis = (endTimeMillis - startTimeMillis);
+            log.info("Backup operation completed. Total time: {}", toProcessSummary(durationMillis));
+        }
     }
 
     @SuppressWarnings("java:S106")

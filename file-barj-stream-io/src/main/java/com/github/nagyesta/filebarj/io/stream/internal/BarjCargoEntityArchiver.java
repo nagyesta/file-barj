@@ -84,6 +84,7 @@ public class BarjCargoEntityArchiver implements Closeable, BarjCargoBoundarySour
      * @throws IOException When IO exception occurs during the open operation
      */
     protected OutputStream openContentStream() throws IOException {
+        log.trace("Opening content stream for {}", path);
         return openStreamForStage(EntityArchivalStage.CONTENT, EntityArchivalStage.PRE_CONTENT);
     }
 
@@ -93,6 +94,7 @@ public class BarjCargoEntityArchiver implements Closeable, BarjCargoBoundarySour
      * @throws IOException When an IO exception occurs during the close operation
      */
     protected void closeContentStream() throws IOException {
+        log.trace("Closing content stream for {}", path);
         closeStreamForStage(EntityArchivalStage.CONTENT, () -> this.contentBoundary = currentStream.getEntityBoundary());
     }
 
@@ -103,6 +105,7 @@ public class BarjCargoEntityArchiver implements Closeable, BarjCargoBoundarySour
      * @throws IOException When IO exception occurs during the open operation
      */
     protected OutputStream openMetadataStream() throws IOException {
+        log.trace("Opening metadata stream for {}", path);
         return openStreamForStage(EntityArchivalStage.METADATA, EntityArchivalStage.PRE_METADATA);
     }
 
@@ -112,6 +115,7 @@ public class BarjCargoEntityArchiver implements Closeable, BarjCargoBoundarySour
      * @throws IOException When an IO exception occurs during the close operation
      */
     protected void closeMetadataStream() throws IOException {
+        log.trace("Closing metadata stream for {}", path);
         closeStreamForStage(EntityArchivalStage.METADATA, () -> this.metadataBoundary = currentStream.getEntityBoundary());
     }
 
@@ -123,10 +127,13 @@ public class BarjCargoEntityArchiver implements Closeable, BarjCargoBoundarySour
         statusLock.lock();
         try {
             if (status == EntityArchivalStage.CONTENT) {
-                closeContentStream();
-                //noinspection resource
-                openMetadataStream();
-                closeMetadataStream();
+                log.trace("Closing backup stream.");
+                if (currentStream != null && !currentStream.isClosed()) {
+                    closeContentStream();
+                    //noinspection resource
+                    openMetadataStream();
+                    closeMetadataStream();
+                }
             } else if (status == EntityArchivalStage.METADATA) {
                 closeMetadataStream();
             }

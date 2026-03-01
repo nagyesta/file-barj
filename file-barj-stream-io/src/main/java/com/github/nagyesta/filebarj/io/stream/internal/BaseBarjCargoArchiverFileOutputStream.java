@@ -307,12 +307,12 @@ public class BaseBarjCargoArchiverFileOutputStream extends ChunkingFileOutputStr
             final @NotNull FileType fileType,
             final @Nullable SecretKey encryptionKey) {
         if (this.hasOpenEntity()) {
-            throw new IllegalStateException("Entity is already open.");
+            throw new IllegalStateException("Entity is already open with stage: " + openEntity.getStatus());
         }
         entityLock.lock();
         try {
             if (this.hasOpenEntity()) {
-                throw new IllegalStateException("Entity is already open.");
+                throw new IllegalStateException("Entity is already open with stage: " + openEntity.getStatus());
             }
             final var entityPath = normalizeAndValidateUniquePath(archiveEntityPath, fileType);
             this.openEntity = new BarjCargoEntityArchiver(entityPath, fileType, this, encryptionKey);

@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.io.stream.internal;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * An implementation for {@link OutputStream} that can write the data into multiple streams with a
  * predefined maximum size per part.
  */
+@Slf4j
 public abstract class ChunkingOutputStream extends OutputStream {
     /**
      * The number of bytes per mebibyte.
@@ -87,6 +89,7 @@ public abstract class ChunkingOutputStream extends OutputStream {
 
     @Override
     public void close() throws IOException {
+        log.trace("Closing chunking stream.");
         currentStream.close();
     }
 
@@ -97,6 +100,7 @@ public abstract class ChunkingOutputStream extends OutputStream {
      * @throws IOException if we cannot open the next stream
      */
     protected final @NotNull OutputStream openNextStream() throws IOException {
+        log.debug("Opening next internal stream for chunking stream.");
         final var byteCount = currentByteCount;
         byteCountOffset = byteCountOffset + byteCount;
         currentByteCount = 0L;

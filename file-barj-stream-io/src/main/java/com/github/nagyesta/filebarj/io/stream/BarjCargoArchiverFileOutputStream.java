@@ -88,7 +88,9 @@ public class BarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiverFile
 
     private void writeEntityToIndex(final @NotNull BarjCargoEntityIndex entityIndex) throws IOException {
         try {
-            final var prefix = entryIndexPrefix(entryCount());
+            final var entryIndex = entryCount();
+            log.trace("Writing entry index: {}", entryIndex);
+            final var prefix = entryIndexPrefix(entryIndex);
             this.indexStreamWriter.write(entityIndex.toProperties(prefix));
             this.indexStreamWriter.flush();
         } catch (final IllegalArgumentException e) {
@@ -102,6 +104,7 @@ public class BarjCargoArchiverFileOutputStream extends BaseBarjCargoArchiverFile
 
     private void writeIndexFileFooter() throws IOException {
         final var lastChunk = getCurrentFilePath();
+        log.debug("Writing last chunk of index: {}", lastChunk);
         final var footer = ArchiveIndexV2.builder()
                 .numberOfChunks(getCurrentChunkIndex())
                 .lastChunkSizeInBytes(lastChunk.toFile().length())

@@ -18,6 +18,7 @@ public class InMemoryArchivedFileMetadataSetRepository
         extends InMemoryBaseFileSetRepository<ArchivedFileMetadataSetId, ArchivedFileMetadata>
         implements ArchivedFileMetadataSetRepository {
 
+    private final Map<UUID, Map<UUID, ArchivedFileMetadata>> metadataByFileSetAndArchiveFileId = new ConcurrentHashMap<>();
     private final Map<UUID, Map<UUID, ArchivedFileMetadata>> metadataByFileSetAndFileId = new ConcurrentHashMap<>();
     private final Map<UUID, Map<ArchiveEntryLocator, Set<ArchivedFileMetadata>>> metadataByFileSetAndLocator = new ConcurrentHashMap<>();
 
@@ -31,8 +32,10 @@ public class InMemoryArchivedFileMetadataSetRepository
             @NotNull final ArchivedFileMetadataSetId id,
             @NotNull final Collection<ArchivedFileMetadata> values) {
         super.appendTo(id, values);
+        final var mapByArchiveFileId = metadataByFileSetAndArchiveFileId.computeIfAbsent(id.id(), k -> new ConcurrentHashMap<>());
+        values.forEach(metadata -> mapByArchiveFileId.put(metadata.getId(), metadata));
         final var mapByFileId = metadataByFileSetAndFileId.computeIfAbsent(id.id(), k -> new ConcurrentHashMap<>());
-        values.forEach(metadata -> mapByFileId.put(metadata.getId(), metadata));
+        values.forEach(metadata -> metadata.getFiles().forEach(fileId -> mapByFileId.put(fileId, metadata)));
         final var mapByLocator = metadataByFileSetAndLocator.computeIfAbsent(id.id(), k -> new ConcurrentHashMap<>());
         values.forEach(metadata -> mapByLocator
                 .computeIfAbsent(metadata.getArchiveLocation(), k -> new ConcurrentSkipListSet<>()).add(metadata));
@@ -41,6 +44,7 @@ public class InMemoryArchivedFileMetadataSetRepository
     @Override
     public void removeFileSet(@NotNull final ArchivedFileMetadataSetId id) {
         super.removeFileSet(id);
+        metadataByFileSetAndArchiveFileId.remove(id.id());
         metadataByFileSetAndFileId.remove(id.id());
         metadataByFileSetAndLocator.remove(id.id());
     }
@@ -48,6 +52,7 @@ public class InMemoryArchivedFileMetadataSetRepository
     @Override
     public void close() {
         super.close();
+        metadataByFileSetAndArchiveFileId.clear();
         metadataByFileSetAndFileId.clear();
         metadataByFileSetAndLocator.clear();
     }
@@ -77,10 +82,14 @@ public class InMemoryArchivedFileMetadataSetRepository
     public Map<UUID, ArchivedFileMetadata> findByFileMetadataIds(
             @NotNull final ArchivedFileMetadataSetId id,
             @NotNull final Collection<UUID> fileMetadataIds) {
+        final var map = metadataByFileSetAndFileId.get(id.id());
+        if (map == null) {
+            return Collections.emptyMap();
+        }
         final var result = new ConcurrentHashMap<UUID, ArchivedFileMetadata>();
-        getFileSetById(id).forEach(metadata -> fileMetadataIds.stream()
-                .filter(metadata.getFiles()::contains)
-                .forEach(fileMetadataId -> result.put(fileMetadataId, metadata)));
+        fileMetadataIds.stream()
+                .filter(map::containsKey)
+                .forEach(fileMetadataId -> result.put(fileMetadataId, map.get(fileMetadataId)));
         return result;
     }
 
@@ -89,7 +98,7 @@ public class InMemoryArchivedFileMetadataSetRepository
             @NotNull final ArchivedFileMetadataSetId id,
             @NotNull final FileMetadataSetId fileMetadataSetId) {
         final var result = createFileSet();
-        final var archivedMetadataByFileId = metadataByFileSetAndFileId.get(id.id());
+        final var archivedMetadataByFileId = metadataByFileSetAndArchiveFileId.get(id.id());
         dataStore().fileMetadataSetRepository()
                 .forEach(fileMetadataSetId,
                         dataStore().singleThreadedPool(),

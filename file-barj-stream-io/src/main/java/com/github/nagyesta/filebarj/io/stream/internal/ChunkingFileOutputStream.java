@@ -2,6 +2,7 @@ package com.github.nagyesta.filebarj.io.stream.internal;
 
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedOutputStream;
@@ -21,6 +22,7 @@ import static com.github.nagyesta.filebarj.io.stream.BarjCargoUtil.toChunkFileNa
  * An implementation for {@link ChunkingOutputStream} that can write the data into multiple files
  * with a predefined maximum size.
  */
+@Slf4j
 public class ChunkingFileOutputStream extends ChunkingOutputStream {
     /**
      * The number of bytes per mebibyte.
@@ -114,6 +116,7 @@ public class ChunkingFileOutputStream extends ChunkingOutputStream {
             }
         }
         final var fileName = toChunkFileName(prefix, counter.getAndIncrement());
+        log.debug("Created {} for chunking stream.", fileName);
         final var path = createDataFile(fileName);
         currentFilePath = path;
         final var fileOutputStream = new FileOutputStream(path.toFile());

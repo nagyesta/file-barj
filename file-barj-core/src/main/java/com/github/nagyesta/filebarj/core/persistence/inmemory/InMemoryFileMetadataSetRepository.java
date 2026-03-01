@@ -271,8 +271,13 @@ public class InMemoryFileMetadataSetRepository
     public SortedSet<FileMetadata> findFilesByIds(
             @NotNull final FileMetadataSetId id,
             @NotNull final Set<UUID> files) {
-        return getFileSetById(id).stream()
-                .filter(file -> files.contains(file.getId()))
+        final var fileMetadataMap = metadataByFileSetAndFileId.get(id.id());
+        if (fileMetadataMap == null) {
+            return Collections.emptySortedSet();
+        }
+        return files.stream()
+                .filter(fileMetadataMap::containsKey)
+                .map(fileMetadataMap::get)
                 .collect(Collectors.toCollection(TreeSet::new));
     }
 
