@@ -239,7 +239,7 @@ public class Controller {
         final var config = new ObjectMapper().reader()
                 .readValue(properties.getConfig().toFile(), BackupJobConfiguration.class);
         final var startTimeMillis = System.currentTimeMillis();
-        log.info("Bootstrapping backup operation...");
+        log.info("Bootstrapping backup operation with version {}...", AppVersion.DEFAULT_VERSION);
         final var parameters = BackupParameters.builder()
                 .job(config)
                 .forceFull(properties.isForceFullBackup())

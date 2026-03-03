@@ -245,7 +245,8 @@ public class RestorePipeline implements Closeable {
             });
             final var counter = new AtomicInteger(0);
             try (var leftOverFiles = fileSetRepository.subtract(pathsInRestoreTarget, pathsInBackup)) {
-                fileSetRepository.forEachReverse(leftOverFiles, threadPool, path -> {
+                //delete left-over files using a single thread to avoid issues with directory deletions
+                fileSetRepository.forEachReverse(leftOverFiles, dataStore.singleThreadedPool(), path -> {
                     try {
                         log.info("Deleting left-over file: {}", path);
                         deleteIfExists(path);
