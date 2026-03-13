@@ -31,17 +31,20 @@ public interface BaseFileSetRepository<K extends BaseFileSetId<K>, V extends Com
 
     boolean isEmpty(K id);
 
-    default void forEach(final K id, final ForkJoinPool threadPool, final Consumer<V> consumer) {
-        forEach(id, threadPool, SortOrder.ASC, consumer);
+    default void forEachOrdered(final K id, final ForkJoinPool threadPool, final Consumer<V> consumer) {
+        forEachOrdered(id, threadPool, SortOrder.ASC, consumer);
     }
 
     default void forEachReverse(final K id, final ForkJoinPool threadPool, final Consumer<V> consumer) {
-        forEach(id, threadPool, SortOrder.DESC, consumer);
+        forEachOrdered(id, threadPool, SortOrder.DESC, consumer);
     }
 
-    void forEach(K id, ForkJoinPool threadPool, SortOrder order, Consumer<V> consumer);
+    void forEachOrdered(K id, ForkJoinPool threadPool, SortOrder order, Consumer<V> consumer);
+
+    void forEach(K id, ForkJoinPool threadPool, Consumer<V> consumer);
 
     boolean isClosed();
 
+    void assertExists(K id);
 }
 

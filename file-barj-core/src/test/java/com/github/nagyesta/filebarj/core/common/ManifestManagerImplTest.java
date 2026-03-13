@@ -536,6 +536,6 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         expected.setIndexFileName("index");
         expected.setDataFileNames(List.of("data"));
         final var directoryMetadata = FileMetadataParserFactory.newInstance().parse(testDataRoot.toFile(), configuration);
-        expected.getFiles().put(directoryMetadata.getId(), directoryMetadata);
+        expected.getDataStore().fileMetadataSetRepository().appendTo(expected.getFiles(), directoryMetadata);
     }
 }

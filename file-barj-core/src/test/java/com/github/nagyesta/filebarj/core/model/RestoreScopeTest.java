@@ -232,7 +232,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var backupPathChangeStatusMapRepository = dataStore.backupPathChangeStatusMapRepository();
         final var fileMap = backupPathChangeStatusMapRepository.createFileMap();
-        fileMetadataSetRepository.forEach(incFiles, dataStore.singleThreadedPool(), file ->
+        fileMetadataSetRepository.forEachOrdered(incFiles, dataStore.singleThreadedPool(), file ->
                 backupPathChangeStatusMapRepository.appendTo(fileMap, file.getAbsolutePath(), Change.DELETED));
         return fileMap;
     }
@@ -243,7 +243,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         final var changes = new HashMap<BackupPath, Change>();
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var backupPathChangeStatusMapRepository = dataStore.backupPathChangeStatusMapRepository();
-        fileMetadataSetRepository.forEach(incFiles, dataStore.singleThreadedPool(), file -> {
+        fileMetadataSetRepository.forEachOrdered(incFiles, dataStore.singleThreadedPool(), file -> {
             if (origScope.contains(file.getAbsolutePath())) {
                 if (file.getFileType() == FileType.REGULAR_FILE) {
                     changes.put(file.getAbsolutePath(), Change.CONTENT_CHANGED);

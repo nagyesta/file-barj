@@ -1,7 +1,6 @@
 package com.github.nagyesta.filebarj.core.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -43,7 +42,6 @@ public class EncryptionKeyStore {
      * by 1. A manifest can contain more numbers if the backup increments were merged (consolidated)
      * into a single archive.
      */
-    @JsonProperty("backup_versions")
     private
     @Size(min = 1)
     @NonNull SortedSet<@PositiveOrZero Integer> versions;
@@ -51,7 +49,6 @@ public class EncryptionKeyStore {
      * The byte arrays containing the data encryption keys (DEK) encrypted with the key encryption
      * key (KEK).
      */
-    @JsonProperty("encryption_keys")
     private Map<Integer, Map<Integer, String>> encryptionKeys;
     /**
      * The unencrypted data encryption keys (DEK) which were just generated. This property is not
