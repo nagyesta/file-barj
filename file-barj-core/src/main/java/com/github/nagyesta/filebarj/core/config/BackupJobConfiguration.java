@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.json.DirectoryPathSerializer;
 import com.github.nagyesta.filebarj.core.json.PublicKeyDeserializer;
 import com.github.nagyesta.filebarj.core.json.PublicKeySerializer;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
@@ -103,6 +104,7 @@ public class BackupJobConfiguration {
      * NOTE: A change of this value requires a {@link BackupType#FULL} backup as the metadata of the
      * previous increments must be found in the destination in order to calculate changes.
      */
+    @JsonSerialize(using = DirectoryPathSerializer.class)
     @JsonProperty("destination_directory")
     private final @NonNull Path destinationDirectory;
     /**

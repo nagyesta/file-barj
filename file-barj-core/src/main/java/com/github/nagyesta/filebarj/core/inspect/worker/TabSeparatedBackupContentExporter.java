@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.inspect.worker;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
+import com.github.nagyesta.filebarj.core.persistence.SortOrder;
 import lombok.NonNull;
 
 import java.io.BufferedOutputStream;
@@ -12,7 +13,6 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.Optional;
 
 /**
@@ -42,12 +42,18 @@ public class TabSeparatedBackupContentExporter {
             final OutputStreamWriter writer,
             final BackupIncrementManifest manifest) throws IOException {
         writer.write(generateHeader(manifest));
-        final var files = manifest.getFiles().values().stream()
-                .sorted(Comparator.comparing(FileMetadata::getAbsolutePath))
-                .toList();
-        for (final var fileMetadata : files) {
-            writer.write(toTsv(fileMetadata));
-        }
+        final var dataStore = manifest.getDataStore();
+        dataStore.fileMetadataSetRepository().forEachOrdered(
+                manifest.getFiles(),
+                dataStore.singleThreadedPool(),
+                SortOrder.ASC,
+                fileMetadata -> {
+                    try {
+                        writer.write(toTsv(fileMetadata));
+                    } catch (final IOException e) {
+                        throw new ArchivalException("Failed to write inspection results.", e);
+                    }
+                });
     }
 
     private String generateHeader(final BackupIncrementManifest manifest) {

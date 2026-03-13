@@ -24,7 +24,6 @@ import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
@@ -35,6 +34,7 @@ class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
         //given
         final var dataStore = DataStore.newInMemoryInstance();
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
         final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
         final var destinationDirectory = testDataRoot.resolve("destination");
         final var source = testDataRoot.resolve("source");
@@ -71,12 +71,8 @@ class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
                 Set.of(origFile2),
                 original.getVersions().last(),
                 Optional.empty());
-        original.getFiles()
-                .putAll(Stream.of(origFile1, origFile2, origFile1Copy)
-                .collect(Collectors.toMap(FileMetadata::getId, Function.identity())));
-        original.getArchivedEntries()
-                .putAll(Stream.of(origArchiveFile1, origArchiveFile2)
-                .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity())));
+        fileMetadataSetRepository.appendTo(original.getFiles(), Set.of(origFile1, origFile2, origFile1Copy));
+        archivedFileMetadataSetRepository.appendTo(original.getArchivedEntries(), Set.of(origArchiveFile1, origArchiveFile2));
         Thread.sleep(Duration.ofSeconds(1).toMillis());
         final var incremental = underTest.generateManifest(config, BackupType.INCREMENTAL, 1);
         FileUtils.deleteQuietly(file2.toFile());
@@ -91,12 +87,8 @@ class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
                 Set.of(incFile1Copy),
                 original.getVersions().last(),
                 Optional.of(origArchiveFile1.getId()));
-        incremental.getFiles()
-                .putAll(Stream.of(incFile1, incFile1Copy)
-                .collect(Collectors.toMap(FileMetadata::getId, Function.identity())));
-        incremental.getArchivedEntries()
-                .putAll(Stream.of(incArchiveFile1, incArchiveFile1Copy)
-                .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity())));
+        fileMetadataSetRepository.appendTo(incremental.getFiles(), Set.of(incFile1, incFile1Copy));
+        archivedFileMetadataSetRepository.appendTo(incremental.getArchivedEntries(), Set.of(incArchiveFile1, incArchiveFile1Copy));
 
         //when
         final var actual = underTest.mergeForRestore(new TreeMap<>(Map.of(0, original, 1, incremental)));
@@ -107,7 +99,10 @@ class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
         final var actualMap = fileMetadataSetRepository.findAll(actual.getFiles(), 0, Integer.MAX_VALUE)
                 .stream()
                 .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
-        Assertions.assertEquals(incremental.getFiles(), actualMap);
+        final var expectedMap = fileMetadataSetRepository.findAll(incremental.getFiles(), 0, Integer.MAX_VALUE)
+                .stream()
+                .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
+        Assertions.assertEquals(expectedMap, actualMap);
     }
 
     private static ArchivedFileMetadata getArchivedFileMetadata(

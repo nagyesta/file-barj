@@ -80,4 +80,6 @@ public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMet
     SortedSet<FileMetadata> findFilesByIds(FileMetadataSetId id, Set<UUID> files);
 
     boolean containsPath(FileMetadataSetId id, String absolutePath);
+
+    FileMetadataSetId copyAllNotDeleted(FileMetadataSetId source);
 }

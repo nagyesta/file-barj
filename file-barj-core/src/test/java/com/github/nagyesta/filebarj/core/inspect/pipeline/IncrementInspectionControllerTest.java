@@ -110,10 +110,10 @@ class IncrementInspectionControllerTest extends TempFileAwareTest {
         //then
         final var actualContents = Files.readAllLines(outputFile);
         Assertions.assertTrue(actualContents.get(0).contains("hash_sha256"));
-        Assertions.assertTrue(actualContents.get(1)
-                .endsWith(FilenameUtils.separatorsToUnix(originalDirectory.toAbsolutePath().toString())));
-        Assertions.assertTrue(actualContents.get(2)
-                .endsWith(FilenameUtils.separatorsToUnix(originalFile.toAbsolutePath().toString())));
+        final var originalDirPath = FilenameUtils.separatorsToUnix(originalDirectory.toAbsolutePath().toString());
+        final var originalFilePath = FilenameUtils.separatorsToUnix(originalFile.toAbsolutePath().toString());
+        Assertions.assertTrue(actualContents.get(1).endsWith(originalDirPath));
+        Assertions.assertTrue(actualContents.get(2).endsWith(originalFilePath));
     }
 
     @SuppressWarnings("DataFlowIssue")
