@@ -5,8 +5,9 @@ import org.jetbrains.annotations.NotNull;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public record ArchivedFileMetadataSetId(@NotNull UUID id, @NotNull Consumer<ArchivedFileMetadataSetId> closeWith)
-        implements BaseFileSetId<ArchivedFileMetadataSetId> {
+public record ArchivedFileMetadataSetId(
+        @NotNull UUID id,
+        @NotNull Consumer<ArchivedFileMetadataSetId> closeWith) implements BaseFileSetId<ArchivedFileMetadataSetId> {
 
     public ArchivedFileMetadataSetId(@NotNull final Consumer<ArchivedFileMetadataSetId> closeWith) {
         this(UUID.randomUUID(), closeWith);

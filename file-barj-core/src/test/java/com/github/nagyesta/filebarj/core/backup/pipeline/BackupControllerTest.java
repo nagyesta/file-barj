@@ -74,7 +74,9 @@ class BackupControllerTest extends TempFileAwareTest {
         Assertions.assertIterableEquals(Set.of(0), actual.getVersions());
         Assertions.assertTrue(actual.getFileNamePrefix().startsWith(job.getFileNamePrefix()));
         Assertions.assertEquals(BackupIncrementManifest.DEK_COUNT, actual.getEncryptionKeys().get(0).size());
-        Assertions.assertEquals(0, actual.getArchivedEntries().size());
-        Assertions.assertEquals(0, actual.getFiles().size());
+        final var actualFileCount = actual.getDataStore().fileMetadataSetRepository().countAll(actual.getFiles());
+        final var actualArchiveCount = actual.getDataStore().archivedFileMetadataSetRepository().countAll(actual.getArchivedEntries());
+        Assertions.assertEquals(0L, actualFileCount);
+        Assertions.assertEquals(0L, actualArchiveCount);
     }
 }

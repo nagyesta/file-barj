@@ -1,14 +1,16 @@
 package com.github.nagyesta.filebarj.core.common;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
+import com.github.nagyesta.filebarj.core.json.BackupIncrementMetadataReader;
+import com.github.nagyesta.filebarj.core.json.BackupIncrementMetadataWriter;
 import com.github.nagyesta.filebarj.core.model.AppVersion;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.ValidationRules;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
-import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.OperatingSystem;
 import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.progress.ProgressTracker;
@@ -29,7 +31,6 @@ import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPInputStream;
@@ -45,8 +46,9 @@ public class ManifestManagerImpl implements ManifestManager {
     private static final String HISTORY_FOLDER = ".history";
     private static final String MANIFEST_JSON_GZ = ".manifest.json.gz";
     private static final String MANIFEST_CARGO = ".manifest.cargo";
-    private final ObjectMapper mapper = new ObjectMapper();
-    private final Validator validator = createValidator();
+    private final Validator validator;
+    private final JsonFactory jsonFactory;
+    private final ObjectMapper objectMapper;
     private final ProgressTracker progressTracker;
     private final DataStore dataStore;
 
@@ -56,6 +58,9 @@ public class ManifestManagerImpl implements ManifestManager {
         progressTracker.assertSupports(LOAD_MANIFESTS);
         this.dataStore = dataStore;
         this.progressTracker = progressTracker;
+        this.validator = createValidator();
+        this.jsonFactory = new JsonFactory();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -70,8 +75,9 @@ public class ManifestManagerImpl implements ManifestManager {
                 .configuration(jobConfiguration)
                 .backupType(backupTypeOverride)
                 .versions(new TreeSet<>(Set.of(nextVersion)))
-                .files(new ConcurrentHashMap<>())
-                .archivedEntries(new ConcurrentHashMap<>())
+                .dataStore(dataStore)
+                .files(dataStore.fileMetadataSetRepository().createFileSet())
+                .archivedEntries(dataStore.archivedFileMetadataSetRepository().createFileSet())
                 .startTimeUtcEpochSeconds(startTimeEpochSecond)
                 .fileNamePrefix(fileNamePrefix)
                 .operatingSystem(OsUtil.getRawOsName())
@@ -80,6 +86,18 @@ public class ManifestManagerImpl implements ManifestManager {
                 .ifPresent(manifest::generateDataEncryptionKeys);
         validate(manifest, ValidationRules.Created.class);
         return manifest;
+    }
+
+    @Override
+    public BackupIncrementManifest reloadManifest(
+            final BackupIncrementManifest manifest,
+            final PrivateKey privateKey) {
+        final var loaded = load(
+                manifest.getConfiguration().getDestinationDirectory(),
+                manifest.getFileNamePrefix(),
+                privateKey,
+                manifest.getStartTimeUtcEpochSeconds() + 1);
+        return loaded.get(loaded.lastKey());
     }
 
     @Override
@@ -107,8 +125,10 @@ public class ManifestManagerImpl implements ManifestManager {
         try (var fileStream = new FileOutputStream(plainManifestFile);
              var bufferedStream = new BufferedOutputStream(fileStream);
              var gzipStream = new GZIPOutputStream(bufferedStream);
-             var writer = new OutputStreamWriter(gzipStream, StandardCharsets.UTF_8)) {
-            mapper.writerWithDefaultPrettyPrinter().writeValue(writer, manifest);
+             var writer = new OutputStreamWriter(gzipStream, StandardCharsets.UTF_8);
+             var generator = jsonFactory.createGenerator(writer);
+             var jsonWriter = new BackupIncrementMetadataWriter(generator, objectMapper)) {
+            jsonWriter.write(manifest);
         } catch (final Exception e) {
             throw new ArchivalException("Failed to save manifest.", e);
         }
@@ -199,15 +219,11 @@ public class ManifestManagerImpl implements ManifestManager {
         final var keys = mergeEncryptionKeys(manifests);
         final var versions = new TreeSet<>(manifests.keySet());
         final var fileNamePrefixes = findAllFilenamePrefixes(manifests);
-        final var files = fileMetadataSetRepository.createFileSet();
-        final var archivedEntries = archivedFileMetadataSetRepository.createFileSet();
         //add all not deleted directories and files
-        lastIncrementManifest.getFiles().values().stream()
-                .filter(fileMetadata -> fileMetadata.getStatus() != Change.DELETED)
-                .forEach(file -> fileMetadataSetRepository.appendTo(files, file));
-        archivedFileMetadataSetRepository.appendTo(archivedEntries, lastIncrementManifest.getArchivedEntries().values());
+        final var files = fileMetadataSetRepository.copyAllNotDeleted(lastIncrementManifest.getFiles());
+        final var archivedEntries = archivedFileMetadataSetRepository.copyAll(lastIncrementManifest.getArchivedEntries());
         fileMetadataSetRepository.countsByType(files).forEach((type, count) ->
-                        log.info("Increment {} contains {} {} items.", lastIncrementManifest.getFileNamePrefix(), count, type));
+                log.info("Increment {} contains {} {} items.", lastIncrementManifest.getFileNamePrefix(), count, type));
         return RestoreManifest.builder()
                 .maximumAppVersion(maximumAppVersion)
                 .lastStartTimeUtcEpochSeconds(maximumTimeStamp)
@@ -263,9 +279,10 @@ public class ManifestManagerImpl implements ManifestManager {
                  var bufferedStream = new BufferedInputStream(fileStream);
                  var cryptoStream = new ManifestCipherInputStream(bufferedStream, privateKey);
                  var gzipStream = new GZIPInputStream(cryptoStream);
-                 var reader = new InputStreamReader(gzipStream, StandardCharsets.UTF_8)) {
-                final var manifest = mapper.readerFor(BackupIncrementManifest.class)
-                        .readValue(reader, BackupIncrementManifest.class);
+                 var reader = new InputStreamReader(gzipStream, StandardCharsets.UTF_8);
+                 var parser = jsonFactory.createParser(reader);
+                 var jsonReader = new BackupIncrementMetadataReader(dataStore, parser, objectMapper)) {
+                final var manifest = jsonReader.read();
                 if (manifest.getStartTimeUtcEpochSeconds() > latestBeforeEpochMillis) {
                     continue;
                 }
@@ -295,9 +312,10 @@ public class ManifestManagerImpl implements ManifestManager {
                  var bufferedStream = new BufferedInputStream(fileStream);
                  var cryptoStream = new ManifestCipherInputStream(bufferedStream, privateKey);
                  var gzipStream = new GZIPInputStream(cryptoStream);
-                 var reader = new InputStreamReader(gzipStream, StandardCharsets.UTF_8)) {
-                final var manifest = mapper.readerFor(BackupIncrementManifest.class)
-                        .readValue(reader, BackupIncrementManifest.class);
+                 var reader = new InputStreamReader(gzipStream, StandardCharsets.UTF_8);
+                 var parser = jsonFactory.createParser(reader);
+                 var jsonReader = new BackupIncrementMetadataReader(dataStore, parser, objectMapper)) {
+                final var manifest = jsonReader.read();
                 validate(manifest, ValidationRules.Persisted.class);
                 manifests.put(manifest.getStartTimeUtcEpochSeconds(), manifest);
                 progressTracker.recordProgressInSubSteps(LOAD_MANIFESTS);

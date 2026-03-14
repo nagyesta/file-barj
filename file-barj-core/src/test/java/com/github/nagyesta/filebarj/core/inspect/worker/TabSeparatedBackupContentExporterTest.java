@@ -12,6 +12,7 @@ import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -69,49 +69,55 @@ class TabSeparatedBackupContentExporterTest extends TempFileAwareTest {
         final var underTest = new TabSeparatedBackupContentExporter();
         final var fileId = UUID.randomUUID();
         final var absolutePath = FilenameUtils.separatorsToUnix(testDataRoot.resolve("path.txt").toAbsolutePath().toString());
-        final var manifest = BackupIncrementManifest.builder()
-                .files(Map.of(fileId, FileMetadata.builder()
-                        .fileSystemKey("key")
-                        .owner(OWNER)
-                        .group(GROUP)
-                        .posixPermissions(PERMISSIONS)
-                        .id(fileId)
-                        .lastAccessedUtcEpochSeconds(0L)
-                        .createdUtcEpochSeconds(0L)
-                        .lastModifiedUtcEpochSeconds(LAST_MODIFIED_UTC_EPOCH_SECONDS)
-                        .originalSizeBytes(ORIGINAL_SIZE_BYTES)
-                        .originalHash(ORIGINAL_HASH)
-                        .absolutePath(BackupPath.ofPathAsIs(absolutePath))
-                        .fileType(FileType.REGULAR_FILE)
-                        .status(Change.NEW)
-                        .build()))
-                .appVersion(new AppVersion("1.2.3"))
-                .configuration(BackupJobConfiguration.builder()
-                        .encryptionKey(EncryptionUtil.generateRsaKeyPair().getPublic())
-                        .compression(CompressionAlgorithm.GZIP)
-                        .chunkSizeMebibyte(1)
-                        .fileNamePrefix("prefix")
-                        .hashAlgorithm(HashAlgorithm.SHA256)
-                        .destinationDirectory(testDataRoot)
-                        .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                        .sources(Set.of())
-                        .backupType(BackupType.FULL)
-                        .build())
-                .backupType(BackupType.FULL)
-                .versions(new TreeSet<>(Set.of(0)))
-                .fileNamePrefix("prefix")
-                .build();
-        final var path = testDataRoot.resolve(UUID.randomUUID() + ".tsv");
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var files = fileMetadataSetRepository.createFileSet();
+            fileMetadataSetRepository.appendTo(files, FileMetadata.builder()
+                    .fileSystemKey("key")
+                    .owner(OWNER)
+                    .group(GROUP)
+                    .posixPermissions(PERMISSIONS)
+                    .id(fileId)
+                    .lastAccessedUtcEpochSeconds(0L)
+                    .createdUtcEpochSeconds(0L)
+                    .lastModifiedUtcEpochSeconds(LAST_MODIFIED_UTC_EPOCH_SECONDS)
+                    .originalSizeBytes(ORIGINAL_SIZE_BYTES)
+                    .originalHash(ORIGINAL_HASH)
+                    .absolutePath(BackupPath.ofPathAsIs(absolutePath))
+                    .fileType(FileType.REGULAR_FILE)
+                    .status(Change.NEW)
+                    .build());
+            final var manifest = BackupIncrementManifest.builder()
+                    .files(files)
+                    .dataStore(dataStore)
+                    .appVersion(new AppVersion("1.2.3"))
+                    .configuration(BackupJobConfiguration.builder()
+                            .encryptionKey(EncryptionUtil.generateRsaKeyPair().getPublic())
+                            .compression(CompressionAlgorithm.GZIP)
+                            .chunkSizeMebibyte(1)
+                            .fileNamePrefix("prefix")
+                            .hashAlgorithm(HashAlgorithm.SHA256)
+                            .destinationDirectory(testDataRoot)
+                            .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                            .sources(Set.of())
+                            .backupType(BackupType.FULL)
+                            .build())
+                    .backupType(BackupType.FULL)
+                    .versions(new TreeSet<>(Set.of(0)))
+                    .fileNamePrefix("prefix")
+                    .build();
+            final var path = testDataRoot.resolve(UUID.randomUUID() + ".tsv");
 
-        //when
-        underTest.writeManifestContent(manifest, path);
+            //when
+            underTest.writeManifestContent(manifest, path);
 
-        //then
-        final var actual = Files.readAllLines(path);
-        Assertions.assertEquals(2, actual.size());
-        Assertions.assertEquals("permissions\towner\tgroup\tsize\tlast_modified\thash_sha256\tpath", actual.get(0));
-        final var expected = PERMISSIONS + "\t" + OWNER + "\t" + GROUP + "\t" + ORIGINAL_SIZE_BYTES + "\t"
-                + Instant.ofEpochSecond(LAST_MODIFIED_UTC_EPOCH_SECONDS) + "\t" + ORIGINAL_HASH + "\t" + absolutePath;
-        Assertions.assertEquals(expected, actual.get(1));
+            //then
+            final var actual = Files.readAllLines(path);
+            Assertions.assertEquals(2, actual.size());
+            Assertions.assertEquals("permissions\towner\tgroup\tsize\tlast_modified\thash_sha256\tpath", actual.get(0));
+            final var expected = PERMISSIONS + "\t" + OWNER + "\t" + GROUP + "\t" + ORIGINAL_SIZE_BYTES + "\t"
+                    + Instant.ofEpochSecond(LAST_MODIFIED_UTC_EPOCH_SECONDS) + "\t" + ORIGINAL_HASH + "\t" + absolutePath;
+            Assertions.assertEquals(expected, actual.get(1));
+        }
     }
 }

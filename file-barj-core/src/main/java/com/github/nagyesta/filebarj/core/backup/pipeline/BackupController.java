@@ -85,8 +85,6 @@ public class BackupController
 
     private BackupType loadPreviousBackups(final @NotNull BackupParameters parameters) {
         try {
-            final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
-            final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
             var backupType = parameters.getJob().getBackupType();
             final var forceFull = parameters.isForceFull();
             if (!forceFull && backupType != BackupType.FULL) {
@@ -94,15 +92,10 @@ public class BackupController
                 if (previousManifests.isEmpty()) {
                     backupType = BackupType.FULL;
                 } else {
-                    //TODO: can we move this processing to the load logic?
                     previousManifests.values().forEach(value -> {
-                        final var fileSetId = fileMetadataSetRepository.createFileSet();
-                        final var archiveSetId = archivedFileMetadataSetRepository.createFileSet();
-                        fileMetadataSetRepository.appendTo(fileSetId, value.getFiles().values());
-                        archivedFileMetadataSetRepository.appendTo(archiveSetId, value.getArchivedEntries().values());
                         value.getVersions().forEach(increment -> {
-                            previousManifestFiles.put(increment, fileSetId);
-                            previousManifestArchives.put(increment, archiveSetId);
+                            previousManifestFiles.put(increment, value.getFiles());
+                            previousManifestArchives.put(increment, value.getArchivedEntries());
                             previousManifestPrefixes.put(increment, value.getFileNamePrefix());
                         });
                     });
@@ -254,17 +247,10 @@ public class BackupController
                     .toList();
             manifest.setDataFileNames(dataFiles);
             manifest.setIndexFileName(pipeline.getIndexFileWritten().getFileName().toString());
-
-            //TODO: need to find a way to stream this into the manifest file
-            //move files from the staging area to the actual manifest
-            fileMetadataSetRepository
-                    .forEach(backupFileSet, threadPool,
-                            metadata -> manifest.getFiles().put(metadata.getId(), metadata));
-            //move archives from the staging area to the actual manifest
-            archivedFileMetadataSetRepository
-                    .forEach(backupArchivedFileSet, threadPool,
-                            metadata -> manifest.getArchivedEntries().put(metadata.getId(), metadata));
-
+            fileMetadataSetRepository.forEach(backupFileSet, dataStore().singleThreadedPool(),
+                    f -> fileMetadataSetRepository.appendTo(manifest.getFiles(), f));
+            archivedFileMetadataSetRepository.forEach(backupArchivedFileSet, dataStore().singleThreadedPool(),
+                    a -> archivedFileMetadataSetRepository.appendTo(manifest.getArchivedEntries(), a));
             final var endTimeMillis = System.currentTimeMillis();
             final var durationMillis = endTimeMillis - startTimeMillis;
             progressTracker.completeStep(BACKUP);

@@ -12,11 +12,11 @@ import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -50,52 +50,58 @@ class ManifestToSummaryConverterTest extends TempFileAwareTest {
         final var underTest = new ManifestToSummaryConverter();
         final var fileId = UUID.randomUUID();
         final var absolutePath = testDataRoot.resolve("path.txt");
-        final var manifest = BackupIncrementManifest.builder()
-                .files(Map.of(fileId, FileMetadata.builder()
-                        .fileSystemKey("key")
-                        .owner(OWNER)
-                        .group(GROUP)
-                        .posixPermissions(PERMISSIONS)
-                        .id(fileId)
-                        .lastAccessedUtcEpochSeconds(0L)
-                        .createdUtcEpochSeconds(0L)
-                        .lastModifiedUtcEpochSeconds(LAST_MODIFIED_UTC_EPOCH_SECONDS)
-                        .originalSizeBytes(ORIGINAL_SIZE_BYTES)
-                        .originalHash(ORIGINAL_HASH)
-                        .absolutePath(BackupPath.of(absolutePath))
-                        .fileType(FileType.REGULAR_FILE)
-                        .status(Change.NEW)
-                        .build()))
-                .appVersion(new AppVersion("1.2.3"))
-                .configuration(BackupJobConfiguration.builder()
-                        .encryptionKey(EncryptionUtil.generateRsaKeyPair().getPublic())
-                        .compression(CompressionAlgorithm.GZIP)
-                        .chunkSizeMebibyte(1)
-                        .fileNamePrefix("prefix")
-                        .hashAlgorithm(HashAlgorithm.SHA256)
-                        .destinationDirectory(testDataRoot)
-                        .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
-                        .sources(Set.of())
-                        .backupType(BackupType.FULL)
-                        .build())
-                .backupType(BackupType.FULL)
-                .versions(new TreeSet<>(Set.of(0)))
-                .fileNamePrefix("prefix")
-                .startTimeUtcEpochSeconds(1L)
-                .operatingSystem(null)
-                .build();
-        //when
-        final var actual = underTest.convertToSummaryString(manifest);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var files = fileMetadataSetRepository.createFileSet();
+            fileMetadataSetRepository.appendTo(files, FileMetadata.builder()
+                    .fileSystemKey("key")
+                    .owner(OWNER)
+                    .group(GROUP)
+                    .posixPermissions(PERMISSIONS)
+                    .id(fileId)
+                    .lastAccessedUtcEpochSeconds(0L)
+                    .createdUtcEpochSeconds(0L)
+                    .lastModifiedUtcEpochSeconds(LAST_MODIFIED_UTC_EPOCH_SECONDS)
+                    .originalSizeBytes(ORIGINAL_SIZE_BYTES)
+                    .originalHash(ORIGINAL_HASH)
+                    .absolutePath(BackupPath.of(absolutePath))
+                    .fileType(FileType.REGULAR_FILE)
+                    .status(Change.NEW)
+                    .build());
+            final var manifest = BackupIncrementManifest.builder()
+                    .files(files)
+                    .dataStore(dataStore)
+                    .appVersion(new AppVersion("1.2.3"))
+                    .configuration(BackupJobConfiguration.builder()
+                            .encryptionKey(EncryptionUtil.generateRsaKeyPair().getPublic())
+                            .compression(CompressionAlgorithm.GZIP)
+                            .chunkSizeMebibyte(1)
+                            .fileNamePrefix("prefix")
+                            .hashAlgorithm(HashAlgorithm.SHA256)
+                            .destinationDirectory(testDataRoot)
+                            .duplicateStrategy(DuplicateHandlingStrategy.KEEP_EACH)
+                            .sources(Set.of())
+                            .backupType(BackupType.FULL)
+                            .build())
+                    .backupType(BackupType.FULL)
+                    .versions(new TreeSet<>(Set.of(0)))
+                    .fileNamePrefix("prefix")
+                    .startTimeUtcEpochSeconds(1L)
+                    .operatingSystem(null)
+                    .build();
+            //when
+            final var actual = underTest.convertToSummaryString(manifest);
 
-        //then
-        Assertions.assertEquals("""
-                \033[0;31mFULL\033[0;0m backup: prefix
-                \tStarted at : 1970-01-01T00:00:01Z (Epoch seconds: 1)
-                \tContains 1 files (2 MiB)
-                \tVersions   : [0]
-                \tOS name    : unknown
-                \tEncrypted  : true
-                \tHash alg.  : SHA256
-                \tCompression: GZIP""", actual);
+            //then
+            Assertions.assertEquals("""
+                    \033[0;31mFULL\033[0;0m backup: prefix
+                    \tStarted at : 1970-01-01T00:00:01Z (Epoch seconds: 1)
+                    \tContains 1 files (2 MiB)
+                    \tVersions   : [0]
+                    \tOS name    : unknown
+                    \tEncrypted  : true
+                    \tHash alg.  : SHA256
+                    \tCompression: GZIP""", actual);
+        }
     }
 }

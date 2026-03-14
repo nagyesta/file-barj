@@ -1,6 +1,7 @@
 package com.github.nagyesta.filebarj.core.backup.pipeline;
 
 import com.github.nagyesta.filebarj.core.TempFileAwareTest;
+import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
@@ -11,6 +12,8 @@ import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.FileUtils;
@@ -62,62 +65,70 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
                 .forceFull(false)
                 .build();
         final var underTest = new BackupController(parameters);
+        try (var loadDataStore = DataStore.newInMemoryInstance()) {
+            final var manifestManager = new ManifestManagerImpl(loadDataStore, new NoOpProgressTracker());
 
-        //when
-        underTest.execute(threads);
-        final var actualManifest = underTest.getManifest();
+            //when
+            underTest.execute(threads);
+            final var manifest = underTest.getManifest();
+            final var actualManifest = manifestManager.reloadManifest(manifest, keyPair.getPrivate());
 
-        //then
-        final var indexName = actualManifest.getIndexFileName();
-        final var indexFile = new File(job.getDestinationDirectory().toString(), indexName);
-        Assertions.assertTrue(indexFile.exists());
-        final var indexBytes = Files.readAllBytes(indexFile.toPath());
-        final var indexDecryptionKey = actualManifest.dataIndexDecryptionKey(keyPair.getPrivate(), actualManifest.getVersions().first());
-        final var indexDecrypted = decrypt(indexBytes, 0, indexBytes.length, indexDecryptionKey);
-        final var indexProperties = new Properties();
-        indexProperties.load(new ByteArrayInputStream(Objects.requireNonNull(indexDecrypted)));
-        //verify the archive contains the expected files
-        final var dirName = indexProperties.get("00000001.path");
-        final var name1 = indexProperties.get("00000002.path");
-        final var name2 = indexProperties.get("00000003.path");
-        final var expectedFileNames = actualManifest.getFiles().values().stream()
-                .map(FileMetadata::getArchiveMetadataId)
-                .filter(Objects::nonNull)
-                .map(uuid -> "/0/" + uuid)
-                .collect(Collectors.toCollection(TreeSet::new));
-        final var actualFileNames = new TreeSet<>(Set.of(name1, name2));
-        Assertions.assertEquals("/0", dirName);
-        Assertions.assertIterableEquals(expectedFileNames, actualFileNames);
-        //verify the archive contains no more files
-        Assertions.assertFalse(indexProperties.containsKey("00000004.path"));
 
-        //read data file content
-        final var fileNames = actualManifest.getDataFileNames();
-        Assertions.assertEquals(1, fileNames.size());
-        final var dataFile = new File(job.getDestinationDirectory().toString(), fileNames.get(0));
-        Assertions.assertTrue(dataFile.exists());
-        final var dataBytes = Files.readAllBytes(dataFile.toPath());
-        //verify file contents
-        final var indexMap = Map.of(name1, "00000002", name2, "00000003");
-        for (final var entry : actualManifest.getFiles().entrySet()) {
-            final var v = entry.getValue();
-            final var id = v.getArchiveMetadataId();
-            if (id == null) {
-                continue;
+            //then
+            final var indexName = actualManifest.getIndexFileName();
+            final var indexFile = new File(job.getDestinationDirectory().toString(), indexName);
+            Assertions.assertTrue(indexFile.exists());
+            final var indexBytes = Files.readAllBytes(indexFile.toPath());
+            final var firstVersion = actualManifest.getVersions().first();
+            final var indexDecryptionKey = actualManifest.dataIndexDecryptionKey(keyPair.getPrivate(), firstVersion);
+            final var indexDecrypted = decrypt(indexBytes, 0, indexBytes.length, indexDecryptionKey);
+            final var indexProperties = new Properties();
+            indexProperties.load(new ByteArrayInputStream(Objects.requireNonNull(indexDecrypted)));
+            //verify the archive contains the expected files
+            final var dirName = indexProperties.get("00000001.path");
+            final var name1 = indexProperties.get("00000002.path");
+            final var name2 = indexProperties.get("00000003.path");
+            final var dataStore = actualManifest.getDataStore();
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var expectedFileNames = fileMetadataSetRepository.findAll(actualManifest.getFiles(), 0, Integer.MAX_VALUE)
+                    .stream()
+                    .map(FileMetadata::getArchiveMetadataId)
+                    .filter(Objects::nonNull)
+                    .map(uuid -> "/0/" + uuid)
+                    .collect(Collectors.toCollection(TreeSet::new));
+            final var actualFileNames = new TreeSet<>(Set.of(name1, name2));
+            Assertions.assertEquals("/0", dirName);
+            Assertions.assertIterableEquals(expectedFileNames, actualFileNames);
+            //verify the archive contains no more files
+            Assertions.assertFalse(indexProperties.containsKey("00000004.path"));
+
+            //read data file content
+            final var fileNames = actualManifest.getDataFileNames();
+            Assertions.assertEquals(1, fileNames.size());
+            final var dataFile = new File(job.getDestinationDirectory().toString(), fileNames.get(0));
+            Assertions.assertTrue(dataFile.exists());
+            final var dataBytes = Files.readAllBytes(dataFile.toPath());
+            //verify file contents
+            final var indexMap = Map.of(name1, "00000002", name2, "00000003");
+            for (final var file : fileMetadataSetRepository.findAll(actualManifest.getFiles(), 0, Integer.MAX_VALUE)) {
+                final var id = file.getArchiveMetadataId();
+                if (id == null) {
+                    continue;
+                }
+                final var idx = indexMap.get("/0/" + id);
+                final var start = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.start.idx")));
+                final var end = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.end.idx")));
+                final var locator = Objects.requireNonNull(ArchiveEntryLocator.fromEntryPath("/0/" + id));
+                final var key = actualManifest.dataDecryptionKey(keyPair.getPrivate(), locator);
+                final var fileContent = decrypt(dataBytes, start, end - start, key);
+                final byte[] originalBytes;
+                if (file.getFileType() == FileType.SYMBOLIC_LINK) {
+                    originalBytes = exampleFile.getAbsolutePath().getBytes();
+                } else {
+                    originalBytes = Files.readAllBytes(file.getAbsolutePath().toOsPath());
+                }
+                Assertions.assertArrayEquals(originalBytes, fileContent);
             }
-            final var idx = indexMap.get("/0/" + id);
-            final var start = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.start.idx")));
-            final var end = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.end.idx")));
-            final var locator = Objects.requireNonNull(ArchiveEntryLocator.fromEntryPath("/0/" + id));
-            final var key = actualManifest.dataDecryptionKey(keyPair.getPrivate(), locator);
-            final var fileContent = decrypt(dataBytes, start, end - start, key);
-            final byte[] originalBytes;
-            if (v.getFileType() == FileType.SYMBOLIC_LINK) {
-                originalBytes = exampleFile.getAbsolutePath().getBytes();
-            } else {
-                originalBytes = Files.readAllBytes(v.getAbsolutePath().toOsPath());
-            }
-            Assertions.assertArrayEquals(originalBytes, fileContent);
         }
     }
 
@@ -144,62 +155,68 @@ class BackupControllerIntegrationTest extends TempFileAwareTest {
                 .forceFull(false)
                 .build();
         final var underTest = new BackupController(parameters);
+        try (var loadDataStore = DataStore.newInMemoryInstance()) {
+            final var manifestManager = new ManifestManagerImpl(loadDataStore, new NoOpProgressTracker());
 
-        //when
-        underTest.execute(threads);
-        final var actualManifest = underTest.getManifest();
+            //when
+            underTest.execute(threads);
+            final var manifest = underTest.getManifest();
+            final var actualManifest = manifestManager.reloadManifest(manifest, keyPair.getPrivate());
 
-        //then
-        final var indexName = actualManifest.getIndexFileName();
-        final var indexFile = new File(job.getDestinationDirectory().toString(), indexName);
-        Assertions.assertTrue(indexFile.exists());
-        final var indexBytes = Files.readAllBytes(indexFile.toPath());
-        final var indexDecryptionKey = actualManifest.dataIndexDecryptionKey(keyPair.getPrivate(), actualManifest.getVersions().first());
-        final var indexDecrypted = decrypt(indexBytes, 0, indexBytes.length, indexDecryptionKey);
-        final var indexProperties = new Properties();
-        indexProperties.load(new ByteArrayInputStream(Objects.requireNonNull(indexDecrypted)));
-        //verify the archive contains the expected files
-        final var dirName = indexProperties.get("00000001.path");
-        final var name1 = indexProperties.get("00000002.path");
-        final var name2 = indexProperties.get("00000003.path");
-        final var expectedFileNames = actualManifest.getFiles().values().stream()
-                .map(FileMetadata::getArchiveMetadataId)
-                .filter(Objects::nonNull)
-                .map(uuid -> "/0/" + uuid)
-                .collect(Collectors.toCollection(TreeSet::new));
-        final var actualFileNames = new TreeSet<>(Set.of(name1, name2));
-        Assertions.assertEquals("/0", dirName);
-        Assertions.assertIterableEquals(expectedFileNames, actualFileNames);
-        //verify the archive contains no more files
-        Assertions.assertFalse(indexProperties.containsKey("00000004.path"));
+            //then
+            final var indexName = actualManifest.getIndexFileName();
+            final var indexFile = new File(job.getDestinationDirectory().toString(), indexName);
+            Assertions.assertTrue(indexFile.exists());
+            final var indexBytes = Files.readAllBytes(indexFile.toPath());
+            final var firstVersion = actualManifest.getVersions().first();
+            final var indexDecryptionKey = actualManifest.dataIndexDecryptionKey(keyPair.getPrivate(), firstVersion);
+            final var indexDecrypted = decrypt(indexBytes, 0, indexBytes.length, indexDecryptionKey);
+            final var indexProperties = new Properties();
+            indexProperties.load(new ByteArrayInputStream(Objects.requireNonNull(indexDecrypted)));
+            //verify the archive contains the expected files
+            final var dirName = indexProperties.get("00000001.path");
+            final var name1 = indexProperties.get("00000002.path");
+            final var name2 = indexProperties.get("00000003.path");
+            final var fileMetadataSetRepository = loadDataStore.fileMetadataSetRepository();
+            final var expectedFileNames = fileMetadataSetRepository.findAll(actualManifest.getFiles(), 0, Integer.MAX_VALUE)
+                    .stream()
+                    .map(FileMetadata::getArchiveMetadataId)
+                    .filter(Objects::nonNull)
+                    .map(uuid -> "/0/" + uuid)
+                    .collect(Collectors.toCollection(TreeSet::new));
+            final var actualFileNames = new TreeSet<>(Set.of(name1, name2));
+            Assertions.assertEquals("/0", dirName);
+            Assertions.assertIterableEquals(expectedFileNames, actualFileNames);
+            //verify the archive contains no more files
+            Assertions.assertFalse(indexProperties.containsKey("00000004.path"));
 
-        //read data file content
-        final var fileNames = actualManifest.getDataFileNames();
-        Assertions.assertEquals(1, fileNames.size());
-        final var dataFile = new File(job.getDestinationDirectory().toString(), fileNames.get(0));
-        Assertions.assertTrue(dataFile.exists());
-        final var dataBytes = Files.readAllBytes(dataFile.toPath());
-        //verify file contents
-        final var indexMap = Map.of(name1, "00000002", name2, "00000003");
-        for (final var entry : actualManifest.getFiles().entrySet()) {
-            final var v = entry.getValue();
-            final var id = v.getArchiveMetadataId();
-            if (id == null) {
-                continue;
+            //read data file content
+            final var fileNames = actualManifest.getDataFileNames();
+            Assertions.assertEquals(1, fileNames.size());
+            final var dataFile = new File(job.getDestinationDirectory().toString(), fileNames.get(0));
+            Assertions.assertTrue(dataFile.exists());
+            final var dataBytes = Files.readAllBytes(dataFile.toPath());
+            //verify file contents
+            final var indexMap = Map.of(name1, "00000002", name2, "00000003");
+            for (final var file : fileMetadataSetRepository.findAll(actualManifest.getFiles(), 0, Integer.MAX_VALUE)) {
+                final var id = file.getArchiveMetadataId();
+                if (id == null) {
+                    continue;
+                }
+                final var idx = indexMap.get("/0/" + id);
+                final var start = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.start.idx")));
+                final var end = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.end.idx")));
+                final var locator = Objects.requireNonNull(ArchiveEntryLocator.fromEntryPath("/0/" + id));
+                final var key = actualManifest.dataDecryptionKey(keyPair.getPrivate(), locator);
+                final var fileContent = decrypt(dataBytes, start, end - start, key);
+                final byte[] originalBytes;
+                if (file.getFileType() == FileType.SYMBOLIC_LINK) {
+                    originalBytes = exampleFile.getAbsolutePath().getBytes();
+                } else {
+                    originalBytes = Files.readAllBytes(file.getAbsolutePath().toOsPath());
+                }
+                Assertions.assertArrayEquals(originalBytes, fileContent);
             }
-            final var idx = indexMap.get("/0/" + id);
-            final var start = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.start.idx")));
-            final var end = Integer.parseInt(String.valueOf(indexProperties.get(idx + ".content.abs.end.idx")));
-            final var locator = Objects.requireNonNull(ArchiveEntryLocator.fromEntryPath("/0/" + id));
-            final var key = actualManifest.dataDecryptionKey(keyPair.getPrivate(), locator);
-            final var fileContent = decrypt(dataBytes, start, end - start, key);
-            final byte[] originalBytes;
-            if (v.getFileType() == FileType.SYMBOLIC_LINK) {
-                originalBytes = exampleFile.getAbsolutePath().getBytes();
-            } else {
-                originalBytes = Files.readAllBytes(v.getAbsolutePath().toOsPath());
-            }
-            Assertions.assertArrayEquals(originalBytes, fileContent);
         }
     }
 

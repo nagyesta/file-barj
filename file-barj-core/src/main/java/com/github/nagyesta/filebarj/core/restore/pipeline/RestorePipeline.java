@@ -239,7 +239,7 @@ public class RestorePipeline implements Closeable {
         try (var pathsInRestoreTarget = fileSetRepository.createFileSet();
              var pathsInBackup = fileSetRepository.createFileSet()) {
             findPathsInRestoreTarget(threadPool, pathsInRestoreTarget, pathRestriction);
-            fileMetadataSetRepository.forEach(filesFromLastIncrement, threadPool, fileMetadata -> {
+            fileMetadataSetRepository.forEachOrdered(filesFromLastIncrement, threadPool, fileMetadata -> {
                 final var path = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
                 fileSetRepository.appendTo(pathsInBackup, path);
             });
@@ -417,7 +417,7 @@ public class RestorePipeline implements Closeable {
                             .excludePatterns(source.getExcludePatterns())
                             .build())
                     .forEach(source -> new BackupSourceScanner(fileSetRepository, source).listMatchingFilePaths(uniquePathSet));
-            fileSetRepository.forEach(uniquePathSet, threadPool, path -> {
+            fileSetRepository.forEachOrdered(uniquePathSet, threadPool, path -> {
                 if (pathRestriction.test(path)) {
                     fileSetRepository.appendTo(pathsInRestoreTarget, path);
                 }

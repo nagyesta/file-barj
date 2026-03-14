@@ -85,17 +85,35 @@ public abstract class InMemoryBaseFileSetRepository<K extends BaseFileSetId<K>, 
     public void forEach(
             final @NotNull K id,
             final @NotNull ForkJoinPool threadPool,
+            final @NotNull Consumer<V> consumer) {
+        final var countAll = countAll(id);
+        LongStream.iterate(0L, offset -> offset < countAll, offset -> offset + Integer.MAX_VALUE)
+                .mapToObj(offset -> findAll(id, offset, Integer.MAX_VALUE, SortOrder.ASC))
+                .forEach(values -> threadPool.submit(() -> values.stream().parallel().forEach(consumer)).join());
+    }
+
+    @Override
+    public void forEachOrdered(
+            final @NotNull K id,
+            final @NotNull ForkJoinPool threadPool,
             final @NotNull SortOrder order,
             final @NotNull Consumer<V> consumer) {
         final var countAll = countAll(id);
         LongStream.iterate(0L, offset -> offset < countAll, offset -> offset + Integer.MAX_VALUE)
                 .mapToObj(offset -> findAll(id, offset, Integer.MAX_VALUE, order))
-                .forEach(values -> threadPool.submit(() -> values.stream().parallel().forEach(consumer)).join());
+                .forEachOrdered(values -> threadPool.submit(() -> values.stream().parallel().forEachOrdered(consumer)).join());
     }
 
     @Override
     public boolean isClosed() {
         return fileSets.isEmpty();
+    }
+
+    @Override
+    public void assertExists(final @NotNull K id) {
+        if (getFileSetById(id) == null) {
+            throw new IllegalStateException(id.getClass().getSimpleName() + " " + id.id() + " does not exist.");
+        }
     }
 
     @Override

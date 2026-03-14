@@ -8,6 +8,7 @@ import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
 import com.github.nagyesta.filebarj.core.model.*;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -154,6 +155,7 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
     }
 
     private static BackupIncrementManifest getManifest(final BackupJobConfiguration config) {
+        final var dataStore = DataStore.newInMemoryInstance();
         return BackupIncrementManifest.builder()
                 .appVersion(APP_VERSION)
                 .versions(new TreeSet<>(Set.of(0)))
@@ -161,6 +163,9 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
                 .backupType(BackupType.FULL)
                 .configuration(config)
                 .fileNamePrefix("pipeline-prefix-12345")
+                .dataStore(dataStore)
+                .files(dataStore.fileMetadataSetRepository().createFileSet())
+                .archivedEntries(dataStore.archivedFileMetadataSetRepository().createFileSet())
                 .build();
     }
 

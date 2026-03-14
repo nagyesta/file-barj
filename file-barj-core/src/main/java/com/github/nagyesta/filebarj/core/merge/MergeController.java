@@ -4,7 +4,9 @@ import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.common.ManifestManager;
 import com.github.nagyesta.filebarj.core.common.ManifestManagerImpl;
 import com.github.nagyesta.filebarj.core.common.SingleUseController;
-import com.github.nagyesta.filebarj.core.model.*;
+import com.github.nagyesta.filebarj.core.model.AppVersion;
+import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
+import com.github.nagyesta.filebarj.core.model.RestoreManifest;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.progress.ObservableProgressTracker;
@@ -25,7 +27,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.github.nagyesta.filebarj.core.progress.ProgressStep.*;
 
@@ -104,15 +105,10 @@ public class MergeController extends SingleUseController implements Closeable {
     private @NotNull BackupIncrementManifest mergeBackupContent() {
         final var lastManifest = manifestsToMerge.get(manifestsToMerge.lastKey());
         final var firstManifest = manifestsToMerge.get(manifestsToMerge.firstKey());
-        final var files = new HashMap<UUID, FileMetadata>();
-        final var archives = new HashMap<UUID, ArchivedFileMetadata>();
         final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
         final var archivedFileMetadataSetRepository = dataStore().archivedFileMetadataSetRepository();
-        final var forkJoinPool = dataStore().singleThreadedPool();
-        fileMetadataSetRepository.forEach(mergedManifest.getFilesOfLastManifest(), forkJoinPool,
-                fileMetadata -> files.put(fileMetadata.getId(), fileMetadata));
-        archivedFileMetadataSetRepository.forEach(mergedManifest.getArchivedEntriesOfLastManifest(), forkJoinPool,
-                archivedFileMetadata -> archives.put(archivedFileMetadata.getId(), archivedFileMetadata));
+        final var files = fileMetadataSetRepository.copyAllNotDeleted(mergedManifest.getFilesOfLastManifest());
+        final var archives = archivedFileMetadataSetRepository.copyAll(mergedManifest.getArchivedEntriesOfLastManifest());
         final var result = BackupIncrementManifest.builder()
                 .backupType(firstManifest.getBackupType())
                 .startTimeUtcEpochSeconds(mergedManifest.getLastStartTimeUtcEpochSeconds())
@@ -124,10 +120,11 @@ public class MergeController extends SingleUseController implements Closeable {
                 .encryptionKeys(mergedManifest.getEncryptionKeys())
                 .operatingSystem(lastManifest.getOperatingSystem())
                 .versions(mergedManifest.getVersions())
+                .dataStore(dataStore())
                 .files(files)
                 .archivedEntries(archives)
                 .build();
-        final var totalEntries = (long) result.getArchivedEntries().size();
+        final var totalEntries = archivedFileMetadataSetRepository.countAll(result.getArchivedEntries());
         progressTracker.estimateStepSubtotal(MERGE, totalEntries);
         @SuppressWarnings("java:S2637") final var outputStreamConfiguration = BarjCargoOutputStreamConfiguration.builder()
                 .compressionFunction(result.getConfiguration().getCompression()::decorateOutputStream)
@@ -223,11 +220,13 @@ public class MergeController extends SingleUseController implements Closeable {
     private @NonNull Set<String> filterEntities(
             final BackupIncrementManifest currentManifest,
             final BackupIncrementManifest result) {
-        return result.getArchivedEntries().values().stream()
-                .map(ArchivedFileMetadata::getArchiveLocation)
-                .filter(archiveLocation -> currentManifest.getVersions().contains(archiveLocation.getBackupIncrement()))
-                .map(ArchiveEntryLocator::asEntryPath)
-                .collect(Collectors.toSet());
+        final var dataStore = result.getDataStore();
+        final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
+        final var resultId = result.getArchivedEntries();
+        final var versions = currentManifest.getVersions();
+        try (var filtered = archivedFileMetadataSetRepository.filterByBackupIncrements(resultId, versions)) {
+            return archivedFileMetadataSetRepository.asEntryPaths(filtered);
+        }
     }
 
     private BarjCargoInputStreamConfiguration getStreamConfig(
