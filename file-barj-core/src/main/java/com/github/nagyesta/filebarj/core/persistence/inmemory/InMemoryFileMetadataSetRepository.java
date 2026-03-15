@@ -106,7 +106,7 @@ public class InMemoryFileMetadataSetRepository
             @NotNull final ForkJoinPool threadPool,
             @NotNull final SortOrder order,
             @NotNull final Consumer<FileMetadata> consumer) {
-        forEach(id, threadPool, order, metadata -> {
+        forEachOrdered(id, threadPool, order, metadata -> {
             if (changeStatuses.contains(metadata.getStatus())
                     && fileTypes.contains(metadata.getFileType())) {
                 consumer.accept(metadata);
@@ -289,5 +289,15 @@ public class InMemoryFileMetadataSetRepository
         return map != null && map.keySet()
                 .stream()
                 .anyMatch(path -> path.toString().equals(absolutePath));
+    }
+
+    @Override
+    public FileMetadataSetId copyAllNotDeleted(@NotNull final FileMetadataSetId source) {
+        final var fileSetById = getFileSetById(source).stream()
+                .filter(file -> file.getStatus() != Change.DELETED)
+                .toList();
+        final var target = createFileSet();
+        appendTo(target, fileSetById);
+        return target;
     }
 }

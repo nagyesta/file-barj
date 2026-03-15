@@ -33,14 +33,15 @@ public class IncrementInspectionController extends SingleUseController {
      *
      * @param parameters The parameters.
      */
-    public IncrementInspectionController(
-            final @NonNull InspectParameters parameters) {
+    public IncrementInspectionController(final @NonNull InspectParameters parameters) {
         super(DataStore.newInMemoryInstance());
         final var progressTracker = new ObservableProgressTracker(List.of(ProgressStep.LOAD_MANIFESTS));
         progressTracker.registerListener(parameters.getProgressListener());
         final ManifestManager manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);
-        this.manifests = manifestManager
-                .loadAll(parameters.getBackupDirectory(), parameters.getFileNamePrefix(), parameters.getKek());
+        final var backupDirectory = parameters.getBackupDirectory();
+        final var fileNamePrefix = parameters.getFileNamePrefix();
+        final var kek = parameters.getKek();
+        this.manifests = manifestManager.loadAll(backupDirectory, fileNamePrefix, kek);
     }
 
     /**

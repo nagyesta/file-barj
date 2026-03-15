@@ -30,6 +30,10 @@ public interface ManifestManager {
             @NonNull BackupType backupTypeOverride,
             int nextVersion);
 
+    BackupIncrementManifest reloadManifest(
+            BackupIncrementManifest manifest,
+            PrivateKey privateKey);
+
     /**
      * Persists the provided manifest to the hard drive in two copies (one encrypted that can be
      * moved to a safe location and one unencrypted in the history folder to allow incremental

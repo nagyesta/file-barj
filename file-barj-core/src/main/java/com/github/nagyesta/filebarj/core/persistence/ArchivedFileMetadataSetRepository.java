@@ -31,4 +31,6 @@ public interface ArchivedFileMetadataSetRepository
 
     SortedSet<FileMetadata> findFileMetadataByArchiveLocator(
             ArchivedFileMetadataSetId id, FileMetadataSetId files, ArchiveEntryLocator currentLocator);
+
+    ArchivedFileMetadataSetId copyAll(ArchivedFileMetadataSetId source);
 }

@@ -1,7 +1,6 @@
 package com.github.nagyesta.filebarj.core.inspect.worker;
 
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
-import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.util.LogUtil;
 import com.github.nagyesta.filebarj.io.stream.internal.ChunkingOutputStream;
@@ -24,11 +23,13 @@ public class ManifestToSummaryConverter {
      */
     public String convertToSummaryString(final @NonNull BackupIncrementManifest manifest) {
         final var epochSeconds = manifest.getStartTimeUtcEpochSeconds();
-        final var totalSize = manifest.getFiles().values().stream()
-                .mapToLong(FileMetadata::getOriginalSizeBytes).sum() / ChunkingOutputStream.MEBIBYTE;
+        final var dataStore = manifest.getDataStore();
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var totalSize = fileMetadataSetRepository.getOriginalSizeBytes(manifest.getFiles()) / ChunkingOutputStream.MEBIBYTE;
+        final var numberOfFiles = fileMetadataSetRepository.countAll(manifest.getFiles());
         return getFormattedType(manifest) + " backup: " + manifest.getFileNamePrefix() + "\n"
                 + "\tStarted at : " + Instant.ofEpochSecond(epochSeconds) + " (Epoch seconds: " + epochSeconds + ")\n"
-                + "\tContains " + manifest.getFiles().size() + " files (" + totalSize + " MiB)\n"
+                + "\tContains " + numberOfFiles + " files (" + totalSize + " MiB)\n"
                 + "\tVersions   : " + manifest.getVersions() + "\n"
                 + "\tOS name    : " + Optional.ofNullable(manifest.getOperatingSystem()).orElse("unknown") + "\n"
                 + "\tEncrypted  : " + Optional.ofNullable(manifest.getConfiguration().getEncryptionKey()).isPresent() + "\n"

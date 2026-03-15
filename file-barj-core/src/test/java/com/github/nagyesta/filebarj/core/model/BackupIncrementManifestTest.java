@@ -1,24 +1,32 @@
 package com.github.nagyesta.filebarj.core.model;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.nagyesta.filebarj.core.config.BackupJobConfiguration;
 import com.github.nagyesta.filebarj.core.config.BackupSource;
 import com.github.nagyesta.filebarj.core.config.enums.CompressionAlgorithm;
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
+import com.github.nagyesta.filebarj.core.json.BackupIncrementMetadataReader;
+import com.github.nagyesta.filebarj.core.json.BackupIncrementMetadataWriter;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
+import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.util.OsUtil;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
+import org.apache.commons.io.output.StringBuilderWriter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.github.nagyesta.filebarj.core.model.BackupIncrementManifest.DEK_COUNT;
 
@@ -45,9 +53,10 @@ class BackupIncrementManifestTest {
             UUID.fromString("c516820c-53cb-42a0-ab8a-2775b019b741")
     );
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JsonFactory jsonFactory = new JsonFactory();
 
     @Test
-    void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfFullyPopulatedObject() throws JsonProcessingException {
+    void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfFullyPopulatedObject() throws IOException {
         //given
         final var archive = ArchivedFileMetadata.builder()
                 .id(UUID.randomUUID())
@@ -79,30 +88,47 @@ class BackupIncrementManifestTest {
         final var encrypted = EncryptionUtil.encryptBytes(keyPair.getPublic(), secretKey.getEncoded());
         final var config = getConfiguration(keyPair);
         final var dek = Base64.getEncoder().encodeToString(encrypted);
-        final var expected = BackupIncrementManifest.builder()
-                .appVersion(new AppVersion(0, 0, 1))
-                .versions(new TreeSet<>(Set.of(0)))
-                .backupType(BackupType.FULL)
-                .operatingSystem(OsUtil.getRawOsName())
-                .encryptionKeys(Map.of(0, Map.of(0, dek)))
-                .startTimeUtcEpochSeconds(Instant.now().getEpochSecond())
-                .fileNamePrefix("backup-")
-                .configuration(config)
-                .archivedEntries(Map.of(archive.getId(), archive))
-                .files(Map.of(file.getId(), file))
-                .build();
-        final var json = objectMapper.writer().writeValueAsString(expected);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
+            final var files = fileMetadataSetRepository.createFileSet();
+            final var archives = archivedFileMetadataSetRepository.createFileSet();
+            fileMetadataSetRepository.appendTo(files, file);
+            archivedFileMetadataSetRepository.appendTo(archives, archive);
+            final var expected = BackupIncrementManifest.builder()
+                    .appVersion(new AppVersion(0, 0, 1))
+                    .versions(new TreeSet<>(Set.of(0)))
+                    .backupType(BackupType.FULL)
+                    .operatingSystem(OsUtil.getRawOsName())
+                    .encryptionKeys(Map.of(0, Map.of(0, dek)))
+                    .startTimeUtcEpochSeconds(Instant.now().getEpochSecond())
+                    .fileNamePrefix("backup-")
+                    .configuration(config)
+                    .archivedEntries(archives)
+                    .dataStore(dataStore)
+                    .files(files)
+                    .dataFileNames(List.of("file1", "file2"))
+                    .build();
+            final var stringWriter = new StringBuilderWriter();
+            final var generator = jsonFactory.createGenerator(stringWriter);
+            final var jsonWriter = new BackupIncrementMetadataWriter(generator, objectMapper);
+            jsonWriter.write(expected);
+            final var json = stringWriter.toString();
 
-        //when
-        final BackupIncrementManifest actual = objectMapper.readerFor(BackupIncrementManifest.class).readValue(json);
+            //when
+            final var parser = jsonFactory.createParser(new StringReader(json));
+            final var jsonReader = new BackupIncrementMetadataReader(dataStore, parser, objectMapper);
+            final var actual = jsonReader.read();
 
-        //then
-        Assertions.assertEquals(expected, actual);
-        Assertions.assertEquals(expected.hashCode(), actual.hashCode());
+            //then
+            Assertions.assertEquals(expected, actual);
+            Assertions.assertEquals(expected.hashCode(), actual.hashCode());
+            assertFilesAreMatching(dataStore, expected, actual);
+        }
     }
 
     @Test
-    void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfMinimalObject() throws JsonProcessingException {
+    void testDeserializeShouldRecreatePreviousStateWhenCalledOnSerializedStateOfMinimalObject() throws IOException {
         //given
         final var file = FileMetadata.builder()
                 .id(UUID.randomUUID())
@@ -119,23 +145,40 @@ class BackupIncrementManifestTest {
                 .fileNamePrefix("backup-")
                 .sources(Set.of(BackupSource.builder().path(BackupPath.of(Path.of(TEMP_DIR), "visible-file1.txt")).build()))
                 .build();
-        final var expected = BackupIncrementManifest.builder()
-                .appVersion(new AppVersion(0, 0, 1))
-                .versions(new TreeSet<>(Set.of(0, 1, 2)))
-                .backupType(BackupType.FULL)
-                .startTimeUtcEpochSeconds(Instant.now().getEpochSecond())
-                .fileNamePrefix("backup-consolidation-")
-                .configuration(config)
-                .files(Map.of(file.getId(), file))
-                .build();
-        final var json = objectMapper.writer().writeValueAsString(expected);
+        try (var dataStore = DataStore.newInMemoryInstance()) {
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
+            final var files = fileMetadataSetRepository.createFileSet();
+            final var archives = archivedFileMetadataSetRepository.createFileSet();
+            fileMetadataSetRepository.appendTo(files, file);
+            final var expected = BackupIncrementManifest.builder()
+                    .appVersion(new AppVersion(0, 0, 1))
+                    .versions(new TreeSet<>(Set.of(0, 1, 2)))
+                    .backupType(BackupType.FULL)
+                    .startTimeUtcEpochSeconds(Instant.now().getEpochSecond())
+                    .fileNamePrefix("backup-consolidation-")
+                    .configuration(config)
+                    .dataStore(dataStore)
+                    .files(files)
+                    .archivedEntries(archives)
+                    .dataFileNames(List.of("file1", "file2"))
+                    .build();
+            final var stringWriter = new StringBuilderWriter();
+            final var generator = jsonFactory.createGenerator(stringWriter);
+            final var jsonWriter = new BackupIncrementMetadataWriter(generator, objectMapper);
+            jsonWriter.write(expected);
+            final var json = stringWriter.toString();
 
-        //when
-        final BackupIncrementManifest actual = objectMapper.readerFor(BackupIncrementManifest.class).readValue(json);
+            //when
+            final var parser = jsonFactory.createParser(new StringReader(json));
+            final var jsonReader = new BackupIncrementMetadataReader(dataStore, parser, objectMapper);
+            final var actual = jsonReader.read();
 
-        //then
-        Assertions.assertEquals(expected, actual);
-        Assertions.assertEquals(expected.hashCode(), actual.hashCode());
+            //then
+            Assertions.assertEquals(expected, actual);
+            Assertions.assertEquals(expected.hashCode(), actual.hashCode());
+            assertFilesAreMatching(dataStore, expected, actual);
+        }
     }
 
     @Test
@@ -266,6 +309,7 @@ class BackupIncrementManifestTest {
             final String dek,
             final BackupJobConfiguration config) {
         final var builder = BackupIncrementManifest.builder()
+                .dataStore(DataStore.newInMemoryInstance())
                 .appVersion(new AppVersion(0, 0, 1))
                 .versions(new TreeSet<>(Set.of(0)))
                 .backupType(BackupType.FULL)
@@ -274,5 +318,27 @@ class BackupIncrementManifestTest {
                 .configuration(config);
         Optional.ofNullable(dek).ifPresent(key -> builder.encryptionKeys(Map.of(0, Map.of(0, key))));
         return builder.build();
+    }
+
+    private static void assertFilesAreMatching(
+            final DataStore dataStore,
+            final BackupIncrementManifest expected,
+            final BackupIncrementManifest actual) {
+        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+        final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
+        final var actualFileMap = fileMetadataSetRepository.findAll(actual.getFiles(), 0, Integer.MAX_VALUE)
+                .stream()
+                .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
+        final var actualArchiveMap = archivedFileMetadataSetRepository.findAll(actual.getArchivedEntries(), 0, Integer.MAX_VALUE)
+                .stream()
+                .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity()));
+        final var expectedFileMap = fileMetadataSetRepository.findAll(expected.getFiles(), 0, Integer.MAX_VALUE)
+                .stream()
+                .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
+        final var expectedArchiveMap = archivedFileMetadataSetRepository.findAll(expected.getArchivedEntries(), 0, Integer.MAX_VALUE)
+                .stream()
+                .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity()));
+        Assertions.assertIterableEquals(expectedFileMap.entrySet(), actualFileMap.entrySet());
+        Assertions.assertIterableEquals(expectedArchiveMap.entrySet(), actualArchiveMap.entrySet());
     }
 }

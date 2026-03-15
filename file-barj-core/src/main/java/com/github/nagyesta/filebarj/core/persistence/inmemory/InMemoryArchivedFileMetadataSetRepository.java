@@ -100,7 +100,7 @@ public class InMemoryArchivedFileMetadataSetRepository
         final var result = createFileSet();
         final var archivedMetadataByFileId = metadataByFileSetAndArchiveFileId.get(id.id());
         dataStore().fileMetadataSetRepository()
-                .forEach(fileMetadataSetId,
+                .forEachOrdered(fileMetadataSetId,
                         dataStore().singleThreadedPool(),
                         metadata -> {
                             if (metadata.getArchiveMetadataId() != null) {
@@ -150,5 +150,13 @@ public class InMemoryArchivedFileMetadataSetRepository
                 .map(ArchivedFileMetadata::getFiles)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet()));
+    }
+
+    @Override
+    public ArchivedFileMetadataSetId copyAll(@NotNull final ArchivedFileMetadataSetId source) {
+        final var fileSetById = getFileSetById(source);
+        final var target = createFileSet();
+        appendTo(target, fileSetById);
+        return target;
     }
 }
