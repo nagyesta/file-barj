@@ -20,7 +20,6 @@ jacksonAnnotations = { strictly = "2.21" }
 jetbrainsAnnotations = "26.1.0"
 
 abortMissionPlugin = "5.2.45"
-indexScanPlugin = "3.1.5"
 lombokPlugin = "9.4.0"
 shadowPlugin = "9.4.1"
 gitVersionerPlugin = "1.6.7"
@@ -76,7 +75,6 @@ shadow = { id = "com.gradleup.shadow", version.ref = "shadowPlugin" }
 lombok = { id = "io.freefair.lombok", version.ref = "lombokPlugin" }
 abort-mission = { id = "com.github.nagyesta.abort-mission-gradle-plugin", version.ref = "abortMissionPlugin" }
 versioner = { id = "io.toolebox.git-versioner", version.ref = "gitVersionerPlugin" }
-index-scan = { id = "org.sonatype.gradle.plugins.scan", version.ref = "indexScanPlugin" }
 owasp-dependencycheck = { id = "org.owasp.dependencycheck", version.ref = "owaspPlugin" }
 cyclonedx-bom = { id = "org.cyclonedx.bom", version.ref = "cycloneDxBomPlugin" }
 licensee-plugin = { id = "app.cash.licensee", version.ref = "licenseePlugin" }
