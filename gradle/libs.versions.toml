@@ -19,7 +19,7 @@ jackson = { strictly = "2.21.2" }
 jacksonAnnotations = { strictly = "2.21" }
 jetbrainsAnnotations = "26.1.0"
 
-abortMissionPlugin = "5.2.45"
+abortMissionPlugin = "5.2.51"
 lombokPlugin = "9.4.0"
 shadowPlugin = "9.4.1"
 gitVersionerPlugin = "1.6.7"
