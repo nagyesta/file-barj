@@ -20,7 +20,7 @@ jacksonAnnotations = { strictly = "2.21" }
 jetbrainsAnnotations = "26.1.0"
 
 abortMissionPlugin = "5.2.51"
-lombokPlugin = "9.4.0"
+lombokPlugin = "9.5.0"
 shadowPlugin = "9.4.1"
 gitVersionerPlugin = "1.6.7"
 owaspPlugin = "12.2.1"
