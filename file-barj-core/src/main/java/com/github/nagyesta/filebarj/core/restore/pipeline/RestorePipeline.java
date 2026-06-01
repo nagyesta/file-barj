@@ -284,8 +284,12 @@ public class RestorePipeline implements Closeable {
                     EnumSet.of(FileType.DIRECTORY, FileType.REGULAR_FILE),
                     threadPool,
                     fileMetadata -> {
-                        final var change = Optional.of(backupPathChangeStatusMapRepository
-                                        .getOrDefault(checkOutcome, fileMetadata.getAbsolutePath(), Change.NO_CHANGE))
+                        final var status = backupPathChangeStatusMapRepository
+                                .getOrDefault(checkOutcome, fileMetadata.getAbsolutePath(), Change.NO_CHANGE);
+                        if (status == Change.NO_CHANGE) {
+                            return;
+                        }
+                        final var change = Optional.of(status)
                                 .map(Change::getRestoreStatusMessage)
                                 .orElse("Unknown.");
                         final var restorePath = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());

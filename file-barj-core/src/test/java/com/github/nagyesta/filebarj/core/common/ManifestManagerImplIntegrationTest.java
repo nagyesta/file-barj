@@ -16,7 +16,8 @@ import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,81 +29,84 @@ import java.util.stream.Collectors;
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 class ManifestManagerImplIntegrationTest extends TempFileAwareTest {
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @SuppressWarnings("java:S2925")
-    void testMergeForRestoreShouldKeepLatestFileSetWhenCalledWithValidIncrementalData() throws IOException, InterruptedException {
+    void testMergeForRestoreShouldKeepLatestFileSetWhenCalledWithValidIncrementalData(final DataStore dataStore)
+            throws IOException, InterruptedException {
         //given
-        final var dataStore = DataStore.newInMemoryInstance();
-        final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
-        final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
-        final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
-        final var destinationDirectory = testDataRoot.resolve("destination");
-        final var source = testDataRoot.resolve("source");
-        final var config = BackupJobConfiguration.builder()
-                .fileNamePrefix("prefix")
-                .sources(Set.of(BackupSource.builder().path(BackupPath.of(source)).build()))
-                .compression(CompressionAlgorithm.GZIP)
-                .hashAlgorithm(HashAlgorithm.SHA256)
-                .chunkSizeMebibyte(1)
-                .duplicateStrategy(DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP)
-                .destinationDirectory(destinationDirectory)
-                .backupType(BackupType.INCREMENTAL)
-                .build();
-        final var file1 = source.resolve("file1.txt");
-        final var file2 = source.resolve("file2.txt");
-        final var file1Copy = source.resolve("file1copy.txt");
-        Files.createDirectories(source);
-        Files.createFile(file1);
-        Files.writeString(file1, "content1");
-        Files.createFile(file2);
-        Files.writeString(file2, "content2");
-        Files.createFile(file1Copy);
-        Files.writeString(file1Copy, "content1");
-        final var parser = FileMetadataParserFactory.newInstance();
-        final var original = underTest.generateManifest(config, BackupType.FULL, 0);
-        final var origFile1 = parser.parse(file1.toFile(), config);
-        final var origFile2 = parser.parse(file2.toFile(), config);
-        final var origFile1Copy = parser.parse(file1Copy.toFile(), config);
-        final var origArchiveFile1 = getArchivedFileMetadata(
-                Set.of(origFile1, origFile1Copy),
-                original.getVersions().last(),
-                Optional.empty());
-        final var origArchiveFile2 = getArchivedFileMetadata(
-                Set.of(origFile2),
-                original.getVersions().last(),
-                Optional.empty());
-        fileMetadataSetRepository.appendTo(original.getFiles(), Set.of(origFile1, origFile2, origFile1Copy));
-        archivedFileMetadataSetRepository.appendTo(original.getArchivedEntries(), Set.of(origArchiveFile1, origArchiveFile2));
-        Thread.sleep(Duration.ofSeconds(1).toMillis());
-        final var incremental = underTest.generateManifest(config, BackupType.INCREMENTAL, 1);
-        FileUtils.deleteQuietly(file2.toFile());
-        Files.writeString(file1, "content1-changed");
-        final var incFile1 = parser.parse(file1.toFile(), config);
-        final var incFile1Copy = parser.parse(file1Copy.toFile(), config);
-        final var incArchiveFile1 = getArchivedFileMetadata(
-                Set.of(incFile1),
-                incremental.getVersions().last(),
-                Optional.empty());
-        final var incArchiveFile1Copy = getArchivedFileMetadata(
-                Set.of(incFile1Copy),
-                original.getVersions().last(),
-                Optional.of(origArchiveFile1.getId()));
-        fileMetadataSetRepository.appendTo(incremental.getFiles(), Set.of(incFile1, incFile1Copy));
-        archivedFileMetadataSetRepository.appendTo(incremental.getArchivedEntries(), Set.of(incArchiveFile1, incArchiveFile1Copy));
+        try (dataStore) {
+            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+            final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
+            final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+            final var destinationDirectory = testDataRoot.resolve("destination");
+            final var source = testDataRoot.resolve("source");
+            final var config = BackupJobConfiguration.builder()
+                    .fileNamePrefix("prefix")
+                    .sources(Set.of(BackupSource.builder().path(BackupPath.of(source)).build()))
+                    .compression(CompressionAlgorithm.GZIP)
+                    .hashAlgorithm(HashAlgorithm.SHA256)
+                    .chunkSizeMebibyte(1)
+                    .duplicateStrategy(DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP)
+                    .destinationDirectory(destinationDirectory)
+                    .backupType(BackupType.INCREMENTAL)
+                    .build();
+            final var file1 = source.resolve("file1.txt");
+            final var file2 = source.resolve("file2.txt");
+            final var file1Copy = source.resolve("file1copy.txt");
+            Files.createDirectories(source);
+            Files.createFile(file1);
+            Files.writeString(file1, "content1");
+            Files.createFile(file2);
+            Files.writeString(file2, "content2");
+            Files.createFile(file1Copy);
+            Files.writeString(file1Copy, "content1");
+            final var parser = FileMetadataParserFactory.newInstance();
+            final var original = underTest.generateManifest(config, BackupType.FULL, 0);
+            final var origFile1 = parser.parse(file1.toFile(), config);
+            final var origFile2 = parser.parse(file2.toFile(), config);
+            final var origFile1Copy = parser.parse(file1Copy.toFile(), config);
+            final var origArchiveFile1 = getArchivedFileMetadata(
+                    Set.of(origFile1, origFile1Copy),
+                    original.getVersions().last(),
+                    Optional.empty());
+            final var origArchiveFile2 = getArchivedFileMetadata(
+                    Set.of(origFile2),
+                    original.getVersions().last(),
+                    Optional.empty());
+            fileMetadataSetRepository.appendTo(original.getFiles(), Set.of(origFile1, origFile2, origFile1Copy));
+            archivedFileMetadataSetRepository.appendTo(original.getArchivedEntries(), Set.of(origArchiveFile1, origArchiveFile2));
+            Thread.sleep(Duration.ofSeconds(1).toMillis());
+            final var incremental = underTest.generateManifest(config, BackupType.INCREMENTAL, 1);
+            FileUtils.deleteQuietly(file2.toFile());
+            Files.writeString(file1, "content1-changed");
+            final var incFile1 = parser.parse(file1.toFile(), config);
+            final var incFile1Copy = parser.parse(file1Copy.toFile(), config);
+            final var incArchiveFile1 = getArchivedFileMetadata(
+                    Set.of(incFile1),
+                    incremental.getVersions().last(),
+                    Optional.empty());
+            final var incArchiveFile1Copy = getArchivedFileMetadata(
+                    Set.of(incFile1Copy),
+                    original.getVersions().last(),
+                    Optional.of(origArchiveFile1.getId()));
+            fileMetadataSetRepository.appendTo(incremental.getFiles(), Set.of(incFile1, incFile1Copy));
+            archivedFileMetadataSetRepository.appendTo(incremental.getArchivedEntries(), Set.of(incArchiveFile1, incArchiveFile1Copy));
 
-        //when
-        final var actual = underTest.mergeForRestore(new TreeMap<>(Map.of(0, original, 1, incremental)));
+            //when
+            final var actual = underTest.mergeForRestore(new TreeMap<>(Map.of(0, original, 1, incremental)));
 
-        //then
-        Assertions.assertNotNull(actual);
-        //The deleted file will be filtered out
-        final var actualMap = fileMetadataSetRepository.findAll(actual.getFiles(), 0, Integer.MAX_VALUE)
-                .stream()
-                .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
-        final var expectedMap = fileMetadataSetRepository.findAll(incremental.getFiles(), 0, Integer.MAX_VALUE)
-                .stream()
-                .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
-        Assertions.assertEquals(expectedMap, actualMap);
+            //then
+            Assertions.assertNotNull(actual);
+            //The deleted file will be filtered out
+            final var actualMap = fileMetadataSetRepository.findAll(actual.getFiles(), 0, Integer.MAX_VALUE)
+                    .stream()
+                    .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
+            final var expectedMap = fileMetadataSetRepository.findAll(incremental.getFiles(), 0, Integer.MAX_VALUE)
+                    .stream()
+                    .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
+            Assertions.assertEquals(expectedMap, actualMap);
+        }
     }
 
     private static ArchivedFileMetadata getArchivedFileMetadata(

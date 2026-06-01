@@ -79,7 +79,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         link1 = setSymbolicLink(DIR_LINK_1_TXT, file1);
         link2 = setSymbolicLink(DIR_LINK_2_TXT, file2);
         link3 = setSymbolicLink(DIR_LINK_3_TXT, file3);
-        dataStore = DataStore.newInMemoryInstance();
+        dataStore = getDataStore();
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
         origFiles = fileMetadataSetRepository.createFileSet();
@@ -115,6 +115,10 @@ class RestoreScopeTest extends TempFileAwareTest {
                 .filter(file -> incPaths.contains(file.getAbsolutePath()))
                 .toList();
         fileMetadataSetRepository.appendTo(incScope, incList);
+    }
+
+    protected DataStore getDataStore() {
+        return DataStore.newEmbeddedSqlInstance();
     }
 
     @Test
@@ -286,7 +290,9 @@ class RestoreScopeTest extends TempFileAwareTest {
                         origFileMap.values().stream()
                                 .filter(f -> f.getAbsolutePath().equals(path))
                                 .map(FileMetadata::getArchiveMetadataId)
+                                .filter(Objects::nonNull)
                                 .map(origArchiveMap::get)
+                                .filter(Objects::nonNull)
                                 .map(ArchivedFileMetadata::copyArchiveDetails)
                                 .forEach(copied -> {
                                     file.setArchiveMetadataId(copied.getId());

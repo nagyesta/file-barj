@@ -70,6 +70,8 @@ licensee {
     allowUrl("https://repository.jboss.org/licenses/apache-2.0.txt")
     allowUrl("https://www.bouncycastle.org/licence.html")
     allowUrl("https://opensource.org/license/mit")
+    allowUrl("https://www.mozilla.org/en-US/MPL/2.0/")
+    allowUrl("https://opensource.org/licenses/eclipse-1.0.php")
 }
 
 publishing {

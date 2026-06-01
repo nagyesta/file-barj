@@ -207,7 +207,12 @@ subprojects {
                         "com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker",
                         "com.github.nagyesta.filebarj.core.restore.worker.WindowsFileMetadataSetter",
                         "com.github.nagyesta.filebarj.job.Main",
-                        "com.github.nagyesta.filebarj.job.Controller"
+                        "com.github.nagyesta.filebarj.job.Controller",
+                        "com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFileMetadataSetRepository",
+                        "com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFilePathSetRepository",
+                        "com.github.nagyesta.filebarj.core.persistence.inmemory.InMemoryFilePathSetRepository",
+                        "com.github.nagyesta.filebarj.core.persistence.ArchivedFileMetadataSetRepository",
+                        "com.github.nagyesta.filebarj.core.persistence.h2.mapper.H2BackupChangeRowMapper"
                 )
             }
         }

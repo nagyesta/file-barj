@@ -14,7 +14,8 @@ import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 
-public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMetadataSetId, FileMetadata> {
+public interface FileMetadataSetRepository
+        extends BaseFileSetRepository<FileMetadataSetId, FileMetadata> {
 
     default void forEachByChangeStatusesAndFileTypes(
             final FileMetadataSetId id,

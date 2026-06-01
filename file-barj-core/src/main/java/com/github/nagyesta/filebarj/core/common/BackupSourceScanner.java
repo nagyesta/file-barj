@@ -61,7 +61,7 @@ public class BackupSourceScanner {
     public void listMatchingFilePaths(final @NonNull FilePathSetId resultFilePathSetId) {
         try (var tempFileSetId = filePathSetRepository.createFileSet()) {
             var current = Optional.of(backupSourceOsPath);
-            var parentDirsFromBackupSource = List.<Path>of();
+            var parentDirsFromBackupSource = Set.<Path>of();
             Path lastParent = null;
             while (current.isPresent()) {
                 final var currentPath = current.get();
@@ -75,8 +75,8 @@ public class BackupSourceScanner {
         }
     }
 
-    private List<Path> findParentsFromBackupSource(final @NotNull Path path) {
-        final var parents = new ArrayList<>(List.of(backupSourceOsPath));
+    private Set<Path> findParentsFromBackupSource(final @NotNull Path path) {
+        final var parents = new LinkedHashSet<>(Set.of(backupSourceOsPath));
         var current = path.getParent();
         while (current.startsWith(backupSourceOsPath)) {
             parents.add(current);
@@ -87,7 +87,7 @@ public class BackupSourceScanner {
 
     private void listRemainingFiles(
             final @NotNull Path currentPath,
-            final @NotNull List<Path> parentDirsFromBackupSource,
+            final @NotNull Set<Path> parentDirsFromBackupSource,
             final @NotNull FilePathSetId sourceFileSetIt,
             final @NotNull FilePathSetId tempFilePathSetId) {
         if (!currentPath.toFile().exists()) {

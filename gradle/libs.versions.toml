@@ -10,6 +10,8 @@ commonsCodec = "1.22.0"
 commonsCompress = "1.28.0"
 commonsCli = "1.11.0"
 commonsIo = "2.22.0"
+h2 = "2.4.240"
+jdbi3 = "3.53.0"
 mockitoCore = "5.23.0"
 jupiter = "6.1.0"
 abortMission = "7.1.7"
@@ -47,6 +49,9 @@ commons-compress = { module = "org.apache.commons:commons-compress", version.ref
 commons-codec = { module = "commons-codec:commons-codec", version.ref = "commonsCodec" }
 commons-cli = { module = "commons-cli:commons-cli", version.ref = "commonsCli" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsIo" }
+
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+jdbi3-sqlobject = { module = "org.jdbi:jdbi3-sqlobject", version.ref = "jdbi3" }
 
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
 

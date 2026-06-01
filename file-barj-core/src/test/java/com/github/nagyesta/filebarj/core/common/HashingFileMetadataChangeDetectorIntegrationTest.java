@@ -2,7 +2,6 @@ package com.github.nagyesta.filebarj.core.common;
 
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -75,7 +74,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
@@ -107,7 +106,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),

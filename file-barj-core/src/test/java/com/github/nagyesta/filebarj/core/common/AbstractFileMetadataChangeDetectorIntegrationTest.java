@@ -138,14 +138,18 @@ abstract class AbstractFileMetadataChangeDetectorIntegrationTest extends TempFil
                 .build();
     }
 
+    protected DataStore getDataStore() {
+        return DataStore.newEmbeddedSqlInstance();
+    }
+
     protected SimpleFileMetadataChangeDetector getDefaultSimpleFileMetadataChangeDetector(final FileMetadata prev) {
-        final var fileMetadataSetRepository = DataStore.newInMemoryInstance().fileMetadataSetRepository();
+        final var fileMetadataSetRepository = getDataStore().fileMetadataSetRepository();
         final var fileSet = populateRepository(fileMetadataSetRepository, Collections.singleton(prev));
         return new SimpleFileMetadataChangeDetector(fileMetadataSetRepository, Map.of("test", fileSet), null);
     }
 
     protected HashingFileMetadataChangeDetector getDefaultHashingFileMetadataChangeDetector(final FileMetadata prev) {
-        final var fileMetadataSetRepository = DataStore.newInMemoryInstance().fileMetadataSetRepository();
+        final var fileMetadataSetRepository = getDataStore().fileMetadataSetRepository();
         final var fileSet = populateRepository(fileMetadataSetRepository, Collections.singleton(prev));
         return new HashingFileMetadataChangeDetector(fileMetadataSetRepository, Map.of("test", fileSet), null);
     }

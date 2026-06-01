@@ -5,7 +5,6 @@ import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -84,7 +83,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(testDataRoot), testDataRoot)));
         FileMetadataSetterFactory.newInstance(restoreTargets, null).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
@@ -116,7 +115,7 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),

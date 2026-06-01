@@ -66,7 +66,7 @@ public class BackupController
      * @param parameters The parameters
      */
     public BackupController(final @NonNull BackupParameters parameters) {
-        super(DataStore.newInMemoryInstance());
+        super(DataStore.newDefaultInstance());
         this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
         progressTracker.registerListener(parameters.getProgressListener());
         this.manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);
