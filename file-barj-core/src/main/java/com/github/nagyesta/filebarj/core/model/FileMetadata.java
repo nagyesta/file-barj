@@ -28,7 +28,8 @@ import java.util.UUID;
 @Builder
 @Jacksonized
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class FileMetadata implements Comparable<FileMetadata> {
+public class FileMetadata
+        implements Comparable<FileMetadata> {
     /**
      * The unique Id of the file.
      */

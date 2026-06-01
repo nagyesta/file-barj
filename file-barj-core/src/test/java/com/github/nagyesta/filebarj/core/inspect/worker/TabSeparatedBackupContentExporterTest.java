@@ -17,6 +17,8 @@ import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.apache.commons.io.FilenameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -63,13 +65,14 @@ class TabSeparatedBackupContentExporterTest extends TempFileAwareTest {
         //then + exception
     }
 
-    @Test
-    void testWriteManifestContentShouldExportContentWhenCalledWithValidInput() throws IOException {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testWriteManifestContentShouldExportContentWhenCalledWithValidInput(final DataStore dataStore) throws IOException {
         //given
         final var underTest = new TabSeparatedBackupContentExporter();
         final var fileId = UUID.randomUUID();
         final var absolutePath = FilenameUtils.separatorsToUnix(testDataRoot.resolve("path.txt").toAbsolutePath().toString());
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var files = fileMetadataSetRepository.createFileSet();
             fileMetadataSetRepository.appendTo(files, FileMetadata.builder()
@@ -86,6 +89,7 @@ class TabSeparatedBackupContentExporterTest extends TempFileAwareTest {
                     .absolutePath(BackupPath.ofPathAsIs(absolutePath))
                     .fileType(FileType.REGULAR_FILE)
                     .status(Change.NEW)
+                    .hidden(false)
                     .build());
             final var manifest = BackupIncrementManifest.builder()
                     .files(files)

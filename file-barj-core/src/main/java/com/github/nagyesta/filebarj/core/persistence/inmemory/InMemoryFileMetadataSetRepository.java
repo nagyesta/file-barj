@@ -7,29 +7,26 @@ import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
-import com.github.nagyesta.filebarj.core.persistence.SortOrder;
 import com.github.nagyesta.filebarj.core.persistence.entities.BackupPathChangeStatusMapId;
 import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import static com.github.nagyesta.filebarj.core.persistence.DataStore.BATCH_CHUNK_SIZE;
 
 public class InMemoryFileMetadataSetRepository
         extends InMemoryBaseFileSetRepository<FileMetadataSetId, FileMetadata>
         implements FileMetadataSetRepository {
 
-    private static final int BATCH_SIZE = 250;
-
     private final Map<UUID, Map<BackupPath, FileMetadata>> metadataByFileSetAndPath = new ConcurrentHashMap<>();
     private final Map<UUID, Map<UUID, FileMetadata>> metadataByFileSetAndFileId = new ConcurrentHashMap<>();
-    private final Map<UUID, Map<Long, Set<FileMetadata>>> metadataByFileSetAndOriginalFileSize = new ConcurrentHashMap<>();
-    private final Map<UUID, Map<String, Set<FileMetadata>>> metadataByFileSetAndOriginalHash = new ConcurrentHashMap<>();
 
     @Override
     protected FileMetadataSetId createFileSetId(final Consumer<FileMetadataSetId> closeWith) {
@@ -45,16 +42,6 @@ public class InMemoryFileMetadataSetRepository
         values.forEach(metadata -> mapByPath.put(metadata.getAbsolutePath(), metadata));
         final var mapByFileId = metadataByFileSetAndFileId.computeIfAbsent(id.id(), k -> new ConcurrentHashMap<>());
         values.forEach(metadata -> mapByFileId.put(metadata.getId(), metadata));
-        final var mapByOriginalFileSize = metadataByFileSetAndOriginalFileSize.computeIfAbsent(id.id(), k -> new ConcurrentHashMap<>());
-        values.stream()
-                .filter(metadata -> metadata.getOriginalSizeBytes() != null)
-                .forEach(metadata -> mapByOriginalFileSize.computeIfAbsent(metadata.getOriginalSizeBytes(),
-                        k -> new ConcurrentSkipListSet<>()).add(metadata));
-        final var mapByOriginalHash = metadataByFileSetAndOriginalHash.computeIfAbsent(id.id(), k -> new ConcurrentHashMap<>());
-        values.stream()
-                .filter(metadata -> metadata.getOriginalHash() != null)
-                .forEach(metadata -> mapByOriginalHash.computeIfAbsent(metadata.getOriginalHash(),
-                        k -> new ConcurrentSkipListSet<>()).add(metadata));
     }
 
     @Override
@@ -62,8 +49,6 @@ public class InMemoryFileMetadataSetRepository
         super.removeFileSet(id);
         metadataByFileSetAndPath.remove(id.id());
         metadataByFileSetAndFileId.remove(id.id());
-        metadataByFileSetAndOriginalFileSize.remove(id.id());
-        metadataByFileSetAndOriginalHash.remove(id.id());
     }
 
     @Override
@@ -71,8 +56,6 @@ public class InMemoryFileMetadataSetRepository
         super.close();
         metadataByFileSetAndPath.clear();
         metadataByFileSetAndFileId.clear();
-        metadataByFileSetAndOriginalFileSize.clear();
-        metadataByFileSetAndOriginalHash.clear();
     }
 
     @Override
@@ -99,14 +82,28 @@ public class InMemoryFileMetadataSetRepository
     }
 
     @Override
-    public void forEachByChangeStatusesAndFileTypes(
+    public void forEachByChangeStatusesAndFileTypesAsc(
             @NotNull final FileMetadataSetId id,
             @NotNull final Set<Change> changeStatuses,
             @NotNull final Set<FileType> fileTypes,
             @NotNull final ForkJoinPool threadPool,
-            @NotNull final SortOrder order,
             @NotNull final Consumer<FileMetadata> consumer) {
-        forEachOrdered(id, threadPool, order, metadata -> {
+        forEachAsc(id, threadPool, metadata -> {
+            if (changeStatuses.contains(metadata.getStatus())
+                    && fileTypes.contains(metadata.getFileType())) {
+                consumer.accept(metadata);
+            }
+        });
+    }
+
+    @Override
+    public void forEachByChangeStatusesAndFileTypesDesc(
+            @NotNull final FileMetadataSetId id,
+            @NotNull final Set<Change> changeStatuses,
+            @NotNull final Set<FileType> fileTypes,
+            @NotNull final ForkJoinPool threadPool,
+            @NotNull final Consumer<FileMetadata> consumer) {
+        forEachDesc(id, threadPool, metadata -> {
             if (changeStatuses.contains(metadata.getStatus())
                     && fileTypes.contains(metadata.getFileType())) {
                 consumer.accept(metadata);
@@ -121,14 +118,13 @@ public class InMemoryFileMetadataSetRepository
             @NotNull final Set<FileType> fileTypes,
             @NotNull final DuplicateHandlingStrategy strategy,
             @NotNull final HashAlgorithm hashAlgorithm,
-            @NotNull final ForkJoinPool threadPool,
             @NotNull final Consumer<List<List<FileMetadata>>> consumer) {
         final var groupedDuplicates = partition(getFileSetById(id).stream()
                 .filter(metadata -> changeStatuses.contains(metadata.getStatus()))
                 .filter(metadata -> fileTypes.contains(metadata.getFileType()))
                 .collect(Collectors.groupingBy(strategy.fileGroupingFunctionForHash(hashAlgorithm)))
                 .values());
-        threadPool.submit(() -> groupedDuplicates.stream().parallel().forEach(consumer)).join();
+        groupedDuplicates.stream().parallel().forEach(consumer);
     }
 
     private @NotNull List<List<List<FileMetadata>>> partition(final @NotNull Collection<List<FileMetadata>> groupedScope) {
@@ -136,7 +132,7 @@ public class InMemoryFileMetadataSetRepository
         var batch = new ArrayList<List<FileMetadata>>();
         for (final var group : groupedScope) {
             batch.add(group);
-            if (batch.size() == BATCH_SIZE) {
+            if (batch.size() == BATCH_CHUNK_SIZE) {
                 partitionedScope.add(batch);
                 batch = new ArrayList<>();
             }
@@ -164,36 +160,6 @@ public class InMemoryFileMetadataSetRepository
             return false;
         }
         return map.containsKey(fileId);
-    }
-
-    @Override
-    public Set<FileMetadata> findFilesByOriginalHash(
-            @NotNull final FileMetadataSetId id,
-            @NotNull final String originalHash) {
-        final var map = metadataByFileSetAndOriginalHash.get(id.id());
-        if (map == null || !map.containsKey(originalHash)) {
-            return Collections.emptySet();
-        }
-        return Collections.unmodifiableSet(map.get(originalHash));
-    }
-
-    @Override
-    public Set<FileMetadata> findFilesByOriginalSize(
-            @NotNull final FileMetadataSetId id,
-            @NotNull final Long originalSize) {
-        final var map = metadataByFileSetAndOriginalFileSize.get(id.id());
-        if (map == null) {
-            return Collections.emptySet();
-        }
-        return Collections.unmodifiableSet(map.get(originalSize));
-    }
-
-    @Override
-    public Optional<FileMetadata> findFileByPath(
-            @NotNull final FileMetadataSetId id,
-            @NotNull final BackupPath absolutePath) {
-        return Optional.ofNullable(metadataByFileSetAndPath.get(id.id()))
-                .map(map -> map.get(absolutePath));
     }
 
     @Override
@@ -268,6 +234,17 @@ public class InMemoryFileMetadataSetRepository
     }
 
     @Override
+    public Optional<FileMetadata> findFileById(
+            @NotNull final UUID id,
+            @NotNull final UUID file) {
+        final var fileMetadataMap = metadataByFileSetAndFileId.get(id);
+        if (fileMetadataMap == null || !fileMetadataMap.containsKey(file)) {
+            return Optional.empty();
+        }
+        return Optional.of(fileMetadataMap.get(file));
+    }
+
+    @Override
     public SortedSet<FileMetadata> findFilesByIds(
             @NotNull final FileMetadataSetId id,
             @NotNull final Set<UUID> files) {
@@ -299,5 +276,34 @@ public class InMemoryFileMetadataSetRepository
         final var target = createFileSet();
         appendTo(target, fileSetById);
         return target;
+    }
+
+    @Override
+    public void copyAll(
+            @NotNull final FileMetadataSetId source,
+            @NotNull final FileMetadataSetId target) {
+        final var fileSetById = getFileSetById(source).stream()
+                .filter(file -> file.getStatus() != Change.DELETED)
+                .toList();
+        appendTo(target, fileSetById);
+    }
+
+    @Override
+    public void forEachForIndex(
+            final FileMetadataSetId id,
+            final Consumer<FileMetadataIndex> consumer) {
+        getFileSetById(id)
+                .stream()
+                .filter(f -> f.getStatus() != Change.DELETED)
+                .map(f -> new FileMetadataIndex(
+                        id.id(),
+                        f.getId(),
+                        f.getAbsolutePath(),
+                        f.getOriginalHash(),
+                        f.getOriginalSizeBytes(),
+                        f.getLastModifiedUtcEpochSeconds(),
+                        f.getFileType()
+                ))
+                .forEach(consumer);
     }
 }

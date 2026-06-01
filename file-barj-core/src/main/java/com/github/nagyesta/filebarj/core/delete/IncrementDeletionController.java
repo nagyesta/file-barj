@@ -37,7 +37,7 @@ public class IncrementDeletionController extends SingleUseController {
      */
     public IncrementDeletionController(
             final @NonNull IncrementDeletionParameters parameters) {
-        super(DataStore.newInMemoryInstance());
+        super(DataStore.newDefaultInstance());
         this.progressTracker = new ObservableProgressTracker(List.of(LOAD_MANIFESTS, DELETE_OBSOLETE_FILES));
         progressTracker.registerListener(parameters.getProgressListener());
         this.manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);

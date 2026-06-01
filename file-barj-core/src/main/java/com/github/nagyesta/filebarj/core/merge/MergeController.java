@@ -54,7 +54,7 @@ public class MergeController extends SingleUseController implements Closeable {
      * @param mergeParameters The parameters.
      */
     public MergeController(final @NonNull MergeParameters mergeParameters) {
-        super(DataStore.newInMemoryInstance());
+        super(DataStore.newDefaultInstance());
         mergeParameters.assertValid();
         this.kek = mergeParameters.getKek();
         this.backupDirectory = mergeParameters.getBackupDirectory();
