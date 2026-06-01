@@ -67,30 +67,17 @@ public class InMemoryArchivedFileMetadataSetRepository
     }
 
     @Override
-    public Set<UUID> containsFileMetadataIds(
+    public Optional<ArchivedFileMetadata> findByFileMetadataId(
             @NotNull final ArchivedFileMetadataSetId id,
-            @NotNull final Collection<UUID> fileMetadataIds) {
-        return getFileSetById(id)
-                .stream()
-                .map(ArchivedFileMetadata::getFiles)
-                .flatMap(Collection::stream)
-                .filter(fileMetadataIds::contains)
-                .collect(Collectors.toSet());
-    }
-
-    @Override
-    public Map<UUID, ArchivedFileMetadata> findByFileMetadataIds(
-            @NotNull final ArchivedFileMetadataSetId id,
-            @NotNull final Collection<UUID> fileMetadataIds) {
+            @NotNull final UUID fileMetadataId) {
         final var map = metadataByFileSetAndFileId.get(id.id());
         if (map == null) {
-            return Collections.emptyMap();
+            return Optional.empty();
         }
-        final var result = new ConcurrentHashMap<UUID, ArchivedFileMetadata>();
-        fileMetadataIds.stream()
+
+        return Optional.of(fileMetadataId)
                 .filter(map::containsKey)
-                .forEach(fileMetadataId -> result.put(fileMetadataId, map.get(fileMetadataId)));
-        return result;
+                .map(map::get);
     }
 
     @Override
@@ -100,7 +87,7 @@ public class InMemoryArchivedFileMetadataSetRepository
         final var result = createFileSet();
         final var archivedMetadataByFileId = metadataByFileSetAndArchiveFileId.get(id.id());
         dataStore().fileMetadataSetRepository()
-                .forEachOrdered(fileMetadataSetId,
+                .forEachAsc(fileMetadataSetId,
                         dataStore().singleThreadedPool(),
                         metadata -> {
                             if (metadata.getArchiveMetadataId() != null) {

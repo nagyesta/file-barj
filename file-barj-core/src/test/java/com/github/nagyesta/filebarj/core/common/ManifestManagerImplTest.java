@@ -18,6 +18,8 @@ import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import jakarta.validation.ValidationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,10 +44,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
             .backupType(BackupType.INCREMENTAL)
             .build();
 
-    @Test
-    void testGenerateManifestShouldAllowOverridingTheBackupTypeWhenCalledWithFullBackupOfIncrementalConfiguration() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testGenerateManifestShouldAllowOverridingTheBackupTypeWhenCalledWithFullBackupOfIncrementalConfiguration(
+            final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -59,10 +63,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testGenerateManifestShouldThrowExceptionWhenCalledWithNullConfiguration() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testGenerateManifestShouldThrowExceptionWhenCalledWithNullConfiguration(
+            final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -74,10 +80,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testGenerateManifestShouldThrowExceptionWhenCalledWithNullBackupType() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testGenerateManifestShouldThrowExceptionWhenCalledWithNullBackupType(
+            final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -88,10 +96,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         }
     }
 
-    @Test
-    void testLoadShouldReadPreviouslyPersistedManifestWhenUsingEncryption() throws IOException {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testLoadShouldReadPreviouslyPersistedManifestWhenUsingEncryption(
+            final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var keyPair = EncryptionUtil.generateRsaKeyPair();
             final var destinationDirectory = testDataRoot.resolve("destination");
@@ -125,10 +135,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         }
     }
 
-    @Test
-    void testLoadShouldReadPreviouslyPersistedManifestWhenNotUsingEncryption() throws IOException {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testLoadShouldReadPreviouslyPersistedManifestWhenNotUsingEncryption(
+            final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -160,12 +172,13 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @SuppressWarnings("java:S2925")
-    void testLoadShouldFilterOutManifestsAfterThresholdWhenATimeStampIsProvided()
-            throws IOException, InterruptedException {
+    void testLoadShouldFilterOutManifestsAfterThresholdWhenATimeStampIsProvided(
+            final DataStore dataStore) throws IOException, InterruptedException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -203,12 +216,13 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @SuppressWarnings("java:S2925")
-    void testLoadShouldFilterOutManifestsBeforeLatestFullBackupWhenMultipleFullBackupsAreEligible()
-            throws IOException, InterruptedException {
+    void testLoadShouldFilterOutManifestsBeforeLatestFullBackupWhenMultipleFullBackupsAreEligible(
+            final DataStore dataStore) throws IOException, InterruptedException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -244,11 +258,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @SuppressWarnings("java:S2925")
-    void testLoadShouldThrowExceptionWhenAPreviousVersionIsMissing() throws InterruptedException {
+    void testLoadShouldThrowExceptionWhenAPreviousVersionIsMissing(final DataStore dataStore) throws InterruptedException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -278,10 +293,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testPersistShouldThrowExceptionWhenCalledWithNull() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testPersistShouldThrowExceptionWhenCalledWithNull(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -292,10 +308,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testPersistShouldThrowExceptionWhenCalledWithNullManifest() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testPersistShouldThrowExceptionWhenCalledWithNullManifest(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destination = Path.of("destination");
 
@@ -307,10 +324,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testPersistShouldThrowExceptionWhenCalledWithNullDestination() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testPersistShouldThrowExceptionWhenCalledWithNullDestination(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -322,10 +340,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testLoadShouldThrowExceptionWhenCalledWithNullDirectory() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testLoadShouldThrowExceptionWhenCalledWithNullDirectory(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -352,10 +371,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testLoadShouldThrowExceptionWhenCalledWithNullPrefix() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testLoadShouldThrowExceptionWhenCalledWithNullPrefix(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -381,10 +401,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testValidateShouldThrowExceptionWhenCalledWithNullManifest() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testValidateShouldThrowExceptionWhenCalledWithNullManifest(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -396,10 +417,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testValidateShouldThrowExceptionWhenCalledWithNullRules() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testValidateShouldThrowExceptionWhenCalledWithNullRules(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -422,10 +444,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
         }
     }
 
-    @Test
-    void testValidateShouldThrowExceptionWhenCalledWithInvalidData() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testValidateShouldThrowExceptionWhenCalledWithInvalidData(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destinationDirectory = testDataRoot.resolve("destination");
             final var config = BackupJobConfiguration.builder()
@@ -449,10 +472,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testMergeForRestoreShouldThrowExceptionWhenCalledWithNull() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testMergeForRestoreShouldThrowExceptionWhenCalledWithNull(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -464,10 +488,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullManifest() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullManifest(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var destination = Path.of("destination");
 
@@ -479,10 +504,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullDestination() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testDeleteIncrementShouldThrowExceptionWhenCalledWithNullDestination(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -494,10 +520,11 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testLoadPreviousManifestsForBackupShouldThrowExceptionWhenCalledWithNull() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testLoadPreviousManifestsForBackupShouldThrowExceptionWhenCalledWithNull(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var underTest = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
 
             //when
@@ -509,10 +536,12 @@ class ManifestManagerImplTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullProgressTracker() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testConstructorShouldThrowExceptionWhenCalledWithNullProgressTracker(
+            final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
 
             //when
             Assertions.assertThrows(IllegalArgumentException.class, () -> new ManifestManagerImpl(dataStore, null));

@@ -23,10 +23,9 @@ import com.github.nagyesta.filebarj.core.progress.NoOpProgressTracker;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.function.Consumers;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,10 +43,11 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     private static final int FUTURE = 99;
     private static final TreeMap<String, TreeSet<Integer>> PREFIX_MAP = new TreeMap<>(Map.of("prefix", new TreeSet<>(Set.of(0))));
 
-    @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithAManifestCreatedByAFutureVersion() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testConstructorShouldThrowExceptionWhenCalledWithAManifestCreatedByAFutureVersion(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var manifest = mock(RestoreManifest.class);
             doReturn(new AppVersion(FUTURE, FUTURE, FUTURE)).when(manifest).getMaximumAppVersion();
             doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
@@ -65,10 +65,11 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         }
     }
 
-    @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithAManifestWhichHasNoConfiguration() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testConstructorShouldThrowExceptionWhenCalledWithAManifestWhichHasNoConfiguration(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var fileSet = dataStore.fileMetadataSetRepository().createFileSet();
             final var manifest = mock(RestoreManifest.class);
             doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
@@ -88,15 +89,17 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         }
     }
 
-    @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithAManifestWhichHasNoFiles() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testConstructorShouldThrowExceptionWhenCalledWithAManifestWhichHasNoFiles(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var manifest = mock(RestoreManifest.class);
             doReturn(new AppVersion()).when(manifest).getMaximumAppVersion();
             doReturn(PREFIX_MAP).when(manifest).getFileNamePrefixes();
             doReturn(mock(BackupJobConfiguration.class)).when(manifest).getConfiguration();
-            doReturn(null).when(manifest).getFiles();
+            doReturn(new FileMetadataSetId(UUID.randomUUID(), a -> {
+            })).when(manifest).getFiles();
             final var sourceDirectory = testDataRoot.resolve("source-dir");
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -111,10 +114,11 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
-    void testConstructorShouldThrowExceptionWhenCalledWithNullManifest() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testConstructorShouldThrowExceptionWhenCalledWithNullManifest(final DataStore dataStore) {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var sourceDirectory = testDataRoot.resolve("source-dir");
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -129,59 +133,65 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testConstructorShouldThrowExceptionWhenCalledWithNullSourcePath() throws IOException {
+    void testConstructorShouldThrowExceptionWhenCalledWithNullSourcePath(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var manifest = backupController.getManifest();
 
             final var manifestManager = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
             final var loaded = reloadManifest(manifestManager, manifest);
 
-            final var restoreManifest = manifestManager.mergeForRestore(loaded);
-            final var restoreDirectory = testDataRoot.resolve("restore-dir");
-            final var sourceDirectory = getSourceDirectory(backupController);
-            final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
+            try (var restoreManifest = manifestManager.mergeForRestore(loaded)) {
+                final var restoreDirectory = testDataRoot.resolve("restore-dir");
+                final var sourceDirectory = getSourceDirectory(backupController);
+                final var restoreTargets = getRestoreTargets(sourceDirectory, restoreDirectory);
 
-            //when
-            Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> new RestorePipeline(dataStore, restoreManifest, null, restoreTargets, null, null));
+                //when
+                Assertions.assertThrows(IllegalArgumentException.class,
+                        () -> new RestorePipeline(dataStore, restoreManifest, null, restoreTargets, null, null));
 
-            //then + exception
+                //then + exception
+            }
         }
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testConstructorShouldThrowExceptionWhenCalledWithNullTargetPath() throws IOException {
+    void testConstructorShouldThrowExceptionWhenCalledWithNullTargetPath(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
-            final var backupController = executeABackup();
-            final var manifest = backupController.getManifest();
+        try (dataStore) {
+            try (var backupController = executeABackup()) {
+                final var manifest = backupController.getManifest();
 
-            final var manifestManager = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
-            final var loaded = reloadManifest(manifestManager, manifest);
+                final var manifestManager = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+                final var loaded = reloadManifest(manifestManager, manifest);
 
-            final var restoreManifest = manifestManager.mergeForRestore(loaded);
-            final var backupDirectory = testDataRoot.resolve("backup-dir");
+                try (var restoreManifest = manifestManager.mergeForRestore(loaded)) {
+                    final var backupDirectory = testDataRoot.resolve("backup-dir");
 
-            //when
-            Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> new RestorePipeline(dataStore, restoreManifest, backupDirectory, null, null, null));
+                    //when
+                    Assertions.assertThrows(IllegalArgumentException.class,
+                            () -> new RestorePipeline(dataStore, restoreManifest, backupDirectory, null, null, null));
 
-            //then + exception
+                    //then + exception
+                }
+            }
         }
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
+    void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullFiles(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -205,11 +215,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullMap() throws IOException {
+    void testFinalizePermissionsShouldThrowExceptionWhenCalledWithNullMap(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -234,11 +245,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testRestoreFilesShouldThrowExceptionWhenCalledWithNullContentSources() throws IOException {
+    void testRestoreFilesShouldThrowExceptionWhenCalledWithNullContentSources(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -262,11 +274,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testRestoreFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
+    void testRestoreFilesShouldThrowExceptionWhenCalledWithNullThreadPool(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -282,7 +295,7 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
             final var underTest = new RestorePipeline(dataStore, restoreManifest, backupDirectory, restoreTargets, null, null);
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var fileSet = fileMetadataSetRepository.createFileSet();
-            final var contentSources = fileMetadataSetRepository.findAll(loaded.get(0).getFiles(), 0, Integer.MAX_VALUE)
+            final var contentSources = fileMetadataSetRepository.findAll(loaded.get(0).getFiles())
                     .stream()
                     .filter(fileMetadata -> fileMetadata.getFileType().isContentSource())
                     .toList();
@@ -297,11 +310,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullFiles() throws IOException {
+    void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullFiles(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -325,11 +339,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
+    void testEvaluateRestoreSuccessShouldThrowExceptionWhenCalledWithNullThreadPool(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -354,11 +369,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
         }
     }
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testEvaluateRestoreSuccessShouldNotThrowExceptionWhenCalledWithoutRestoringBackup() throws IOException {
+    void testEvaluateRestoreSuccessShouldNotThrowExceptionWhenCalledWithoutRestoringBackup(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -377,11 +393,8 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
                 final var threadPool = new ForkJoinPool(1);
                 try {
                     //when
-                    underTest.evaluateRestoreSuccess(fileSet, threadPool);
-
+                    Assertions.assertDoesNotThrow(() -> underTest.evaluateRestoreSuccess(fileSet, threadPool));
                     //then no exception
-                } catch (final Exception e) {
-                    Assertions.fail(e.getMessage());
                 } finally {
                     threadPool.shutdownNow();
                 }
@@ -390,11 +403,12 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testRestoreDirectoriesShouldThrowExceptionWhenCalledWithNull() throws IOException {
+    void testRestoreDirectoriesShouldThrowExceptionWhenCalledWithNull(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -418,11 +432,13 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {1, 2})
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProviderWithMultiThreads")
     @DisabledOnOs(WINDOWS)
-    void testPartialRestoreShouldRestoreFilesToDestinationWhenExecutedWithValidInput(final int threads) throws IOException {
+    void testPartialRestoreShouldRestoreFilesToDestinationWhenExecutedWithValidInput(
+            final int threads,
+            final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var sourceDir = testDataRoot.resolve("source-dir" + UUID.randomUUID());
             final var backupDir = testDataRoot.resolve("backup-dir" + UUID.randomUUID());
             final var restoreDir = testDataRoot.resolve("restore-dir" + UUID.randomUUID());
@@ -449,55 +465,57 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
                     .job(configuration)
                     .forceFull(true)
                     .build();
-            final var backupController = new BackupController(parameters);
-            backupController.execute(1);
-            final var manifest = backupController.getManifest();
+            try (var backupController = new BackupController(parameters)) {
+                backupController.execute(1);
+                final var manifest = backupController.getManifest();
 
-            final var manifestManager = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
-            final var loaded = reloadManifest(manifestManager, manifest);
+                final var manifestManager = new ManifestManagerImpl(dataStore, NoOpProgressTracker.INSTANCE);
+                final var loaded = reloadManifest(manifestManager, manifest);
 
-            final var restoreManifest = manifestManager.mergeForRestore(loaded);
-            final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
+                final var restoreManifest = manifestManager.mergeForRestore(loaded);
+                final var restoreTargets = getRestoreTargets(BackupPath.of(sourceDir), restoreDir);
 
-            final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
-            final var underTest = new RestorePipeline(
-                    dataStore, restoreManifest, backupDir, restoreTargets, null, PermissionComparisonStrategy.STRICT);
-            final var scope = fileMetadataSetRepository.createFileSet();
-            final var scopeList = fileMetadataSetRepository.findAll(loaded.get(0).getFiles(), 0, Integer.MAX_VALUE)
-                    .stream()
-                    .filter(f -> f.getAbsolutePath().toOsPath().equals(sourceLinkExternal)
-                            || f.getAbsolutePath().toOsPath().endsWith("A.png")
-                            || f.getAbsolutePath().toOsPath().equals(sourceDir))
-                    .toList();
-            fileMetadataSetRepository.appendTo(scope, scopeList);
-            final var scopeMap = fileMetadataSetRepository.createFileSet();
-            fileMetadataSetRepository.appendTo(scopeMap, scopeList.stream()
-                    .filter(f -> f.getArchiveMetadataId() != null)
-                    .toList());
+                final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
+                final var underTest = new RestorePipeline(
+                        dataStore, restoreManifest, backupDir, restoreTargets, null, PermissionComparisonStrategy.STRICT);
+                final var scope = fileMetadataSetRepository.createFileSet();
+                final var scopeList = fileMetadataSetRepository.findAll(loaded.get(0).getFiles())
+                        .stream()
+                        .filter(f -> f.getAbsolutePath().toOsPath().equals(sourceLinkExternal)
+                                || f.getAbsolutePath().toOsPath().endsWith("A.png")
+                                || f.getAbsolutePath().toOsPath().equals(sourceDir))
+                        .toList();
+                fileMetadataSetRepository.appendTo(scope, scopeList);
+                final var scopeMap = fileMetadataSetRepository.createFileSet();
+                fileMetadataSetRepository.appendTo(scopeMap, scopeList.stream()
+                        .filter(f -> f.getArchiveMetadataId() != null)
+                        .toList());
 
-            final var threadPool = new ForkJoinPool(threads);
-            try {
-                //when
-                underTest.restoreDirectories(scope);
-                underTest.restoreFiles(scopeMap, threadPool);
-                underTest.finalizePermissions(scope, threadPool);
-            } finally {
-                threadPool.shutdownNow();
+                final var threadPool = new ForkJoinPool(threads);
+                try {
+                    //when
+                    underTest.restoreDirectories(scope);
+                    underTest.restoreFiles(scopeMap, threadPool);
+                    underTest.finalizePermissions(scope, threadPool);
+                } finally {
+                    threadPool.shutdownNow();
+                }
+
+                //then
+                final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
+                final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
+                Assertions.assertEquals(externalLinkTarget, restoredExternal);
             }
-
-            //then
-            final var realRestorePath = restoreTargets.mapToRestorePath(BackupPath.of(sourceDir));
-            final var restoredExternal = Files.readSymbolicLink(realRestorePath.resolve("external.png")).toAbsolutePath();
-            Assertions.assertEquals(externalLinkTarget, restoredExternal);
         }
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     @DisabledOnOs(WINDOWS)
-    void testDeleteLeftOverFilesShouldThrowExceptionWhenCalledWithNullThreadPool() throws IOException {
+    void testDeleteLeftOverFilesShouldThrowExceptionWhenCalledWithNullThreadPool(final DataStore dataStore) throws IOException {
         //given
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var backupController = executeABackup();
             final var backupDirectory = testDataRoot.resolve("backup-dir");
             final var restoreDirectory = testDataRoot.resolve("restore-dir");
@@ -576,5 +594,4 @@ class RestorePipelineIntegrationTest extends TempFileAwareTest {
                 .encryptionKey(null)
                 .build();
     }
-
 }
