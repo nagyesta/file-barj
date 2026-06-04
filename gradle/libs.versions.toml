@@ -1,6 +1,6 @@
 [versions]
 slf4j = "2.0.18"
-logback = "1.5.32"
+logback = "1.5.33"
 jakartaValidationApi = "3.1.1"
 jakartaElApi = "6.0.1"
 hibernateValidator = "9.1.0.Final"
@@ -15,13 +15,13 @@ jupiter = "6.1.0"
 abortMission = "7.1.7"
 checkstyle = "12.3.1"
 jacoco = "0.8.14"
-jackson = { strictly = "2.21.3" }
-jacksonAnnotations = { strictly = "2.21" }
+jackson = { strictly = "2.22.0" }
+jacksonAnnotations = { strictly = "2.22" }
 jetbrainsAnnotations = "26.1.0"
 
 abortMissionPlugin = "5.2.53"
 lombokPlugin = "9.5.0"
-shadowPlugin = "9.4.1"
+shadowPlugin = "9.4.2"
 gitVersionerPlugin = "1.6.7"
 owaspPlugin = "12.2.2"
 cycloneDxBomPlugin = "3.2.2"

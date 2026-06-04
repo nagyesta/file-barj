@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
       - name: Set up JDK 17
@@ -41,12 +41,18 @@ jobs:
           key: gradle-build-dependency-check
           restore-keys: |
             gradle-build-dependency-check
-      - name: Check dependencies with Gradle
+      - name: Check dependencies with Gradle (if not scheduled)
+        if: ${{ github.event_name != 'schedule' }}
+        run: >
+          ./gradlew dependencyCheckAnalyze 
+          -PnvdApiKey=${{ secrets.NVD_API_KEY }}  
+          --no-parallel
+      - name: Check dependencies with Gradle (if scheduled)
+        if: ${{ github.event_name == 'schedule' }}
         run: >
           ./gradlew dependencyCheckAnalyze 
           -PnvdApiKey=${{ secrets.NVD_API_KEY }} 
           -PossIndexUsername=${{ secrets.OSS_INDEX_USER }} 
           -PossIndexPassword=${{ secrets.OSS_INDEX_PASSWORD }} 
-          --no-parallel 
-          --info
+          --no-parallel
 
