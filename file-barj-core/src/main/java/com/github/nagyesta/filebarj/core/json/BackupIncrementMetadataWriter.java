@@ -41,7 +41,7 @@ public class BackupIncrementMetadataWriter implements AutoCloseable {
         generator.writeFieldName(FILE_COLLECTION);
         generator.writeStartObject();
         final var dataStore = manifest.getDataStore();
-        dataStore.fileMetadataSetRepository().forEachOrdered(
+        dataStore.fileMetadataSetRepository().forEachAsc(
                 manifest.getFiles(), dataStore.singleThreadedPool(), fileMetadata -> {
                     try {
                         generator.writeObjectField(fileMetadata.getId().toString(), fileMetadata);
@@ -53,7 +53,7 @@ public class BackupIncrementMetadataWriter implements AutoCloseable {
         generator.writeEndObject();
         generator.writeFieldName(ARCHIVE_ENTRY_COLLECTION);
         generator.writeStartObject();
-        dataStore.archivedFileMetadataSetRepository().forEachOrdered(
+        dataStore.archivedFileMetadataSetRepository().forEachAsc(
                 manifest.getArchivedEntries(), dataStore.singleThreadedPool(), archivedFileMetadata -> {
                     try {
                         generator.writeObjectField(archivedFileMetadata.getId().toString(), archivedFileMetadata);

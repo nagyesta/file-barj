@@ -51,7 +51,7 @@ public class RestoreController
      * @param restoreParameters the parameters.
      */
     public RestoreController(final @NonNull RestoreParameters restoreParameters) {
-        super(DataStore.newInMemoryInstance());
+        super(DataStore.newDefaultInstance());
         this.kek = restoreParameters.getKek();
         this.backupDirectory = restoreParameters.getBackupDirectory();
         this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);

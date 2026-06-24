@@ -7,7 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -18,18 +17,6 @@ public class InMemoryFilePathSetRepository
     @Override
     protected FilePathSetId createFileSetId(final Consumer<FilePathSetId> closeWith) {
         return new FilePathSetId(closeWith);
-    }
-
-    @Override
-    public Optional<Path> takeFirst(final @NotNull FilePathSetId id) {
-        final var values = getFileSetById(id);
-        final var iterator = values.iterator();
-        if (!iterator.hasNext()) {
-            return Optional.empty();
-        }
-        final var next = Optional.ofNullable(iterator.next());
-        iterator.remove();
-        return next;
     }
 
     @Override
