@@ -34,7 +34,7 @@ public class IncrementInspectionController extends SingleUseController {
      * @param parameters The parameters.
      */
     public IncrementInspectionController(final @NonNull InspectParameters parameters) {
-        super(DataStore.newInMemoryInstance());
+        super(DataStore.newDefaultInstance());
         final var progressTracker = new ObservableProgressTracker(List.of(ProgressStep.LOAD_MANIFESTS));
         progressTracker.registerListener(parameters.getProgressListener());
         final ManifestManager manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);

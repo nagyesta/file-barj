@@ -19,7 +19,8 @@ import java.util.regex.Pattern;
  * Represents a path in the backup.
  */
 @EqualsAndHashCode(of = "path")
-public final class BackupPath implements Comparable<BackupPath> {
+public final class BackupPath
+        implements Comparable<BackupPath> {
 
     private static final Comparator<BackupPath> PATH_COMPARATOR = Comparator.comparing(BackupPath::toOsPath);
     private static final String UNIX_SEPARATOR = "/";
@@ -116,6 +117,10 @@ public final class BackupPath implements Comparable<BackupPath> {
         } else {
             return FILE_SCHEME_TRIPLE_SLASH + path;
         }
+    }
+
+    public String getUri() {
+        return toUri();
     }
 
     @Override

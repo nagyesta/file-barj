@@ -14,7 +14,8 @@ import java.io.IOException;
  * Represents the scope of the restore process in case of a backup increment.
  */
 @Data
-public class RestoreScope implements Closeable {
+public class RestoreScope
+        implements Closeable {
 
     private final DataStore dataStore;
 

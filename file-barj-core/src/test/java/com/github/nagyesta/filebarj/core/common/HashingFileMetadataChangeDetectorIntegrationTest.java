@@ -1,8 +1,9 @@
 package com.github.nagyesta.filebarj.core.common;
 
+import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -53,6 +54,7 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         waitASecond();
         final var curr = createMetadata(name, currContent, currType, currPermission, recreate);
         final var underTest = getDefaultHashingFileMetadataChangeDetector(prev);
+        underTest.index();
 
         //when
         final var actualMetadataChanged = underTest.hasMetadataChanged(prev, curr);
@@ -75,13 +77,14 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-1", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
                     "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
             );
             final var underTest = new HashingFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
+            underTest.index();
 
             //when
             final var relevant = underTest.findMostRelevantPreviousVersion(curr);
@@ -107,13 +110,14 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
                     "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
             );
             final var underTest = new HashingFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
+            underTest.index();
 
             //when
             final var actual = underTest.findMostRelevantPreviousVersion(curr);
@@ -187,6 +191,22 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
     @SuppressWarnings("DataFlowIssue")
     @Test
     @DisabledOnOs(WINDOWS)
+    void testHasContentChangedShouldThrowExceptionWhenCalledWithNullCurrentFileIndex()
+            throws IOException {
+        //given
+        final var prev = createMetadata("file.txt", "content", FileType.REGULAR_FILE, "rw-rw-rw-", true);
+        final var prevIndex = convertToMetadataIndex(prev);
+        final var underTest = getDefaultHashingFileMetadataChangeDetector(prev);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged(prevIndex, null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    @DisabledOnOs(WINDOWS)
     void testHasMetadataChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -224,7 +244,22 @@ class HashingFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetad
         final var underTest = getDefaultHashingFileMetadataChangeDetector(curr);
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged(null, curr));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged((FileMetadata) null, curr));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    @DisabledOnOs(WINDOWS)
+    void testHasContentChangedShouldThrowExceptionWhenCalledWithNullPreviousFileIndex()
+            throws IOException {
+        //given
+        final var curr = createMetadata("file.txt", "content", FileType.REGULAR_FILE, "rw-rw-rw-", true);
+        final var underTest = getDefaultHashingFileMetadataChangeDetector(curr);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged((FileMetadataIndex) null, curr));
 
         //then + exception
     }
