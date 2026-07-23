@@ -121,7 +121,7 @@ public class RestorePipeline implements Closeable {
         final var size = fileMetadataSetRepository.countByType(directories, EnumSet.of(FileType.DIRECTORY));
         log.info("Restoring {} directories", size);
         progressTracker.estimateStepSubtotal(RESTORE_DIRECTORIES, size);
-        fileMetadataSetRepository.forEachByChangeStatusesAndFileTypes(
+        fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesAsc(
                 directories,
                 EnumSet.allOf(Change.class),
                 EnumSet.of(FileType.DIRECTORY),
@@ -183,9 +183,9 @@ public class RestorePipeline implements Closeable {
                      .keepChangedMetadata(files, EnumSet.allOf(FileType.class), changeStatus)) {
             final var filesWithMetadataChangesSize = fileMetadataSetRepository.countAll(filesWithMetadataChanges);
             progressTracker.estimateStepSubtotal(RESTORE_METADATA, filesWithMetadataChangesSize);
-            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesReverse(
+            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesDesc(
                     filesWithMetadataChanges,
-                    //the change status of the file was not updated during the previous filtering so we should ignore it
+                    //the change status of the file was not updated during the previous filtering, so we should ignore it
                     EnumSet.allOf(Change.class),
                     FileType.allContentSources(),
                     threadPool,
@@ -193,9 +193,9 @@ public class RestorePipeline implements Closeable {
                         setFileProperties(fileMetadata);
                         progressTracker.recordProgressInSubSteps(RESTORE_METADATA);
                     });
-            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesReverse(
+            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesDesc(
                     filesWithMetadataChanges,
-                    //the change status of the file was not updated during the previous filtering so we should ignore it
+                    //the change status of the file was not updated during the previous filtering, so we should ignore it
                     EnumSet.allOf(Change.class),
                     Set.of(FileType.DIRECTORY),
                     dataStore.singleThreadedPool(),
@@ -239,14 +239,14 @@ public class RestorePipeline implements Closeable {
         try (var pathsInRestoreTarget = fileSetRepository.createFileSet();
              var pathsInBackup = fileSetRepository.createFileSet()) {
             findPathsInRestoreTarget(threadPool, pathsInRestoreTarget, pathRestriction);
-            fileMetadataSetRepository.forEachOrdered(filesFromLastIncrement, threadPool, fileMetadata -> {
+            fileMetadataSetRepository.forEachAsc(filesFromLastIncrement, threadPool, fileMetadata -> {
                 final var path = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
                 fileSetRepository.appendTo(pathsInBackup, path);
             });
             final var counter = new AtomicInteger(0);
             try (var leftOverFiles = fileSetRepository.subtract(pathsInRestoreTarget, pathsInBackup)) {
                 //delete left-over files using a single thread to avoid issues with directory deletions
-                fileSetRepository.forEachReverse(leftOverFiles, dataStore.singleThreadedPool(), path -> {
+                fileSetRepository.forEachDesc(leftOverFiles, dataStore.singleThreadedPool(), path -> {
                     try {
                         log.info("Deleting left-over file: {}", path);
                         deleteIfExists(path);
@@ -278,14 +278,18 @@ public class RestorePipeline implements Closeable {
         try (var checkOutcome = detectChanges(fileMetadataSetRepository, files, threadPool, true, VERIFY_METADATA);
              var changedFiles = fileMetadataSetRepository.keepChangedMetadata(files, EnumSet.allOf(FileType.class), checkOutcome)) {
 
-            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypes(
+            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesAsc(
                     changedFiles,
                     EnumSet.allOf(Change.class),
                     EnumSet.of(FileType.DIRECTORY, FileType.REGULAR_FILE),
                     threadPool,
                     fileMetadata -> {
-                        final var change = Optional.of(backupPathChangeStatusMapRepository
-                                        .getOrDefault(checkOutcome, fileMetadata.getAbsolutePath(), Change.NO_CHANGE))
+                        final var status = backupPathChangeStatusMapRepository
+                                .getOrDefault(checkOutcome, fileMetadata.getAbsolutePath(), Change.NO_CHANGE);
+                        if (status == Change.NO_CHANGE) {
+                            return;
+                        }
+                        final var change = Optional.of(status)
                                 .map(Change::getRestoreStatusMessage)
                                 .orElse("Unknown.");
                         final var restorePath = restoreTargets.mapToRestorePath(fileMetadata.getAbsolutePath());
@@ -310,14 +314,14 @@ public class RestorePipeline implements Closeable {
     /**
      * Returns the restore targets.
      *
-     * @return the restore targets
+     * @return restore targets
      */
     protected RestoreTargets getRestoreTargets() {
         return restoreTargets;
     }
 
     /**
-     * Removes the existing file and creates a symbolic link to point ot the desired target.
+     * Removes the existing file and creates a symbolic link to point to the desired target.
      *
      * @param linkTarget   the link target
      * @param symbolicLink the link file we need to create
@@ -333,7 +337,7 @@ public class RestorePipeline implements Closeable {
      * Copies the original file to the remaining locations.
      *
      * @param original        the original file metadata
-     * @param remainingCopies the remaining copies we need tp restore
+     * @param remainingCopies the remaining copies we need to restore
      */
     protected void copyRestoredFileToRemainingLocations(
             final @NotNull FileMetadata original,
@@ -388,7 +392,7 @@ public class RestorePipeline implements Closeable {
     }
 
     /**
-     * Deletes the currently existing file, link or directory (allowing the restore to replace it later).
+     * Deletes the currently existing file, link, or directory (allowing the restore to replace it later).
      *
      * @param currentFile the current file
      * @throws IOException if an I/O error occurs
@@ -417,7 +421,7 @@ public class RestorePipeline implements Closeable {
                             .excludePatterns(source.getExcludePatterns())
                             .build())
                     .forEach(source -> new BackupSourceScanner(fileSetRepository, source).listMatchingFilePaths(uniquePathSet));
-            fileSetRepository.forEachOrdered(uniquePathSet, threadPool, path -> {
+            fileSetRepository.forEachAsc(uniquePathSet, threadPool, path -> {
                 if (pathRestriction.test(path)) {
                     fileSetRepository.appendTo(pathsInRestoreTarget, path);
                 }
@@ -600,21 +604,28 @@ public class RestorePipeline implements Closeable {
         } else {
             typesIncluded = EnumSet.allOf(FileType.class);
         }
-        fileMetadataSetRepository.forEachByChangeStatusesAndFileTypes(files, EnumSet.allOf(Change.class), typesIncluded, threadPool,
-                file -> {
-                    final var previous = changeDetector.findPreviousVersionByAbsolutePath(file.getAbsolutePath());
-                    if (previous == null) {
-                        throw new IllegalStateException("Previous version not found for " + file.getAbsolutePath());
-                    }
-                    final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
-                    final var current = parser.parse(restorePath.toFile(), manifest.getConfiguration());
-                    final var change = changeDetector.classifyChange(previous, current);
-                    progressTracker.recordProgressInSubSteps(step);
-                    backupPathChangeStatusMapRepository.appendTo(changeStatuses, file.getAbsolutePath(), change);
-                });
-        final var stats = backupPathChangeStatusMapRepository.countsByStatus(changeStatuses);
-        log.info("Detected changes: {}", stats);
-        progressTracker.completeStep(step);
+        try {
+            log.info("Indexing file metadata in previous backup increments");
+            changeDetector.index();
+            log.info("Detecting changes based on previous backup increments");
+            fileMetadataSetRepository.forEachByChangeStatusesAndFileTypesAsc(files, EnumSet.allOf(Change.class), typesIncluded, threadPool,
+                    file -> {
+                        final var previous = changeDetector.findPreviousVersionByAbsolutePath(file.getAbsolutePath());
+                        if (previous == null) {
+                            throw new IllegalStateException("Previous version not found for " + file.getAbsolutePath());
+                        }
+                        final var restorePath = restoreTargets.mapToRestorePath(file.getAbsolutePath());
+                        final var current = parser.parse(restorePath.toFile(), manifest.getConfiguration());
+                        final var change = changeDetector.classifyChange(previous, current);
+                        progressTracker.recordProgressInSubSteps(step);
+                        backupPathChangeStatusMapRepository.appendTo(changeStatuses, file.getAbsolutePath(), change);
+                    });
+            final var stats = backupPathChangeStatusMapRepository.countsByStatus(changeStatuses);
+            log.info("Detected changes: {}", stats);
+            progressTracker.completeStep(step);
+        } finally {
+            changeDetector.clearIndex();
+        }
         return changeStatuses;
     }
 

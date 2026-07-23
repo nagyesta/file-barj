@@ -79,7 +79,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         link1 = setSymbolicLink(DIR_LINK_1_TXT, file1);
         link2 = setSymbolicLink(DIR_LINK_2_TXT, file2);
         link3 = setSymbolicLink(DIR_LINK_3_TXT, file3);
-        dataStore = DataStore.newInMemoryInstance();
+        dataStore = getDataStore();
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
         origFiles = fileMetadataSetRepository.createFileSet();
@@ -110,11 +110,15 @@ class RestoreScopeTest extends TempFileAwareTest {
                 .toList();
         populateFileAndArchiveMapsWithForIncrementalBackup(incPaths, origFiles, origArchived, incFiles, incArchived);
         incList = dataStore.fileMetadataSetRepository()
-                .findAll(incFiles, 0, Integer.MAX_VALUE)
+                .findAll(incFiles)
                 .stream()
                 .filter(file -> incPaths.contains(file.getAbsolutePath()))
                 .toList();
         fileMetadataSetRepository.appendTo(incScope, incList);
+    }
+
+    protected DataStore getDataStore() {
+        return DataStore.newEmbeddedSqlInstance();
     }
 
     @Test
@@ -185,7 +189,7 @@ class RestoreScopeTest extends TempFileAwareTest {
 
     private TreeSet<BackupPath> toPathSet(final FileMetadataSetId actual) {
         return dataStore.fileMetadataSetRepository()
-                .findAll(actual, 0, Integer.MAX_VALUE)
+                .findAll(actual)
                 .stream()
                 .map(FileMetadata::getAbsolutePath)
                 .collect(Collectors.toCollection(TreeSet::new));
@@ -195,12 +199,12 @@ class RestoreScopeTest extends TempFileAwareTest {
             final FileMetadataSetId expected,
             final FileMetadataSetId actual) {
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
-        final var actualPaths = fileMetadataSetRepository.findAll(actual, 0, Integer.MAX_VALUE)
+        final var actualPaths = fileMetadataSetRepository.findAll(actual)
                 .stream()
                 .sorted(Comparator.comparing(FileMetadata::getAbsolutePath))
                 .map(this::fileMetadataCore)
                 .toList();
-        final var expectedPaths = fileMetadataSetRepository.findAll(expected, 0, Integer.MAX_VALUE)
+        final var expectedPaths = fileMetadataSetRepository.findAll(expected)
                 .stream()
                 .sorted(Comparator.comparing(FileMetadata::getAbsolutePath))
                 .map(this::fileMetadataCore)
@@ -232,7 +236,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var backupPathChangeStatusMapRepository = dataStore.backupPathChangeStatusMapRepository();
         final var fileMap = backupPathChangeStatusMapRepository.createFileMap();
-        fileMetadataSetRepository.forEachOrdered(incFiles, dataStore.singleThreadedPool(), file ->
+        fileMetadataSetRepository.forEachAsc(incFiles, dataStore.singleThreadedPool(), file ->
                 backupPathChangeStatusMapRepository.appendTo(fileMap, file.getAbsolutePath(), Change.DELETED));
         return fileMap;
     }
@@ -243,7 +247,7 @@ class RestoreScopeTest extends TempFileAwareTest {
         final var changes = new HashMap<BackupPath, Change>();
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var backupPathChangeStatusMapRepository = dataStore.backupPathChangeStatusMapRepository();
-        fileMetadataSetRepository.forEachOrdered(incFiles, dataStore.singleThreadedPool(), file -> {
+        fileMetadataSetRepository.forEachAsc(incFiles, dataStore.singleThreadedPool(), file -> {
             if (origScope.contains(file.getAbsolutePath())) {
                 if (file.getFileType() == FileType.REGULAR_FILE) {
                     changes.put(file.getAbsolutePath(), Change.CONTENT_CHANGED);
@@ -266,11 +270,11 @@ class RestoreScopeTest extends TempFileAwareTest {
             final FileMetadataSetId incFiles,
             final ArchivedFileMetadataSetId incArchived) {
         final var origFileMap = dataStore.fileMetadataSetRepository()
-                .findAll(origFileId, 0, Integer.MAX_VALUE)
+                .findAll(origFileId)
                 .stream()
                 .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
         final var origArchiveMap = dataStore.archivedFileMetadataSetRepository()
-                .findAll(origArchiveId, 0, Integer.MAX_VALUE)
+                .findAll(origArchiveId)
                 .stream()
                 .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity()));
         files.stream()
@@ -286,7 +290,9 @@ class RestoreScopeTest extends TempFileAwareTest {
                         origFileMap.values().stream()
                                 .filter(f -> f.getAbsolutePath().equals(path))
                                 .map(FileMetadata::getArchiveMetadataId)
+                                .filter(Objects::nonNull)
                                 .map(origArchiveMap::get)
+                                .filter(Objects::nonNull)
                                 .map(ArchivedFileMetadata::copyArchiveDetails)
                                 .forEach(copied -> {
                                     file.setArchiveMetadataId(copied.getId());

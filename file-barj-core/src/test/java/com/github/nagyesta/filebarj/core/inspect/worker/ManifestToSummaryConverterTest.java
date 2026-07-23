@@ -16,6 +16,8 @@ import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.io.stream.crypto.EncryptionUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Set;
 import java.util.TreeSet;
@@ -44,13 +46,14 @@ class ManifestToSummaryConverterTest extends TempFileAwareTest {
         //then + exception
     }
 
-    @Test
-    void testConvertToSummaryStringShouldReturnExpectedValueWhenCalledWithValidManifest() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testConvertToSummaryStringShouldReturnExpectedValueWhenCalledWithValidManifest(final DataStore dataStore) {
         //given
         final var underTest = new ManifestToSummaryConverter();
         final var fileId = UUID.randomUUID();
         final var absolutePath = testDataRoot.resolve("path.txt");
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (dataStore) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var files = fileMetadataSetRepository.createFileSet();
             fileMetadataSetRepository.appendTo(files, FileMetadata.builder()
@@ -67,6 +70,7 @@ class ManifestToSummaryConverterTest extends TempFileAwareTest {
                     .absolutePath(BackupPath.of(absolutePath))
                     .fileType(FileType.REGULAR_FILE)
                     .status(Change.NEW)
+                    .hidden(false)
                     .build());
             final var manifest = BackupIncrementManifest.builder()
                     .files(files)

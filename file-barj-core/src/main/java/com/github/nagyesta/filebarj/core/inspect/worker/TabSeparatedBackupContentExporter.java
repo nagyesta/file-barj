@@ -3,7 +3,6 @@ package com.github.nagyesta.filebarj.core.inspect.worker;
 import com.github.nagyesta.filebarj.core.backup.ArchivalException;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
-import com.github.nagyesta.filebarj.core.persistence.SortOrder;
 import lombok.NonNull;
 
 import java.io.BufferedOutputStream;
@@ -43,10 +42,9 @@ public class TabSeparatedBackupContentExporter {
             final BackupIncrementManifest manifest) throws IOException {
         writer.write(generateHeader(manifest));
         final var dataStore = manifest.getDataStore();
-        dataStore.fileMetadataSetRepository().forEachOrdered(
+        dataStore.fileMetadataSetRepository().forEachAsc(
                 manifest.getFiles(),
                 dataStore.singleThreadedPool(),
-                SortOrder.ASC,
                 fileMetadata -> {
                     try {
                         writer.write(toTsv(fileMetadata));
