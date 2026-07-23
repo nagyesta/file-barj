@@ -6,7 +6,7 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.nagyesta.file-barj/file-barj-job?logo=apache-maven&color=blue)](https://search.maven.org/search?q=com.github.nagyesta.file-barj)
 
 [![JavaCI](https://img.shields.io/github/actions/workflow/status/nagyesta/file-barj/gradle.yml?logo=github&branch=main)](https://github.com/nagyesta/file-barj/actions/workflows/gradle.yml)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=coverage)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
+[![Sonar Coverage](https://img.shields.io/sonar/coverage/nagyesta_file-barj?server=https%3A%2F%2Fsonarcloud.io&logo=sonarcloud&logoColor=white)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=nagyesta_file-barj&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=nagyesta_file-barj)
 
