@@ -3,14 +3,13 @@ package com.github.nagyesta.filebarj.core.common;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
 import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import lombok.NonNull;
-import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Size based implementation of the {@link FileMetadataChangeDetector}.
@@ -35,11 +34,25 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
     public boolean hasContentChanged(
             final @NonNull FileMetadata previousMetadata,
             final @NonNull FileMetadata currentMetadata) {
-        final var isContentSource = previousMetadata.getFileType().isContentSource() || currentMetadata.getFileType().isContentSource();
+        final var isContentSource = previousMetadata.getFileType().isContentSource()
+                || currentMetadata.getFileType().isContentSource();
         final var hasContentChanged = !Objects.equals(previousMetadata.getFileType(), currentMetadata.getFileType())
                 || !Objects.equals(previousMetadata.getOriginalSizeBytes(), currentMetadata.getOriginalSizeBytes())
                 || !Objects.equals(previousMetadata.getLastModifiedUtcEpochSeconds(), currentMetadata.getLastModifiedUtcEpochSeconds())
                 || !Objects.equals(getFileName(previousMetadata), getFileName(currentMetadata));
+        return isContentSource && hasContentChanged;
+    }
+
+    @Override
+    public boolean hasContentChanged(
+            final @NonNull FileMetadataIndex previousMetadata,
+            final @NonNull FileMetadata currentMetadata) {
+        final var isContentSource = previousMetadata.fileType().isContentSource()
+                || currentMetadata.getFileType().isContentSource();
+        final var hasContentChanged = !Objects.equals(previousMetadata.fileType(), currentMetadata.getFileType())
+                || !Objects.equals(previousMetadata.originalSizeBytes(), currentMetadata.getOriginalSizeBytes())
+                || !Objects.equals(previousMetadata.lastModifiedUtcEpochSeconds(), currentMetadata.getLastModifiedUtcEpochSeconds())
+                || !Objects.equals(previousMetadata.absolutePath().getFileName(), getFileName(currentMetadata));
         return isContentSource && hasContentChanged;
     }
 
@@ -49,8 +62,8 @@ public class SimpleFileMetadataChangeDetector extends BaseFileMetadataChangeDete
     }
 
     @Override
-    protected TriFunction<FileMetadataSetRepository, FileMetadataSetId, Long, Set<FileMetadata>> findFilesByPrimaryContentCriteria() {
-        return FileMetadataSetRepository::findFilesByOriginalSize;
+    protected Long getPrimaryContentCriteria(final @NotNull FileMetadataIndex metadata) {
+        return metadata.originalSizeBytes();
     }
 
     private static @NotNull String getFileName(final @NotNull FileMetadata fileMetadata) {

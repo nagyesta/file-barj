@@ -3,9 +3,10 @@ package com.github.nagyesta.filebarj.core.common;
 import com.github.nagyesta.filebarj.core.config.RestoreTarget;
 import com.github.nagyesta.filebarj.core.config.RestoreTargets;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
+import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
-import com.github.nagyesta.filebarj.core.persistence.DataStore;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import com.github.nagyesta.filebarj.core.restore.worker.FileMetadataSetterFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -84,13 +85,14 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var restoreTargets = new RestoreTargets(Set.of(new RestoreTarget(BackupPath.of(testDataRoot), testDataRoot)));
         FileMetadataSetterFactory.newInstance(restoreTargets, null).setTimestamps(orig);
         final var restored = PARSER.parse(curr.getAbsolutePath().toFile(), CONFIGURATION);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
                     "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
             );
             final var underTest = new SimpleFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
+            underTest.index();
 
             //when
             final var relevant = underTest.findMostRelevantPreviousVersion(restored);
@@ -116,13 +118,14 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var prev = createMetadata("file.txt", "content-2", FileType.REGULAR_FILE, "rw-rw-rw-", true);
         waitASecond();
         final var curr = createMetadata("file.txt", "content-3", FileType.REGULAR_FILE, "rwxrwxrwx", true);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var manifests = Map.of(
                     "1", populateRepository(fileMetadataSetRepository, Collections.singleton(orig)),
                     "2", populateRepository(fileMetadataSetRepository, Collections.singleton(prev))
             );
             final var underTest = new SimpleFileMetadataChangeDetector(fileMetadataSetRepository, manifests, null);
+            underTest.index();
 
             //when
             final var actual = underTest.findMostRelevantPreviousVersion(curr);
@@ -226,6 +229,22 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
     @SuppressWarnings("DataFlowIssue")
     @Test
     @DisabledOnOs(WINDOWS)
+    void testHasContentChangedShouldThrowExceptionWhenCalledWithNullCurrentFileIndex()
+            throws IOException {
+        //given
+        final var prev = createMetadata("file.txt", "content", FileType.REGULAR_FILE, "rw-rw-rw-", true);
+        final var prevIndex = convertToMetadataIndex(prev);
+        final var underTest = getDefaultSimpleFileMetadataChangeDetector(prev);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged(prevIndex, null));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    @DisabledOnOs(WINDOWS)
     void testHasContentChangedShouldThrowExceptionWhenCalledWithNullPreviousFile()
             throws IOException {
         //given
@@ -233,7 +252,22 @@ class SimpleFileMetadataChangeDetectorIntegrationTest extends AbstractFileMetada
         final var underTest = getDefaultSimpleFileMetadataChangeDetector(curr);
 
         //when
-        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged(null, curr));
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged((FileMetadata) null, curr));
+
+        //then + exception
+    }
+
+    @SuppressWarnings("DataFlowIssue")
+    @Test
+    @DisabledOnOs(WINDOWS)
+    void testHasContentChangedShouldThrowExceptionWhenCalledWithNullPreviousFileIndex()
+            throws IOException {
+        //given
+        final var curr = createMetadata("file.txt", "content", FileType.REGULAR_FILE, "rw-rw-rw-", true);
+        final var underTest = getDefaultSimpleFileMetadataChangeDetector(curr);
+
+        //when
+        Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.hasContentChanged((FileMetadataIndex) null, curr));
 
         //then + exception
     }

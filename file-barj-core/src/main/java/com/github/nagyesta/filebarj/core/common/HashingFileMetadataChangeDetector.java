@@ -3,14 +3,13 @@ package com.github.nagyesta.filebarj.core.common;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
 import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import lombok.NonNull;
-import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Hashing based implementation of the {@link FileMetadataChangeDetector}.
@@ -35,10 +34,23 @@ public class HashingFileMetadataChangeDetector extends BaseFileMetadataChangeDet
     public boolean hasContentChanged(
             final @NonNull FileMetadata previousMetadata,
             final @NonNull FileMetadata currentMetadata) {
-        final var isContentSource = previousMetadata.getFileType().isContentSource() || currentMetadata.getFileType().isContentSource();
+        final var isContentSource = previousMetadata.getFileType().isContentSource()
+                || currentMetadata.getFileType().isContentSource();
         final var hasContentChanged = !Objects.equals(previousMetadata.getFileType(), currentMetadata.getFileType())
                 || !Objects.equals(previousMetadata.getOriginalHash(), currentMetadata.getOriginalHash())
                 || !Objects.equals(previousMetadata.getOriginalSizeBytes(), currentMetadata.getOriginalSizeBytes());
+        return isContentSource && hasContentChanged;
+    }
+
+    @Override
+    public boolean hasContentChanged(
+            final @NonNull FileMetadataIndex previousMetadata,
+            final @NonNull FileMetadata currentMetadata) {
+        final var isContentSource = previousMetadata.fileType().isContentSource()
+                || currentMetadata.getFileType().isContentSource();
+        final var hasContentChanged = !Objects.equals(previousMetadata.fileType(), currentMetadata.getFileType())
+                || !Objects.equals(previousMetadata.originalHash(), currentMetadata.getOriginalHash())
+                || !Objects.equals(previousMetadata.originalSizeBytes(), currentMetadata.getOriginalSizeBytes());
         return isContentSource && hasContentChanged;
     }
 
@@ -48,7 +60,8 @@ public class HashingFileMetadataChangeDetector extends BaseFileMetadataChangeDet
     }
 
     @Override
-    protected TriFunction<FileMetadataSetRepository, FileMetadataSetId, String, Set<FileMetadata>> findFilesByPrimaryContentCriteria() {
-        return FileMetadataSetRepository::findFilesByOriginalHash;
+    protected String getPrimaryContentCriteria(final @NotNull FileMetadataIndex metadata) {
+        return metadata.originalHash();
     }
+
 }

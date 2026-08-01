@@ -3,6 +3,7 @@ package com.github.nagyesta.filebarj.core.common;
 import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,6 +31,15 @@ public interface FileMetadataChangeDetector {
      * @return true if the file content has changed
      */
     boolean hasContentChanged(@NotNull FileMetadata previousMetadata, @NotNull FileMetadata currentMetadata);
+
+    /**
+     * Determines if the content of the file has changed.
+     *
+     * @param previousMetadata The previous metadata index version
+     * @param currentMetadata  The current metadata version
+     * @return true if the file content has changed
+     */
+    boolean hasContentChanged(@NotNull FileMetadataIndex previousMetadata, @NotNull FileMetadata currentMetadata);
 
     /**
      * Determines if the file is from the last manifest known to the current
@@ -60,6 +70,15 @@ public interface FileMetadataChangeDetector {
     FileMetadata findPreviousVersionByAbsolutePath(@NotNull BackupPath absolutePath);
 
     /**
+     * Finds the previous version of the file based on absolute path.
+     *
+     * @param absolutePath The path of the file
+     * @return the file metadata
+     */
+    @Nullable
+    FileMetadataIndex findPreviousIndexVersionByAbsolutePath(@NotNull BackupPath absolutePath);
+
+    /**
      * Classifies the nature of the change between the previous and current metadata versions.
      *
      * @param previousMetadata The previous metadata version
@@ -68,4 +87,14 @@ public interface FileMetadataChangeDetector {
      */
     @NotNull
     Change classifyChange(@NotNull FileMetadata previousMetadata, @NotNull FileMetadata currentMetadata);
+
+    /**
+     * Initiates an optional indexing step depending on the file metadata repository behind this change detector.
+     */
+    void index();
+
+    /**
+     * Cleans up the optional index depending on the file metadata repository behind this change detector.
+     */
+    void clearIndex();
 }

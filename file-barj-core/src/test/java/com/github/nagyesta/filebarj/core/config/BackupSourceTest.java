@@ -161,7 +161,7 @@ class BackupSourceTest extends TempFileAwareTest {
         //when
         final var actualId = fileSetRepository.createFileSet();
         underTest.listMatchingFilePaths(actualId);
-        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
+        final var actual = fileSetRepository.findAll(actualId);
 
         //then
         assertExpectedPathsFound(expectedPaths, actual);
@@ -186,7 +186,7 @@ class BackupSourceTest extends TempFileAwareTest {
         //when
         final var actualId = fileSetRepository.createFileSet();
         underTest.listMatchingFilePaths(actualId);
-        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
+        final var actual = fileSetRepository.findAll(actualId);
 
         //then
         Assertions.assertEquals(expectedResults, actual.size());
@@ -213,7 +213,7 @@ class BackupSourceTest extends TempFileAwareTest {
         //when
         final var actualId = fileSetRepository.createFileSet();
         underTest.listMatchingFilePaths(actualId);
-        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
+        final var actual = fileSetRepository.findAll(actualId);
 
         //then
         assertExpectedPathsFound(expectedPaths, actual);
@@ -232,7 +232,7 @@ class BackupSourceTest extends TempFileAwareTest {
         //when
         final var actualId = fileSetRepository.createFileSet();
         underTest.listMatchingFilePaths(actualId);
-        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
+        final var actual = fileSetRepository.findAll(actualId);
 
         //then
         Assertions.assertIterableEquals(List.of(expectedFile), actual);
@@ -251,7 +251,7 @@ class BackupSourceTest extends TempFileAwareTest {
         //when
         final var actualId = fileSetRepository.createFileSet();
         underTest.listMatchingFilePaths(actualId);
-        final var actual = fileSetRepository.findAll(actualId, 0, Integer.MAX_VALUE);
+        final var actual = fileSetRepository.findAll(actualId);
 
         //then
         Assertions.assertIterableEquals(List.of(), actual);

@@ -43,7 +43,7 @@ import static com.github.nagyesta.filebarj.io.stream.internal.ChunkingFileOutput
 public class BackupController
         extends SingleUseController implements Closeable {
 
-    private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, SCAN_FILES, PARSE_METADATA, BACKUP);
+    private static final List<ProgressStep> PROGRESS_STEPS = List.of(LOAD_MANIFESTS, SCAN_FILES, PARSE_METADATA, DETECT_CHANGES, BACKUP);
     private final FileMetadataParser metadataParser = FileMetadataParserFactory.newInstance();
     private final ManifestManager manifestManager;
     @Getter
@@ -66,7 +66,7 @@ public class BackupController
      * @param parameters The parameters
      */
     public BackupController(final @NonNull BackupParameters parameters) {
-        super(DataStore.newInMemoryInstance());
+        super(DataStore.newDefaultInstance());
         this.progressTracker = new ObservableProgressTracker(PROGRESS_STEPS);
         progressTracker.registerListener(parameters.getProgressListener());
         this.manifestManager = new ManifestManagerImpl(dataStore(), progressTracker);
@@ -104,6 +104,9 @@ public class BackupController
             }
             if (forceFull) {
                 backupType = BackupType.FULL;
+            }
+            if (backupType == BackupType.FULL) {
+                progressTracker.skipStep(DETECT_CHANGES);
             }
             return backupType;
         } catch (final Exception e) {
@@ -194,24 +197,40 @@ public class BackupController
         try (filesFound) {
             log.info("Calculating backup delta using {} previous backup increments", previousManifestFiles.size());
             final var fileMetadataSetRepository = dataStore().fileMetadataSetRepository();
-
+            final var numbersOfFilesFoundByType = fileMetadataSetRepository.countsByType(filesFound);
             final var previousFiles = new TreeMap<String, FileMetadataSetId>();
             previousManifestFiles.forEach(
                     (key, value) -> previousFiles.put(previousManifestPrefixes.get(key), value));
             if (!previousManifestFiles.isEmpty()) {
                 changeDetector = FileMetadataChangeDetectorFactory
-                        .create(manifest.getConfiguration(), fileMetadataSetRepository, previousFiles, PermissionComparisonStrategy.STRICT);
-                log.info("Trying to find unchanged files in previous backup increments");
-                fileMetadataSetRepository.forEach(filesFound, threadPool, this::findPreviousVersionToReuseOrAddToBackupFileSet);
+                        .create(manifest.getConfiguration(), fileMetadataSetRepository, previousFiles,
+                                PermissionComparisonStrategy.STRICT);
+                try {
+                    final var numberOfContentSourcesFound = numbersOfFilesFoundByType.entrySet().stream()
+                            .filter(e -> e.getKey().isContentSource())
+                            .mapToLong(Map.Entry::getValue)
+                            .sum();
+                    progressTracker.estimateStepSubtotal(DETECT_CHANGES, numberOfContentSourcesFound);
+                    log.info("Indexing file metadata in previous backup increments");
+                    changeDetector.index();
+                    log.info("Trying to find unchanged files in previous backup increments");
+                    fileMetadataSetRepository.forEach(filesFound, threadPool, this::findPreviousVersionToReuseOrAddToBackupFileSet);
+                } finally {
+                    progressTracker.completeStep(DETECT_CHANGES);
+                    changeDetector.clearIndex();
+                }
             } else {
-                fileMetadataSetRepository.forEach(filesFound, threadPool,
-                        fileMetadata -> fileMetadataSetRepository.appendTo(backupFileSet, fileMetadata));
+                fileMetadataSetRepository.copyAll(filesFound, backupFileSet);
             }
             if (!fileMetadataSetRepository.isEmpty(backupFileSet)) {
-                fileMetadataSetRepository.countsByType(backupFileSet).forEach(
+                final var numberOfDetectedFilesByType = fileMetadataSetRepository.countsByType(backupFileSet);
+                numberOfDetectedFilesByType.forEach(
                         (type, count) -> log.info("Found {} matching {} items in previous backup increments.", count, type));
+                if (!numbersOfFilesFoundByType.equals(numberOfDetectedFilesByType)) {
+                    log.warn("The number of files found does not match the number of files processed by the change detection step.");
+                }
             }
-            final var changeStats = fileMetadataSetRepository.countsByStatus(filesFound);
+            final var changeStats = fileMetadataSetRepository.countsByStatus(backupFileSet);
             log.info("Detected changes: {}", changeStats);
         }
     }
@@ -238,7 +257,6 @@ public class BackupController
                             FileType.allContentSources(),
                             duplicateStrategy,
                             hashAlgorithm,
-                            threadPool,
                             batch -> processScope(batch, pipeline));
             //calling close explicitly to trigger finalization of the index and to know a final list of files
             pipeline.close();
@@ -288,6 +306,7 @@ public class BackupController
             fileMetadataSetRepository.appendTo(backupFileSet, file);
             return;
         }
+        progressTracker.recordProgressInSubSteps(DETECT_CHANGES);
         final var previousVersion = changeDetector.findMostRelevantPreviousVersion(file);
         if (previousVersion != null) {
             final var change = changeDetector.classifyChange(previousVersion, file);
@@ -348,6 +367,7 @@ public class BackupController
     }
 
     private void saveManifest() {
+        log.info("Saving manifest for the new increment...");
         manifestManager.persist(manifest);
     }
 

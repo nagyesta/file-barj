@@ -29,8 +29,8 @@ import java.util.List;
 @SuperBuilder
 @EmptyBackup(groups = ValidationRules.Created.class)
 @NotEmptyBackup(groups = ValidationRules.Persisted.class)
-public class BackupIncrementManifest extends EncryptionKeyStore {
-
+public class BackupIncrementManifest
+        extends EncryptionKeyStore {
     /**
      * The JSON property name for the app version.
      */

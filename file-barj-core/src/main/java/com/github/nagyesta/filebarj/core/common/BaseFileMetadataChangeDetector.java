@@ -6,8 +6,8 @@ import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.persistence.FileMetadataSetRepository;
 import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import lombok.NonNull;
-import org.apache.commons.lang3.function.TriFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,6 +23,8 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     private final FileMetadataSetRepository repository;
     private final SortedMap<String, FileMetadataSetId> filesFromManifests;
     private final PermissionComparisonStrategy permissionComparisonStrategy;
+    private final Map<BackupPath, FileMetadataIndex> indexByPath = new HashMap<>();
+    private final Map<T, Set<FileMetadataIndex>> indexByPrimaryCriteria = new HashMap<>();
 
     /**
      * Creates a new instance with the previous manifests.
@@ -60,42 +62,42 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     @Override
     public @Nullable FileMetadata findMostRelevantPreviousVersion(
             final @NonNull FileMetadata currentMetadata) {
-        final var increments = filesFromManifests.keySet().stream().sorted(Comparator.reverseOrder()).toList();
-        final var previousSamePath = findPreviousVersionByAbsolutePath(currentMetadata.getAbsolutePath());
+        final var previousSamePath = findPreviousIndexVersionByAbsolutePath(currentMetadata.getAbsolutePath());
         if (previousSamePath != null && !hasContentChanged(previousSamePath, currentMetadata)) {
-            return previousSamePath;
+            return getFileMetadata(previousSamePath);
         }
-        for (final var increment : increments) {
-            final var index = filesFromManifests.get(increment);
-            final var key = getPrimaryContentCriteria(currentMetadata);
-            final var files = findFilesByPrimaryContentCriteria().apply(repository, index, key);
-            if (!files.isEmpty()) {
-                final var byPath = new TreeMap<BackupPath, FileMetadata>();
-                files.stream()
-                        .filter(metadata -> !hasContentChanged(metadata, currentMetadata))
-                        .forEach(metadata -> byPath.put(metadata.getAbsolutePath(), metadata));
-                if (!byPath.isEmpty()) {
-                    return byPath.getOrDefault(currentMetadata.getAbsolutePath(), byPath.firstEntry().getValue());
-                }
+        final var key = getPrimaryContentCriteria(currentMetadata);
+        final var files = indexByPrimaryCriteria.getOrDefault(key, Collections.emptySet());
+        if (!files.isEmpty()) {
+            final var byPath = new TreeMap<BackupPath, FileMetadataIndex>();
+            files.stream()
+                    .filter(metadata -> !hasContentChanged(metadata, currentMetadata))
+                    .forEach(metadata -> byPath.put(metadata.absolutePath(), metadata));
+            if (!byPath.isEmpty()) {
+                final var index = byPath.getOrDefault(currentMetadata.getAbsolutePath(), byPath.firstEntry().getValue());
+                return getFileMetadata(index);
             }
         }
-        return previousSamePath;
+        if (previousSamePath == null) {
+            return null;
+        }
+        return getFileMetadata(previousSamePath);
     }
 
     @Override
     public @Nullable FileMetadata findPreviousVersionByAbsolutePath(
             final @NonNull BackupPath absolutePath) {
-        return filesFromManifests.keySet()
-                .stream().sorted(Comparator.reverseOrder())
-                .map(increment -> {
-                    final var fileMetadataSetId = filesFromManifests.get(increment);
-                    return repository.findFileByPath(fileMetadataSetId, absolutePath)
-                            .filter(metadata -> metadata.getStatus() != Change.DELETED);
-                })
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .findFirst()
-                .orElse(null);
+        final var index = findPreviousIndexVersionByAbsolutePath(absolutePath);
+        if (index == null) {
+            return null;
+        }
+        return getFileMetadata(index);
+    }
+
+    @Override
+    public @Nullable FileMetadataIndex findPreviousIndexVersionByAbsolutePath(
+            final @NonNull BackupPath absolutePath) {
+        return indexByPath.getOrDefault(absolutePath, null);
     }
 
     @Override
@@ -117,6 +119,30 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
         }
     }
 
+    @Override
+    public void index() {
+        filesFromManifests.keySet()
+                .stream()
+                .sorted(Comparator.reverseOrder())
+                .forEachOrdered(key -> {
+                    final var setId = filesFromManifests.get(key);
+                    repository.forEachForIndex(setId, item -> {
+                        indexByPath.putIfAbsent(item.absolutePath(), item);
+                        if (item.fileType().isContentSource()) {
+                            final var value = getPrimaryContentCriteria(item);
+                            indexByPrimaryCriteria.computeIfAbsent(value, c -> new LinkedHashSet<>())
+                                    .add(item);
+                        }
+                    });
+                });
+    }
+
+    @Override
+    public void clearIndex() {
+        indexByPath.clear();
+        indexByPrimaryCriteria.clear();
+    }
+
     /**
      * Returns the value of the primary criteria used for content comparison.
      *
@@ -126,10 +152,16 @@ public abstract class BaseFileMetadataChangeDetector<T> implements FileMetadataC
     protected abstract T getPrimaryContentCriteria(@NotNull FileMetadata metadata);
 
     /**
-     * Returns a function that can find the files from the repository by matching based on the primary content criteria.
+     * Returns the value of the primary criteria used for content comparison.
      *
-     * @return filter function
+     * @param metadata the metadata
+     * @return the value
      */
-    protected abstract
-    TriFunction<FileMetadataSetRepository, FileMetadataSetId, T, Set<FileMetadata>> findFilesByPrimaryContentCriteria();
+    protected abstract T getPrimaryContentCriteria(@NotNull FileMetadataIndex metadata);
+
+    private FileMetadata getFileMetadata(final FileMetadataIndex index) {
+        return repository.findFileById(index.fileSetId(), index.id())
+                .orElseThrow(() -> new ArithmeticException("Failed to find file metadata based on index!"));
+    }
+
 }

@@ -5,7 +5,7 @@ import lombok.Getter;
 @Getter
 public enum ProgressStep {
     /**
-     * Load manifests for the restore, merge or inspect operation.
+     * Load manifests for the restore, merge, or inspect operation.
      */
     LOAD_MANIFESTS("Load manifests", 1, 10),
     /**
@@ -17,19 +17,23 @@ public enum ProgressStep {
      */
     PARSE_METADATA("Parse file metadata", 10, 10),
     /**
-     * Backup the change set from the source folder.
+     * Search for changes between the existing entries in the previous increments and the files we have found in the input sources.
+     */
+    DETECT_CHANGES("Detect file changes", 10, 30),
+    /**
+     * Back up the change set from the source folder.
      */
     BACKUP("Backup", 5, 50),
     /**
-     * Restore directories from tue archive.
+     * Restore directories from the archive.
      */
     RESTORE_DIRECTORIES("Restore directories", 25, 10),
     /**
-     * Restore file contents from tue archive.
+     * Restore file contents from the archive.
      */
     RESTORE_CONTENT("Restore content", 5, 50),
     /**
-     * Restore file contents from tue archive.
+     * Restore file contents from the archive.
      */
     RESTORE_METADATA("Restore metadata", 25, 10),
     /**

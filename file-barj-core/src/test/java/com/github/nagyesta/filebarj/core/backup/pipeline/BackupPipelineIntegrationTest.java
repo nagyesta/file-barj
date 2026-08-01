@@ -11,7 +11,8 @@ import com.github.nagyesta.filebarj.core.model.enums.BackupType;
 import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,76 +26,87 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
     private static final AppVersion APP_VERSION = new AppVersion(1, 2, 3);
     private static final int START_TIME_UTC_EPOCH_SECONDS = 12345;
 
-    @Test
-    void testStoreEntryShouldAddFileEntryToArchiveWhenNoEncryptionIsUsed() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testStoreEntryShouldAddFileEntryToArchiveWhenNoEncryptionIsUsed(final DataStore dataStore) {
         //given
-        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
-        final var file = getRegularFileMetadata(config);
-        final var manifest = getManifest(config);
-        try (var underTest = new BackupPipeline(manifest)) {
-            //when
-            final var actual = underTest.storeEntries(List.of(List.of(file)));
-            underTest.close();
-            final var files = underTest.getDataFilesWritten();
-            final var indexFile = underTest.getIndexFileWritten();
+        try (dataStore) {
+            final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
+            final var file = getRegularFileMetadata(config);
+            final var manifest = getManifest(config, dataStore);
+            try (var underTest = new BackupPipeline(manifest)) {
+                //when
+                final var actual = underTest.storeEntries(List.of(List.of(file)));
+                underTest.close();
+                final var files = underTest.getDataFilesWritten();
+                final var indexFile = underTest.getIndexFileWritten();
 
-            //then
-            final var expected = getExpected(indexFile, file);
-            Assertions.assertEquals(expected, actual.get(0));
-            Assertions.assertEquals(1, files.size());
-        } catch (final Exception e) {
-            throw new RuntimeException(e);
+                //then
+                final var expected = getExpected(indexFile, file);
+                Assertions.assertEquals(expected, actual.get(0));
+                Assertions.assertEquals(1, files.size());
+            } catch (final Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
-    @Test
-    void testStoreEntryShouldAddFileEntryOnlyOnceToArchiveWhenCalledWithDuplicatesAndKeepOnePerBackupStrategyIsUsed() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testStoreEntryShouldAddFileEntryOnlyOnceToArchiveWhenCalledWithDuplicatesAndKeepOnePerBackupStrategyIsUsed(
+            final DataStore dataStore) {
         //given
-        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP);
-        final var file1 = getRegularFileMetadata(config);
-        final var file2 = getRegularFileMetadata(config);
-        final var file3 = getRegularFileMetadata(config);
-        final var manifest = getManifest(config);
-        try (var underTest = new BackupPipeline(manifest)) {
-            //when
-            final var actual = underTest.storeEntries(List.of(List.of(file1, file2, file3)));
-            underTest.close();
-            final var files = underTest.getDataFilesWritten();
-            final var indexFile = underTest.getIndexFileWritten();
+        try (dataStore) {
+            final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_ONE_PER_BACKUP);
+            final var file1 = getRegularFileMetadata(config);
+            final var file2 = getRegularFileMetadata(config);
+            final var file3 = getRegularFileMetadata(config);
+            final var manifest = getManifest(config, dataStore);
+            try (var underTest = new BackupPipeline(manifest)) {
+                //when
+                final var actual = underTest.storeEntries(List.of(List.of(file1, file2, file3)));
+                underTest.close();
+                final var files = underTest.getDataFilesWritten();
+                final var indexFile = underTest.getIndexFileWritten();
 
-            //then
-            final var expected = getExpected(indexFile, file1, file2, file3);
-            Assertions.assertEquals(expected, actual.get(0));
-            Assertions.assertEquals(1, files.size());
-        } catch (final Exception e) {
-            throw new RuntimeException(e);
+                //then
+                final var expected = getExpected(indexFile, file1, file2, file3);
+                Assertions.assertEquals(expected, actual.get(0));
+                Assertions.assertEquals(1, files.size());
+            } catch (final Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
-    @Test
-    void testStoreEntryShouldAddSymbolicLinkEntryToArchiveWhenNoEncryptionIsUsed() throws IOException {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testStoreEntryShouldAddSymbolicLinkEntryToArchiveWhenNoEncryptionIsUsed(final DataStore dataStore) throws IOException {
         //given
-        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
-        final var file = getSymbolicLinkMetadata(config);
-        final var manifest = getManifest(config);
-        try (var underTest = new BackupPipeline(manifest)) {
-            //when
-            final var actual = underTest.storeEntries(List.of(List.of(file)));
-            underTest.close();
-            final var files = underTest.getDataFilesWritten();
-            final var indexFile = underTest.getIndexFileWritten();
+        try (dataStore) {
+            final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
+            final var file = getSymbolicLinkMetadata(config);
+            final var manifest = getManifest(config, dataStore);
+            try (var underTest = new BackupPipeline(manifest)) {
+                //when
+                final var actual = underTest.storeEntries(List.of(List.of(file)));
+                underTest.close();
+                final var files = underTest.getDataFilesWritten();
+                final var indexFile = underTest.getIndexFileWritten();
 
-            //then
-            final var expected = getExpected(indexFile, file);
-            Assertions.assertEquals(expected, actual.get(0));
-            Assertions.assertEquals(1, files.size());
-        } catch (final Exception e) {
-            Assertions.fail(e);
+                //then
+                final var expected = getExpected(indexFile, file);
+                Assertions.assertEquals(expected, actual.get(0));
+                Assertions.assertEquals(1, files.size());
+            } catch (final Exception e) {
+                Assertions.fail(e);
+            }
         }
     }
 
     @SuppressWarnings({"resource", "DataFlowIssue"})
-    @Test
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
     void testConstructorShouldThrowExceptionWhenCalledWithNull() {
         //given
         //when
@@ -104,36 +116,42 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
     }
 
     @SuppressWarnings({"DataFlowIssue"})
-    @Test
-    void testStoreEntityShouldThrowExceptionWhenCalledWithNull() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testStoreEntityShouldThrowExceptionWhenCalledWithNull(final DataStore dataStore) {
         //given
-        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
-        final var manifest = getManifest(config);
-        try (var underTest = new BackupPipeline(manifest)) {
-            //when
-            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.storeEntries(null));
+        try (dataStore) {
+            final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
+            final var manifest = getManifest(config, dataStore);
+            try (var underTest = new BackupPipeline(manifest)) {
+                //when
+                Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.storeEntries(null));
 
-            //then + exception
-        } catch (final Exception e) {
-            Assertions.fail(e);
+                //then + exception
+            } catch (final Exception e) {
+                Assertions.fail(e);
+            }
         }
     }
 
-    @Test
-    void testStoreEntityShouldThrowExceptionWhenCalledWithNullInList() {
+    @ParameterizedTest
+    @MethodSource("com.github.nagyesta.filebarj.core.test.DataStoreProvider#dataStoreSupplierProvider")
+    void testStoreEntityShouldThrowExceptionWhenCalledWithNullInList(final DataStore dataStore) {
         //given
-        final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
-        final var manifest = getManifest(config);
-        try (var underTest = new BackupPipeline(manifest)) {
-            final List<List<FileMetadata>> list = new ArrayList<>();
-            list.add(null);
+        try (dataStore) {
+            final var config = getConfiguration(DuplicateHandlingStrategy.KEEP_EACH);
+            final var manifest = getManifest(config, dataStore);
+            try (var underTest = new BackupPipeline(manifest)) {
+                final List<List<FileMetadata>> list = new ArrayList<>();
+                list.add(null);
 
-            //when
-            Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.storeEntries(list));
+                //when
+                Assertions.assertThrows(IllegalArgumentException.class, () -> underTest.storeEntries(list));
 
-            //then + exception
-        } catch (final Exception e) {
-            Assertions.fail(e);
+                //then + exception
+            } catch (final Exception e) {
+                Assertions.fail(e);
+            }
         }
     }
 
@@ -154,8 +172,9 @@ class BackupPipelineIntegrationTest extends TempFileAwareTest {
                 .build();
     }
 
-    private static BackupIncrementManifest getManifest(final BackupJobConfiguration config) {
-        final var dataStore = DataStore.newInMemoryInstance();
+    private static BackupIncrementManifest getManifest(
+            final BackupJobConfiguration config,
+            final DataStore dataStore) {
         return BackupIncrementManifest.builder()
                 .appVersion(APP_VERSION)
                 .versions(new TreeSet<>(Set.of(0)))

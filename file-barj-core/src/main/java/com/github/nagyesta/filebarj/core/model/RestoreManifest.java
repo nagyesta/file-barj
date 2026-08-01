@@ -20,7 +20,9 @@ import java.util.stream.Stream;
 @Data
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
-public class RestoreManifest extends EncryptionKeyStore implements Closeable {
+public class RestoreManifest
+        extends EncryptionKeyStore
+        implements Closeable {
     /**
      * The version number of the app that generated the manifest.
      */

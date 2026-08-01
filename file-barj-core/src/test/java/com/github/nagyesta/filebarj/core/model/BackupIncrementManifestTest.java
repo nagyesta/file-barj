@@ -77,7 +77,9 @@ class BackupIncrementManifestTest {
                 .group("group")
                 .posixPermissions("rwxr-xr-x")
                 .originalSizeBytes(ORIGINAL_SIZE_BYTES)
+                .createdUtcEpochSeconds(Instant.now().getEpochSecond())
                 .lastModifiedUtcEpochSeconds(Instant.now().getEpochSecond())
+                .lastAccessedUtcEpochSeconds(Instant.now().getEpochSecond())
                 .originalHash("hash")
                 .hidden(true)
                 .status(Change.NEW)
@@ -88,7 +90,7 @@ class BackupIncrementManifestTest {
         final var encrypted = EncryptionUtil.encryptBytes(keyPair.getPublic(), secretKey.getEncoded());
         final var config = getConfiguration(keyPair);
         final var dek = Base64.getEncoder().encodeToString(encrypted);
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
             final var files = fileMetadataSetRepository.createFileSet();
@@ -135,6 +137,14 @@ class BackupIncrementManifestTest {
                 .absolutePath(BackupPath.of(Path.of("test"), "file", "missing.md"))
                 .fileType(FileType.SYMBOLIC_LINK)
                 .status(Change.DELETED)
+                .originalSizeBytes(0L)
+                .lastModifiedUtcEpochSeconds(Instant.now().getEpochSecond())
+                .lastAccessedUtcEpochSeconds(Instant.now().getEpochSecond())
+                .createdUtcEpochSeconds(Instant.now().getEpochSecond())
+                .posixPermissions("rwxr-xr-x")
+                .owner("-")
+                .group("-")
+                .hidden(false)
                 .build();
         final var config = BackupJobConfiguration.builder()
                 .backupType(BackupType.FULL)
@@ -145,7 +155,7 @@ class BackupIncrementManifestTest {
                 .fileNamePrefix("backup-")
                 .sources(Set.of(BackupSource.builder().path(BackupPath.of(Path.of(TEMP_DIR), "visible-file1.txt")).build()))
                 .build();
-        try (var dataStore = DataStore.newInMemoryInstance()) {
+        try (var dataStore = getDataStore()) {
             final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
             final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
             final var files = fileMetadataSetRepository.createFileSet();
@@ -291,6 +301,10 @@ class BackupIncrementManifestTest {
         //then + exception
     }
 
+    protected DataStore getDataStore() {
+        return DataStore.newEmbeddedSqlInstance();
+    }
+
     private static BackupJobConfiguration getConfiguration(final KeyPair keyPair) {
         return BackupJobConfiguration.builder()
                 .backupType(BackupType.FULL)
@@ -305,11 +319,11 @@ class BackupIncrementManifestTest {
                 .build();
     }
 
-    private static BackupIncrementManifest getUnderTest(
+    private BackupIncrementManifest getUnderTest(
             final String dek,
             final BackupJobConfiguration config) {
         final var builder = BackupIncrementManifest.builder()
-                .dataStore(DataStore.newInMemoryInstance())
+                .dataStore(getDataStore())
                 .appVersion(new AppVersion(0, 0, 1))
                 .versions(new TreeSet<>(Set.of(0)))
                 .backupType(BackupType.FULL)
@@ -326,16 +340,16 @@ class BackupIncrementManifestTest {
             final BackupIncrementManifest actual) {
         final var fileMetadataSetRepository = dataStore.fileMetadataSetRepository();
         final var archivedFileMetadataSetRepository = dataStore.archivedFileMetadataSetRepository();
-        final var actualFileMap = fileMetadataSetRepository.findAll(actual.getFiles(), 0, Integer.MAX_VALUE)
+        final var actualFileMap = fileMetadataSetRepository.findAll(actual.getFiles())
                 .stream()
                 .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
-        final var actualArchiveMap = archivedFileMetadataSetRepository.findAll(actual.getArchivedEntries(), 0, Integer.MAX_VALUE)
+        final var actualArchiveMap = archivedFileMetadataSetRepository.findAll(actual.getArchivedEntries())
                 .stream()
                 .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity()));
-        final var expectedFileMap = fileMetadataSetRepository.findAll(expected.getFiles(), 0, Integer.MAX_VALUE)
+        final var expectedFileMap = fileMetadataSetRepository.findAll(expected.getFiles())
                 .stream()
                 .collect(Collectors.toMap(FileMetadata::getId, Function.identity()));
-        final var expectedArchiveMap = archivedFileMetadataSetRepository.findAll(expected.getArchivedEntries(), 0, Integer.MAX_VALUE)
+        final var expectedArchiveMap = archivedFileMetadataSetRepository.findAll(expected.getArchivedEntries())
                 .stream()
                 .collect(Collectors.toMap(ArchivedFileMetadata::getId, Function.identity()));
         Assertions.assertIterableEquals(expectedFileMap.entrySet(), actualFileMap.entrySet());

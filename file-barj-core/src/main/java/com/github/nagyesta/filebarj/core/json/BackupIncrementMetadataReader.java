@@ -10,14 +10,15 @@ import com.github.nagyesta.filebarj.core.model.ArchivedFileMetadata;
 import com.github.nagyesta.filebarj.core.model.BackupIncrementManifest;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.BackupType;
-import com.github.nagyesta.filebarj.core.persistence.BaseFileSetRepository;
 import com.github.nagyesta.filebarj.core.persistence.DataStore;
 import com.github.nagyesta.filebarj.core.persistence.entities.BaseFileSetId;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 import static com.github.nagyesta.filebarj.core.model.BackupIncrementManifest.*;
+import static com.github.nagyesta.filebarj.core.persistence.DataStore.BATCH_CHUNK_SIZE;
 
 public class BackupIncrementMetadataReader implements AutoCloseable {
 
@@ -86,10 +87,10 @@ public class BackupIncrementMetadataReader implements AutoCloseable {
                     processDataFileNames(manifestBuilder);
                     break;
                 case FILE_COLLECTION:
-                    parseMapOf(fileMetadataSetRepository, files, FileMetadata.class);
+                    parseMapOf(files, fileMetadataSetRepository::appendTo, FileMetadata.class);
                     break;
                 case ARCHIVE_ENTRY_COLLECTION:
-                    parseMapOf(archivedFileMetadataSetRepository, archiveEntries, ArchivedFileMetadata.class);
+                    parseMapOf(archiveEntries, archivedFileMetadataSetRepository::appendTo, ArchivedFileMetadata.class);
                     break;
                 default:
                     throw new IllegalStateException("Unexpected value: " + fieldName);
@@ -132,17 +133,23 @@ public class BackupIncrementMetadataReader implements AutoCloseable {
     }
 
     private <K extends BaseFileSetId<K>, V extends Comparable<V>> void parseMapOf(
-            final BaseFileSetRepository<K, V> repository,
             final K id,
+            final BiConsumer<K, Collection<V>> collectionAppender,
             final Class<V> type) throws IOException {
         var token = jsonParser.nextToken(); //object start
         assertMatches(token, JsonToken.START_OBJECT);
+        final List<V> buffer = new ArrayList<>(BATCH_CHUNK_SIZE);
         for (token = jsonParser.nextToken(); token == JsonToken.FIELD_NAME; token = jsonParser.nextToken()) {
             Objects.requireNonNull(UUID.fromString(jsonParser.getText()));
             jsonParser.nextToken();
             final var value = jsonParser.readValueAs(type);
-            repository.appendTo(id, value);
+            if (buffer.size() == BATCH_CHUNK_SIZE) {
+                collectionAppender.accept(id, buffer);
+                buffer.clear();
+            }
+            buffer.add(value);
         } // object end
+        collectionAppender.accept(id, buffer);
         assertMatches(token, JsonToken.END_OBJECT);
     }
 

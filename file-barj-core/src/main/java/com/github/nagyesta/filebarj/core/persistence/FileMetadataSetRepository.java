@@ -2,37 +2,21 @@ package com.github.nagyesta.filebarj.core.persistence;
 
 import com.github.nagyesta.filebarj.core.config.enums.DuplicateHandlingStrategy;
 import com.github.nagyesta.filebarj.core.config.enums.HashAlgorithm;
-import com.github.nagyesta.filebarj.core.model.BackupPath;
 import com.github.nagyesta.filebarj.core.model.FileMetadata;
 import com.github.nagyesta.filebarj.core.model.enums.Change;
 import com.github.nagyesta.filebarj.core.model.enums.FileType;
 import com.github.nagyesta.filebarj.core.persistence.entities.BackupPathChangeStatusMapId;
 import com.github.nagyesta.filebarj.core.persistence.entities.FileMetadataSetId;
+import com.github.nagyesta.filebarj.core.persistence.h2.entity.FileMetadataIndex;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.Closeable;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Consumer;
 
-public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMetadataSetId, FileMetadata> {
-
-    default void forEachByChangeStatusesAndFileTypes(
-            final FileMetadataSetId id,
-            final Set<Change> changeStatuses,
-            final Set<FileType> fileTypes,
-            final ForkJoinPool threadPool,
-            final Consumer<FileMetadata> consumer) {
-        forEachByChangeStatusesAndFileTypes(id, changeStatuses, fileTypes, threadPool, SortOrder.ASC, consumer);
-    }
-
-    default void forEachByChangeStatusesAndFileTypesReverse(
-            final FileMetadataSetId id,
-            final Set<Change> changeStatuses,
-            final Set<FileType> fileTypes,
-            final ForkJoinPool threadPool,
-            final Consumer<FileMetadata> consumer) {
-        forEachByChangeStatusesAndFileTypes(id, changeStatuses, fileTypes, threadPool, SortOrder.DESC, consumer);
-    }
+public interface FileMetadataSetRepository
+        extends Closeable {
 
     long countByType(FileMetadataSetId id, Collection<FileType> types);
 
@@ -40,12 +24,18 @@ public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMet
 
     SortedMap<Change, Long> countsByStatus(FileMetadataSetId id);
 
-    void forEachByChangeStatusesAndFileTypes(
+    void forEachByChangeStatusesAndFileTypesAsc(
             FileMetadataSetId id,
             Set<Change> changeStatuses,
             Set<FileType> fileTypes,
             ForkJoinPool threadPool,
-            SortOrder order,
+            Consumer<FileMetadata> consumer);
+
+    void forEachByChangeStatusesAndFileTypesDesc(
+            FileMetadataSetId id,
+            Set<Change> changeStatuses,
+            Set<FileType> fileTypes,
+            ForkJoinPool threadPool,
             Consumer<FileMetadata> consumer);
 
     void forEachDuplicateOf(
@@ -54,18 +44,11 @@ public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMet
             Set<FileType> fileTypes,
             DuplicateHandlingStrategy strategy,
             HashAlgorithm hashAlgorithm,
-            ForkJoinPool threadPool,
             Consumer<List<List<FileMetadata>>> consumer);
 
     long getOriginalSizeBytes(FileMetadataSetId id);
 
     boolean containsFileId(FileMetadataSetId id, UUID fileId);
-
-    Set<FileMetadata> findFilesByOriginalHash(FileMetadataSetId id, String originalHash);
-
-    Set<FileMetadata> findFilesByOriginalSize(FileMetadataSetId id, Long originalSize);
-
-    Optional<FileMetadata> findFileByPath(FileMetadataSetId id, BackupPath absolutePath);
 
     List<FileMetadata> findErrorsOf(FileMetadataSetId id);
 
@@ -77,9 +60,39 @@ public interface FileMetadataSetRepository extends BaseFileSetRepository<FileMet
 
     FileMetadataSetId keepChangedMetadata(FileMetadataSetId id, Set<FileType> fileTypes, BackupPathChangeStatusMapId changeStats);
 
+    Optional<FileMetadata> findFileById(UUID id, UUID file);
+
     SortedSet<FileMetadata> findFilesByIds(FileMetadataSetId id, Set<UUID> files);
 
     boolean containsPath(FileMetadataSetId id, String absolutePath);
 
     FileMetadataSetId copyAllNotDeleted(FileMetadataSetId source);
+
+    void copyAll(FileMetadataSetId source, FileMetadataSetId target);
+
+    void forEachForIndex(FileMetadataSetId id, Consumer<FileMetadataIndex> consumer);
+
+    void registerWith(DataStore dataStore);
+
+    FileMetadataSetId createFileSet();
+
+    void appendTo(FileMetadataSetId id, FileMetadata value);
+
+    void appendTo(FileMetadataSetId id, Collection<FileMetadata> values);
+
+    void removeFileSet(FileMetadataSetId id);
+
+    List<FileMetadata> findAll(FileMetadataSetId id);
+
+    long countAll(FileMetadataSetId id);
+
+    boolean isEmpty(FileMetadataSetId id);
+
+    void forEachAsc(FileMetadataSetId id, ForkJoinPool threadPool, Consumer<FileMetadata> consumer);
+
+    void forEach(FileMetadataSetId id, ForkJoinPool threadPool, Consumer<FileMetadata> consumer);
+
+    boolean isClosed();
+
+    void assertExists(FileMetadataSetId id);
 }
